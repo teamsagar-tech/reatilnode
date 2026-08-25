@@ -1,0 +1,22 @@
+- `[x]` **Phase 1: Foundation & Layout**
+  - `[x]` Sync global state management (`store`) from `FrontEndV2` to `FrontEnd`
+  - `[x]` Redesign and port `Sidebar`, `Header`, and `DashboardLayout` to `FrontEnd` with a modern aesthetic
+  - `[x]` Port `App.tsx` routing skeleton to support all 80+ routes
+- `[x]` **Phase 2: Master Forms Modernization**
+  - `[x]` Port `ItemMaster`
+  - `[x]` Port `PartyMaster`
+  - `[x]` Port remaining inventory masters (Brand, Category, SubCategory, Department, etc.)
+  - `[x]` Port remaining config masters
+- `[x]` **Phase 2.5: Build System Fixes**
+  - `[x]` Resolve TypeScript build errors (`npm run build` success!)
+  - `[x]` Clean up unused variables and module properties
+- `[ ]` **Phase 3: Core Operations Modernization**
+  - `[ ]` Port `PurchaseInvoice` and related purchase forms
+  - `[ ]` Port `PointOfSales` and related sales forms
+  - `[ ]` Port Logistics and Stock Transfer forms
+- `[ ]` **Phase 4: Reports & Compliance Modernization**
+  - `[ ]` Port Inventory and Sales Reports
+  - `[ ]` Port Compliance (GSTR, EInvoice) forms
+- `[ ]` **Phase 5: HR & Payroll Modernization**
+  - `[ ]` Port Attendance forms
+  - `[ ]` Port Payroll forms
