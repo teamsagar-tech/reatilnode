@@ -1,12 +1,11 @@
-import React from "react";
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Helmet } from 'react-helmet-async';
+import PremiumReportTemplate from '../../../components/layout/PremiumReportTemplate';
 import SearchableDropdown from '../../../components/SearchableDropdown';
+import { FileText, Search, FilterX, Eye, EyeOff } from 'lucide-react';
 
 export default function PurchaseInvoiceList() {
   const navigate = useNavigate();
-  const listRef = useRef<HTMLDivElement>(null);
   
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [isDetailed, setIsDetailed] = useState(false);
@@ -19,407 +18,187 @@ export default function PurchaseInvoiceList() {
     location: '',
   });
 
-  const [colWidths, setColWidths] = useState({
-    grn: 70,
-    recvDt: 80,
-    billNo: 70,
-    billDate: 80,
-    partyName: 200,
-    state: 100,
-    verified: 70,
-    valueDiff: 70,
-    totalAmt: 100,
-    discount: 70,
-    addChgs: 70,
-    taxableAmt: 100,
-    gstPercent: 50,
-    cgstAmt: 90,
-    sgstAmt: 90,
-    igstAmt: 90,
-    addLess: 70,
-    rOff: 50,
-    netAmount: 110,
-    userName: 80,
-  });
-
-  const handleResize = (colId: keyof typeof colWidths, newWidth: number) => {
-    setColWidths(prev => ({
-      ...prev,
-      [colId]: newWidth
-    }));
-  };
-
-  const ResizableHeader = ({ colId, title, className, minWidth = 40 }: { colId: keyof typeof colWidths, title: string, className?: string, minWidth?: number }) => {
-    const handleMouseDown = (e: React.MouseEvent) => {
-      e.preventDefault();
-      const startX = e.clientX;
-      const startWidth = colWidths[colId];
-
-      const onMouseMove = (moveEvent: MouseEvent) => {
-        const newWidth = Math.max(minWidth, startWidth + (moveEvent.clientX - startX));
-        handleResize(colId, newWidth);
-      };
-
-      const onMouseUp = () => {
-        document.removeEventListener('mousemove', onMouseMove);
-        document.removeEventListener('mouseup', onMouseUp);
-        document.body.style.cursor = 'default';
-      };
-
-      document.addEventListener('mousemove', onMouseMove);
-      document.addEventListener('mouseup', onMouseUp);
-      document.body.style.cursor = 'col-resize';
-    };
-
-    return (
-      <th 
-        className={`relative px-2 py-1 border-r border-slate-300 select-none ${className}`} 
-        style={{ width: colWidths[colId], minWidth: colWidths[colId], maxWidth: colWidths[colId] }}
-      >
-        <span className="truncate block w-full text-[11px] leading-tight" title={title}>{title}</span>
-        <div 
-          className="absolute right-0 top-0 h-full w-2 cursor-col-resize hover:bg-[#1b5e58] z-10 opacity-50"
-          onMouseDown={handleMouseDown}
-        />
-      </th>
-    );
-  };
-
-  const [invoices] = useState([
-    { 
-      id: 1, grn: '135939', recvDt: '29-Jul-26', billNo: '82474', billDate: '24-Jul-26', 
-      partyName: 'MEENAKSHI SILK KENDRA-(TI', state: 'Karnataka', verified: '', valueDiff: '', 
-      totalAmt: '57,440.00', discount: '', addChgs: '', taxableAmt: '57,440.00', 
-      gstPercent: '5', cgstAmt: '2,872.00', sgstAmt: '', igstAmt: '', addLess: '', rOff: '', 
-      netAmount: '60,312.00', userName: 'SHWETA',
-      items: [
-        { name: 'Red Cotton Shirt', qty: '100 pcs', rate: '1000.00', amount: '100,000.00' },
-        { name: 'Blue Denim Jeans', qty: '50 pcs', rate: '1000.00', amount: '50,000.00' }
-      ],
-      ledgers: [
-        { name: 'Purchase A/c', amount: '127,118.64' },
-        { name: 'CGST @ 9%', amount: '11,440.68' },
-        { name: 'SGST @ 9%', amount: '11,440.68' }
-      ]
-    },
-    { 
-      id: 2, grn: '135940', recvDt: '29-Jul-26', billNo: '82475', billDate: '24-Jul-26', 
-      partyName: 'MEENAKSHI SILK KENDRA-(TI', state: 'Karnataka', verified: '', valueDiff: '', 
-      totalAmt: '57,440.00', discount: '', addChgs: '', taxableAmt: '57,440.00', 
-      gstPercent: '5', cgstAmt: '2,872.00', sgstAmt: '', igstAmt: '', addLess: '', rOff: '', 
-      netAmount: '60,312.00', userName: 'SHWETA',
-      items: [
-        { name: 'Silk Saree', qty: '10 pcs', rate: '4100.00', amount: '41,000.00' }
-      ],
-      ledgers: [
-        { name: 'Purchase A/c', amount: '41,000.00' },
-        { name: 'IGST @ 5%', amount: '2,050.00' },
-        { name: 'Freight Charges', amount: '2,150.00' }
-      ]
-    },
-    { 
-      id: 3, grn: '135777', recvDt: '24-Jul-26', billNo: '74', billDate: '24-Jul-26', 
-      partyName: 'MOHD.IKHALAS MUSSADDI-(', state: 'Madhya P', verified: '', valueDiff: '', 
-      totalAmt: '51,300.00', discount: '', addChgs: '', taxableAmt: '51,300.00', 
-      gstPercent: '5', cgstAmt: '2,565.00', sgstAmt: '', igstAmt: '', addLess: '', rOff: '', 
-      netAmount: '53,865.00', userName: 'SHWETA',
-      items: [
-        { name: 'Leather Jacket', qty: '20 pcs', rate: '3500.00', amount: '70,000.00' },
-        { name: 'Winter Gloves', qty: '50 pcs', rate: '150.00', amount: '7,500.00' }
-      ],
-      ledgers: [
-        { name: 'Purchase A/c', amount: '77,500.00' },
-        { name: 'CGST @ 6%', amount: '4,650.00' },
-        { name: 'SGST @ 6%', amount: '4,650.00' },
-        { name: 'Discount Received', amount: '-2,700.00' },
-        { name: 'Packaging Charges', amount: '5,400.00' }
-      ]
-    },
-  ]);
-
-  const calcTotal = (field: keyof typeof invoices[0]) => {
-    return invoices.reduce((sum, inv) => {
-      const strVal = String(inv[field] || '0').replace(/,/g, '');
-      const val = parseFloat(strVal);
-      return sum + (isNaN(val) ? 0 : val);
-    }, 0);
-  };
-  
-  const fmt = (val: number) => val === 0 ? '' : val.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
-  useEffect(() => {
-    if (listRef.current) {
-      listRef.current.focus();
-    }
-  }, []);
+  const invoices = [
+    { id: 1, grn: '135939', recvDt: '29-Jul-26', billNo: '82474', billDate: '24-Jul-26', partyName: 'MEENAKSHI SILK KENDRA-(T NO.34)', state: 'Karnataka', verified: '', valueDiff: '', totalAmt: 57440, discount: 0, addChgs: 0, taxableAmt: 57440, gstPercent: 5, cgstAmt: 2872, sgstAmt: 0, igstAmt: 2872, addLess: 0, rOff: 0, netAmount: 63184, userName: '', items: [{ name: 'Silk Saree Kanjivaram', qty: 20, rate: 2872, amount: 57440 }], ledgers: [{ name: 'IGST @ 5%', amount: 2872 }] },
+    { id: 2, grn: '135940', recvDt: '29-Jul-26', billNo: '82475', billDate: '24-Jul-26', partyName: 'MEENAKSHI SILK KENDRA-(T NO.34)', state: 'Karnataka', verified: '', valueDiff: '', totalAmt: 57440, discount: 0, addChgs: 0, taxableAmt: 57440, gstPercent: 5, cgstAmt: 2872, sgstAmt: 0, igstAmt: 2872, addLess: 0, rOff: 0, netAmount: 63184, userName: '', items: [], ledgers: [] },
+    { id: 3, grn: '135777', recvDt: '24-Jul-26', billNo: '74', billDate: '24-Jul-26', partyName: 'MOHD.IKHALAS MUSSADDI-(MUMBAI)', state: 'Madhya Pradesh', verified: '', valueDiff: '', totalAmt: 51300, discount: 0, addChgs: 0, taxableAmt: 51300, gstPercent: 5, cgstAmt: 2565, sgstAmt: 0, igstAmt: 2565, addLess: 0, rOff: 0, netAmount: 56430, userName: '', items: [], ledgers: [] },
+  ];
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        setSelectedIndex(prev => (prev < invoices.length - 1 ? prev + 1 : prev));
+      if (e.key === 'Escape') {
+         e.preventDefault();
+         navigate(-1);
+      } else if (e.key === 'ArrowDown') {
+         e.preventDefault();
+         setSelectedIndex(prev => Math.min(prev + 1, invoices.length - 1));
       } else if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        setSelectedIndex(prev => (prev > 0 ? prev - 1 : prev));
-      } else if (e.key === 'Escape') {
-        e.preventDefault();
-        navigate(-1);
+         e.preventDefault();
+         setSelectedIndex(prev => Math.max(prev - 1, 0));
       } else if (e.key === 'F1') {
-        e.preventDefault();
-        setIsDetailed(prev => !prev);
+         e.preventDefault();
+         setIsDetailed(prev => !prev);
       } else if (e.altKey && e.key.toLowerCase() === 'c') {
-        e.preventDefault();
-        navigate('/purchase-invoice');
+         e.preventDefault();
+         navigate('/purchase-invoice');
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [navigate, invoices.length]);
 
+  const calcTotal = (field: string) => invoices.reduce((acc, inv: any) => acc + (parseFloat(inv[field]) || 0), 0);
+  const fmt = (num: number) => num.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
   return (
-    <>
-      <Helmet>
-        <title>Purchase Invoice List | RetailNode ERP</title>
-      </Helmet>
+    <PremiumReportTemplate
+      title="Purchase Invoice Register"
+      subtitle="Comprehensive log of all purchase invoices"
+      icon={<FileText className="w-6 h-6" />}
+      onCreate={() => navigate('/purchase-invoice')}
+      onExport={() => alert('Exporting to Excel...')}
+      maxWidth="max-w-[1600px]"
+    >
       
-      <div className='flex flex-col h-screen font-sans text-[13px] selection:bg-transparent overflow-hidden bg-[#e0efeb] w-full'>
-        <div className='flex flex-1 p-1 gap-1 overflow-hidden h-full'>
-          
-          {/* Main Container */}
-          <div className='flex-1 bg-[#fcfaf2] border-2 border-[#81a09d] flex flex-col overflow-hidden shadow-inner relative'>
-            <div className='bg-[#1b5e58] text-white font-bold px-2 py-1 flex justify-between shrink-0'>
-               <div>Purchase Invoice Register</div>
-               <div className='text-yellow-300'>RetailNode ERP</div>
-            </div>
-            
-            <div className='p-2 flex-1 flex flex-col overflow-hidden'>
-               
-               {/* Filters / Header Info */}
-               <div className='flex flex-row flex-wrap items-center gap-3 mb-2 bg-white border border-slate-400 p-2 shadow-sm'>
-                  <div className="flex items-center">
-                    <div className="text-slate-800 font-bold text-[11px] text-right pr-1">From</div>
-                    <input 
-                      type="date"
-                      className="w-[100px] bg-white border border-slate-400 px-1 py-[2px] text-[12px] font-bold text-black focus:bg-[#ffffe0] focus:outline-none focus:border-slate-800"
-                      value={filters.fromDate}
-                      onChange={(e) => setFilters({...filters, fromDate: e.target.value})}
-                    />
-                  </div>
+      {/* Top Filter Bar */}
+      <div className="bg-white/80 backdrop-blur-xl border border-slate-200/60 rounded-2xl shadow-sm p-4 shrink-0 flex flex-wrap items-end gap-4 z-20">
+         <div className="flex flex-col gap-1.5">
+           <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Date Range</label>
+           <div className="flex items-center gap-2">
+             <input type="date" className="bg-slate-50 border border-slate-200 px-3 py-2 rounded-xl text-sm font-bold text-slate-700 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100" value={filters.fromDate} onChange={e => setFilters({...filters, fromDate: e.target.value})} />
+             <span className="text-slate-400 font-bold text-sm">to</span>
+             <input type="date" className="bg-slate-50 border border-slate-200 px-3 py-2 rounded-xl text-sm font-bold text-slate-700 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100" value={filters.toDate} onChange={e => setFilters({...filters, toDate: e.target.value})} />
+           </div>
+         </div>
+         
+         <div className="flex flex-col gap-1.5 min-w-[200px]">
+           <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Firm</label>
+           <SearchableDropdown id="firm" className="bg-slate-50 border border-slate-200 px-3 py-2 rounded-xl text-sm font-bold text-slate-700 outline-none w-full" value={filters.firm} onChange={(v) => setFilters({...filters, firm: v})} options={['All Firms', 'Main Branch', 'Wholesale Division']} placeholder="All Firms" />
+         </div>
 
-                  <div className="flex items-center">
-                    <div className="text-slate-800 font-bold text-[11px] text-right pr-1">To</div>
-                    <input 
-                      type="date"
-                      className="w-[100px] bg-white border border-slate-400 px-1 py-[2px] text-[12px] font-bold text-black focus:bg-[#ffffe0] focus:outline-none focus:border-slate-800"
-                      value={filters.toDate}
-                      onChange={(e) => setFilters({...filters, toDate: e.target.value})}
-                    />
-                  </div>
+         <div className="flex flex-col gap-1.5 min-w-[200px]">
+           <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Party A/c</label>
+           <SearchableDropdown id="party" className="bg-slate-50 border border-slate-200 px-3 py-2 rounded-xl text-sm font-bold text-slate-700 outline-none w-full" value={filters.party} onChange={(v) => setFilters({...filters, party: v})} options={['All Parties', 'MEENAKSHI SILK KENDRA']} placeholder="All Parties" />
+         </div>
 
-                  <div className="flex items-center">
-                    <div className="text-slate-800 font-bold text-[11px] text-right pr-1">Firm</div>
-                    <SearchableDropdown
-                      id="filter-firm"
-                      className="w-[100px] bg-white border border-slate-400 px-1 py-[2px] text-[12px] font-bold text-black focus:bg-[#ffffe0] focus:outline-none focus:border-slate-800"
-                      value={filters.firm}
-                      onChange={(val) => setFilters({...filters, firm: val})}
-                      options={['All', 'RetailNode Default Firm', 'Branch Office 1']}
-                      placeholder="All Firms"
-                      width="150px"
-                    />
-                  </div>
-
-                  <div className="flex items-center">
-                    <div className="text-slate-800 font-bold text-[11px] text-right pr-1">Location</div>
-                    <SearchableDropdown
-                      id="filter-location"
-                      className="w-[100px] bg-white border border-slate-400 px-1 py-[2px] text-[12px] font-bold text-black focus:bg-[#ffffe0] focus:outline-none focus:border-slate-800"
-                      value={filters.location}
-                      onChange={(val) => setFilters({...filters, location: val})}
-                      options={['All', 'Main Godown', 'Store Front']}
-                      placeholder="All Locations"
-                      width="150px"
-                    />
-                  </div>
-
-                  <div className="flex items-center">
-                    <div className="text-slate-800 font-bold text-[11px] text-right pr-1">Party A/c</div>
-                    <SearchableDropdown
-                      id="filter-party"
-                      className="w-[180px] bg-white border border-slate-400 px-1 py-[2px] text-[12px] font-bold text-black focus:bg-[#ffffe0] focus:outline-none focus:border-slate-800"
-                      value={filters.party}
-                      onChange={(val) => setFilters({...filters, party: val})}
-                      options={['All', 'Supplier A', 'Vendor XYZ', 'Global Traders']}
-                      placeholder="All Parties"
-                      width="200px"
-                    />
-                  </div>
-                  
-                  <div className="ml-auto flex gap-2">
-                    <button className="bg-[#1b5e58] text-white px-3 py-1 font-bold text-[11px] hover:bg-[#12423d] shadow-[2px_2px_0_rgba(0,0,0,1)]">Search</button>
-                    <button className="border border-[#1b5e58] text-[#1b5e58] px-3 py-1 font-bold text-[11px] hover:bg-slate-100 shadow-[2px_2px_0_rgba(0,0,0,0.1)]">Clear</button>
-                  </div>
-               </div>
-
-               <div className='flex justify-between items-center mb-1'>
-                 <div className='font-bold text-slate-800 text-[14px] underline decoration-slate-400 underline-offset-4'>
-                   List of Purchase Invoices
-                 </div>
-               </div>
-
-               {/* Table Area - Added overflow-x-auto for horizontal scroll */}
-               <div 
-                 className='flex-1 border border-slate-400 bg-white overflow-auto outline-none flex flex-col'
-                 tabIndex={0}
-                 ref={listRef}
-               >
-                 <table className='text-left border-collapse min-h-full' style={{ tableLayout: 'fixed', minWidth: '100%' }}>
-                   <thead className='bg-[#eef5ed] sticky top-0 shadow-sm z-20'>
-                     <tr className='border-b-2 border-slate-400 text-slate-900 font-bold text-[11px]'>
-                       <ResizableHeader colId="grn" title="GRN" />
-                       <ResizableHeader colId="recvDt" title="RecvDt" />
-                       <ResizableHeader colId="billNo" title="Bill No" />
-                       <ResizableHeader colId="billDate" title="Bill Date" />
-                       <ResizableHeader colId="partyName" title="Party Name" />
-                       <ResizableHeader colId="state" title="State" />
-                       <ResizableHeader colId="verified" title="Verified" />
-                       <ResizableHeader colId="valueDiff" title="ValueDiff" />
-                       <ResizableHeader colId="totalAmt" title="Total Amt" className="text-right" />
-                       <ResizableHeader colId="discount" title="Discount" className="text-right" />
-                       <ResizableHeader colId="addChgs" title="Add Chgs" className="text-right" />
-                       <ResizableHeader colId="taxableAmt" title="Taxable Amt" className="text-right" />
-                       <ResizableHeader colId="gstPercent" title="GST%" className="text-center" />
-                       <ResizableHeader colId="cgstAmt" title="CGST Amt" className="text-right" />
-                       <ResizableHeader colId="sgstAmt" title="SGST Amt" className="text-right" />
-                       <ResizableHeader colId="igstAmt" title="IGST Amt" className="text-right" />
-                       <ResizableHeader colId="addLess" title="Add/Less" className="text-right" />
-                       <ResizableHeader colId="rOff" title="R.Off" className="text-right" />
-                       <ResizableHeader colId="netAmount" title="Net Amount" className="text-right" />
-                       <ResizableHeader colId="userName" title="User Name" />
-                     </tr>
-                   </thead>
-                   <tbody>
-                     {invoices.length > 0 ? invoices.map((inv, idx) => (
-                       <React.Fragment key={inv.id}>
-                         <tr 
-                           onClick={() => setSelectedIndex(idx)}
-                           className={`cursor-pointer ${selectedIndex === idx ? 'bg-[#ffe000] text-black font-bold' : (idx % 2 === 0 ? 'bg-white' : 'bg-[#fcfaf2]')}`}
-                         >
-                           <td className={`px-2 py-1 border-r border-slate-300 overflow-hidden text-ellipsis whitespace-nowrap ${selectedIndex === idx ? 'border-r-black' : ''}`}>{inv.grn}</td>
-                           <td className={`px-2 py-1 border-r border-slate-300 overflow-hidden text-ellipsis whitespace-nowrap ${selectedIndex === idx ? 'border-r-black' : ''}`}>{inv.recvDt}</td>
-                           <td className={`px-2 py-1 border-r border-slate-300 overflow-hidden text-ellipsis whitespace-nowrap ${selectedIndex === idx ? 'border-r-black' : ''}`}>{inv.billNo}</td>
-                           <td className={`px-2 py-1 border-r border-slate-300 overflow-hidden text-ellipsis whitespace-nowrap ${selectedIndex === idx ? 'border-r-black' : ''}`}>{inv.billDate}</td>
-                           <td className={`px-2 py-1 border-r border-slate-300 overflow-hidden text-ellipsis whitespace-nowrap ${selectedIndex === idx ? 'border-r-black' : ''}`}>{inv.partyName}</td>
-                           <td className={`px-2 py-1 border-r border-slate-300 overflow-hidden text-ellipsis whitespace-nowrap ${selectedIndex === idx ? 'border-r-black' : ''}`}>{inv.state}</td>
-                           <td className={`px-2 py-1 border-r border-slate-300 overflow-hidden text-ellipsis whitespace-nowrap ${selectedIndex === idx ? 'border-r-black' : ''}`}>{inv.verified}</td>
-                           <td className={`px-2 py-1 border-r border-slate-300 overflow-hidden text-ellipsis whitespace-nowrap ${selectedIndex === idx ? 'border-r-black' : ''}`}>{inv.valueDiff}</td>
-                           <td className={`px-2 py-1 border-r border-slate-300 overflow-hidden text-ellipsis whitespace-nowrap text-right ${selectedIndex === idx ? 'border-r-black' : ''}`}>{inv.totalAmt}</td>
-                           <td className={`px-2 py-1 border-r border-slate-300 overflow-hidden text-ellipsis whitespace-nowrap text-right ${selectedIndex === idx ? 'border-r-black' : ''}`}>{inv.discount}</td>
-                           <td className={`px-2 py-1 border-r border-slate-300 overflow-hidden text-ellipsis whitespace-nowrap text-right ${selectedIndex === idx ? 'border-r-black' : ''}`}>{inv.addChgs}</td>
-                           <td className={`px-2 py-1 border-r border-slate-300 overflow-hidden text-ellipsis whitespace-nowrap text-right ${selectedIndex === idx ? 'border-r-black' : ''}`}>{inv.taxableAmt}</td>
-                           <td className={`px-2 py-1 border-r border-slate-300 overflow-hidden text-ellipsis whitespace-nowrap text-center ${selectedIndex === idx ? 'border-r-black' : ''}`}>{inv.gstPercent}</td>
-                           <td className={`px-2 py-1 border-r border-slate-300 overflow-hidden text-ellipsis whitespace-nowrap text-right ${selectedIndex === idx ? 'border-r-black' : ''}`}>{inv.cgstAmt}</td>
-                           <td className={`px-2 py-1 border-r border-slate-300 overflow-hidden text-ellipsis whitespace-nowrap text-right ${selectedIndex === idx ? 'border-r-black' : ''}`}>{inv.sgstAmt}</td>
-                           <td className={`px-2 py-1 border-r border-slate-300 overflow-hidden text-ellipsis whitespace-nowrap text-right ${selectedIndex === idx ? 'border-r-black' : ''}`}>{inv.igstAmt}</td>
-                           <td className={`px-2 py-1 border-r border-slate-300 overflow-hidden text-ellipsis whitespace-nowrap text-right ${selectedIndex === idx ? 'border-r-black' : ''}`}>{inv.addLess}</td>
-                           <td className={`px-2 py-1 border-r border-slate-300 overflow-hidden text-ellipsis whitespace-nowrap text-right ${selectedIndex === idx ? 'border-r-black' : ''}`}>{inv.rOff}</td>
-                           <td className={`px-2 py-1 border-r border-slate-300 overflow-hidden text-ellipsis whitespace-nowrap text-right font-bold ${selectedIndex === idx ? 'border-r-black' : ''}`}>{inv.netAmount}</td>
-                           <td className={`px-2 py-1 border-r border-slate-300 overflow-hidden text-ellipsis whitespace-nowrap ${selectedIndex === idx ? 'border-r-black' : ''}`}>{inv.userName}</td>
-                         </tr>
-                         {isDetailed && (
-                           <>
-                             {inv.items?.map((item, itemIdx) => (
-                               <tr key={`${inv.id}-item-${itemIdx}`} className={`text-[11px] ${selectedIndex === idx ? 'bg-[#fff599] text-black' : 'bg-[#fcfaf2]'} border-b border-slate-200 border-dashed`}>
-                                 <td colSpan={4} className="px-2 py-[2px] border-r border-slate-300 border-dashed"></td>
-                                 <td colSpan={4} className="px-2 py-[2px] border-r border-slate-300 border-dashed pl-8 text-[#1b5e58] italic font-medium">
-                                   {item.name}
-                                   <span className="ml-4 text-slate-500">{item.qty} @ {item.rate}</span>
-                                 </td>
-                                 <td colSpan={10} className="px-2 py-[2px] border-r border-slate-300 border-dashed"></td>
-                                 <td className="px-2 py-[2px] text-right italic text-slate-600 border-r border-slate-300 border-dashed">{item.amount}</td>
-                                 <td className="px-2 py-[2px]"></td>
-                               </tr>
-                             ))}
-                             {inv.ledgers?.map((ledger, ledgerIdx) => (
-                               <tr key={`${inv.id}-ledger-${ledgerIdx}`} className={`text-[11px] ${selectedIndex === idx ? 'bg-[#fff599] text-black' : 'bg-[#fcfaf2]'} border-b border-slate-200`}>
-                                 <td colSpan={4} className="px-2 py-[2px] border-r border-slate-300"></td>
-                                 <td colSpan={4} className="px-2 py-[2px] border-r border-slate-300 pl-6 text-slate-800 font-medium">
-                                   {ledger.name}
-                                 </td>
-                                 <td colSpan={10} className="px-2 py-[2px] border-r border-slate-300 text-center text-slate-500"></td>
-                                 <td className="px-2 py-[2px] text-right text-slate-800 font-medium border-r border-slate-300">{ledger.amount}</td>
-                                 <td className="px-2 py-[2px]"></td>
-                               </tr>
-                             ))}
-                           </>
-                         )}
-                       </React.Fragment>
-                     )) : (
-                       <tr>
-                         <td colSpan={20} className="text-center py-4 font-bold text-slate-500 italic">
-                           No Invoices found for this period
-                         </td>
-                       </tr>
-                     )}
-                     <tr className="h-full">
-                       <td colSpan={20} className="border-none"></td>
-                     </tr>
-                   </tbody>
-                   <tfoot className="sticky bottom-0 bg-[#eef5ed] shadow-[0_-1px_3px_rgba(0,0,0,0.1)] z-10 border-t-2 border-slate-400">
-                     <tr className="font-bold text-slate-900 text-[12px]">
-                       <td colSpan={8} className="px-2 py-1 text-right border-r border-slate-300">Grand Total:</td>
-                       <td className="px-2 py-1 text-right border-r border-slate-300">{fmt(calcTotal('totalAmt'))}</td>
-                       <td className="px-2 py-1 text-right border-r border-slate-300">{fmt(calcTotal('discount'))}</td>
-                       <td className="px-2 py-1 text-right border-r border-slate-300">{fmt(calcTotal('addChgs'))}</td>
-                       <td className="px-2 py-1 text-right border-r border-slate-300">{fmt(calcTotal('taxableAmt'))}</td>
-                       <td className="px-2 py-1 text-right border-r border-slate-300"></td>
-                       <td className="px-2 py-1 text-right border-r border-slate-300">{fmt(calcTotal('cgstAmt'))}</td>
-                       <td className="px-2 py-1 text-right border-r border-slate-300">{fmt(calcTotal('sgstAmt'))}</td>
-                       <td className="px-2 py-1 text-right border-r border-slate-300">{fmt(calcTotal('igstAmt'))}</td>
-                       <td className="px-2 py-1 text-right border-r border-slate-300">{fmt(calcTotal('addLess'))}</td>
-                       <td className="px-2 py-1 text-right border-r border-slate-300">{fmt(calcTotal('rOff'))}</td>
-                       <td className="px-2 py-1 text-right border-r border-slate-300 text-[#1b5e58]">{fmt(calcTotal('netAmount'))}</td>
-                       <td></td>
-                     </tr>
-                   </tfoot>
-                 </table>
-               </div>
-            </div>
-          </div>
-
-          {/* Right Sidebar */}
-          <div className='w-[120px] flex-col gap-[2px] overflow-y-auto hidden lg:flex bg-[#e0efeb] shrink-0'>
-             {[
-               { key: 'F1', label: isDetailed ? 'Condensed' : 'Detailed', action: () => setIsDetailed(!isDetailed) },
-               { key: 'F2', label: 'Period' },
-               { key: 'F4', label: 'GRN Type' },
-               { key: 'Alt+C', label: 'Create', to: '/purchase-invoice' },
-             ].map((f) => (
-               <button 
-                 key={f.key} 
-                 onClick={() => f.action ? f.action() : (f.to ? navigate(f.to) : null)}
-                 className='flex flex-row items-center px-2 py-1 bg-[#e0efeb] border border-[#a3c3be] hover:bg-[#c9e1dd] hover:border-[#81a09d] text-left transition-all shadow-[inset_1px_1px_0_rgba(255,255,255,0.8)]'
-               >
-                 <span className='font-bold text-black text-[11px] w-[35px]'>{f.key}</span>
-                 <span className='text-black text-[11px] font-medium border-l border-[#a3c3be] pl-1 ml-1'>{f.label}</span>
-               </button>
-             ))}
-             <div className='flex-1' />
-             <button 
-               onClick={() => navigate(-1)}
-               className='flex flex-row items-center px-2 py-1 bg-[#e0efeb] border border-[#a3c3be] hover:bg-[#c9e1dd] hover:border-[#81a09d] text-left transition-all shadow-[inset_1px_1px_0_rgba(255,255,255,0.8)]'
-             >
-                 <span className='font-bold text-black text-[11px] w-[35px] underline'>Q</span>
-                 <span className='text-black text-[11px] font-medium border-l border-[#a3c3be] pl-1 ml-1'>Quit</span>
-             </button>
-          </div>
-        </div>
-        
-        {/* Footer */}
-        <div className='bg-[#1b5e58] text-white text-[11px] px-4 py-1 flex justify-between items-center border-t-2 border-[#12423d]'>
-          <div className='font-medium tracking-wide'>Purchase Invoice List</div>
-        </div>
+         <div className="flex gap-2 ml-auto">
+            <button className="flex items-center gap-2 px-6 py-2 rounded-xl bg-indigo-600 text-white font-bold hover:bg-indigo-700 shadow-sm transition-all h-[38px]">
+              <Search className="w-4 h-4" />
+              Search
+            </button>
+            <button className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-slate-200 text-slate-600 font-bold hover:bg-slate-50 shadow-sm transition-all h-[38px]" onClick={() => setFilters({fromDate: '', toDate: '', party: '', firm: '', location: ''})}>
+              <FilterX className="w-4 h-4" />
+              Clear
+            </button>
+         </div>
       </div>
-    </>
+
+      <div className="flex justify-between items-center px-2">
+         <h3 className="font-bold text-slate-700">List of Purchase Invoices</h3>
+         <button 
+           onClick={() => setIsDetailed(!isDetailed)} 
+           className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-700 font-bold text-xs hover:bg-indigo-100 transition-colors"
+         >
+           {isDetailed ? <><EyeOff className="w-3.5 h-3.5" /> Condensed View (F1)</> : <><Eye className="w-3.5 h-3.5" /> Detailed View (F1)</>}
+         </button>
+      </div>
+
+      {/* Main Data Grid */}
+      <div className="flex-1 bg-white/90 backdrop-blur-xl border border-slate-200/60 rounded-2xl shadow-sm flex flex-col overflow-hidden">
+         <div className="flex-1 overflow-auto">
+            <table className="w-full text-left border-collapse whitespace-nowrap min-w-[1800px]">
+              <thead className="bg-slate-50/90 backdrop-blur-md sticky top-0 z-10 shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
+                 <tr className="text-slate-500 font-black text-[10px] uppercase tracking-wider">
+                   <th className="px-4 py-3 border-b border-r border-slate-200 text-center w-[80px]">GRN</th>
+                   <th className="px-4 py-3 border-b border-r border-slate-200 text-center w-[90px]">Recv Dt</th>
+                   <th className="px-4 py-3 border-b border-r border-slate-200 text-center w-[80px]">Bill No</th>
+                   <th className="px-4 py-3 border-b border-r border-slate-200 text-center w-[90px]">Bill Date</th>
+                   <th className="px-4 py-3 border-b border-r border-slate-200 w-[250px]">Party Name</th>
+                   <th className="px-4 py-3 border-b border-r border-slate-200 w-[120px]">State</th>
+                   <th className="px-4 py-3 border-b border-r border-slate-200 text-center w-[80px]">Verified</th>
+                   <th className="px-4 py-3 border-b border-r border-slate-200 text-right w-[100px]">Total Amt</th>
+                   <th className="px-4 py-3 border-b border-r border-slate-200 text-right w-[100px]">Discount</th>
+                   <th className="px-4 py-3 border-b border-r border-slate-200 text-right w-[100px]">Add Chgs</th>
+                   <th className="px-4 py-3 border-b border-r border-slate-200 text-right w-[120px] bg-indigo-50/50 text-indigo-700">Taxable Amt</th>
+                   <th className="px-4 py-3 border-b border-r border-slate-200 text-center w-[60px]">GST%</th>
+                   <th className="px-4 py-3 border-b border-r border-slate-200 text-right w-[100px]">CGST Amt</th>
+                   <th className="px-4 py-3 border-b border-r border-slate-200 text-right w-[100px]">SGST Amt</th>
+                   <th className="px-4 py-3 border-b border-r border-slate-200 text-right w-[100px]">IGST Amt</th>
+                   <th className="px-4 py-3 border-b border-r border-slate-200 text-right w-[120px] bg-emerald-50/50 text-emerald-700">Net Amount</th>
+                 </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {invoices.map((inv, idx) => (
+                  <React.Fragment key={inv.id}>
+                    <tr className={`text-[13px] transition-colors cursor-pointer ${selectedIndex === idx ? 'bg-indigo-50/60 shadow-[inset_3px_0_0_#4f46e5]' : 'hover:bg-slate-50'}`} onClick={() => setSelectedIndex(idx)}>
+                      <td className="px-4 py-3 border-r border-slate-100 text-center font-bold text-slate-700">{inv.grn}</td>
+                      <td className="px-4 py-3 border-r border-slate-100 text-center text-slate-600">{inv.recvDt}</td>
+                      <td className="px-4 py-3 border-r border-slate-100 text-center font-bold text-slate-700">{inv.billNo}</td>
+                      <td className="px-4 py-3 border-r border-slate-100 text-center text-slate-600">{inv.billDate}</td>
+                      <td className="px-4 py-3 border-r border-slate-100 font-bold text-slate-800">{inv.partyName}</td>
+                      <td className="px-4 py-3 border-r border-slate-100 text-slate-600">{inv.state}</td>
+                      <td className="px-4 py-3 border-r border-slate-100 text-center text-slate-500">{inv.verified || '-'}</td>
+                      <td className="px-4 py-3 border-r border-slate-100 text-right font-bold text-slate-700">{fmt(inv.totalAmt)}</td>
+                      <td className="px-4 py-3 border-r border-slate-100 text-right text-slate-500">{inv.discount ? fmt(inv.discount) : '-'}</td>
+                      <td className="px-4 py-3 border-r border-slate-100 text-right text-slate-500">{inv.addChgs ? fmt(inv.addChgs) : '-'}</td>
+                      <td className="px-4 py-3 border-r border-slate-100 text-right font-black text-indigo-700 bg-indigo-50/30">{fmt(inv.taxableAmt)}</td>
+                      <td className="px-4 py-3 border-r border-slate-100 text-center font-bold text-slate-500">{inv.gstPercent}%</td>
+                      <td className="px-4 py-3 border-r border-slate-100 text-right text-slate-600">{inv.cgstAmt ? fmt(inv.cgstAmt) : '-'}</td>
+                      <td className="px-4 py-3 border-r border-slate-100 text-right text-slate-600">{inv.sgstAmt ? fmt(inv.sgstAmt) : '-'}</td>
+                      <td className="px-4 py-3 border-r border-slate-100 text-right text-slate-600">{inv.igstAmt ? fmt(inv.igstAmt) : '-'}</td>
+                      <td className="px-4 py-3 text-right font-black text-emerald-700 bg-emerald-50/30 text-[14px]">{fmt(inv.netAmount)}</td>
+                    </tr>
+                    
+                    {/* Detailed View Expansion */}
+                    {isDetailed && selectedIndex === idx && (
+                      <>
+                        {inv.items.length > 0 && inv.items.map((item, itemIdx) => (
+                          <tr key={`item-${itemIdx}`} className="bg-indigo-50/20 border-b border-indigo-100/50">
+                            <td colSpan={4} className="border-r border-indigo-100/50"></td>
+                            <td colSpan={3} className="px-6 py-2 border-r border-indigo-100/50 text-xs font-semibold text-indigo-800">
+                              <span className="inline-block w-4 h-4 bg-indigo-200 rounded-full text-[10px] text-center leading-4 mr-2 text-indigo-800">i</span>
+                              {item.name} <span className="text-indigo-400 font-normal ml-2">({item.qty} units @ ₹{item.rate})</span>
+                            </td>
+                            <td className="px-4 py-2 border-r border-indigo-100/50 text-right text-xs font-bold text-indigo-900">{fmt(item.amount)}</td>
+                            <td colSpan={8}></td>
+                          </tr>
+                        ))}
+                        {inv.ledgers.length > 0 && inv.ledgers.map((ledger, ledgerIdx) => (
+                          <tr key={`ledger-${ledgerIdx}`} className="bg-emerald-50/20 border-b border-emerald-100/50">
+                            <td colSpan={4} className="border-r border-emerald-100/50"></td>
+                            <td colSpan={3} className="px-6 py-2 border-r border-emerald-100/50 text-xs font-semibold text-emerald-800">
+                              <span className="inline-block w-4 h-4 bg-emerald-200 rounded-full text-[10px] text-center leading-4 mr-2 text-emerald-800">T</span>
+                              {ledger.name}
+                            </td>
+                            <td colSpan={7} className="border-r border-emerald-100/50"></td>
+                            <td className="px-4 py-2 text-right text-xs font-bold text-emerald-900">{fmt(ledger.amount)}</td>
+                            <td colSpan={1}></td>
+                          </tr>
+                        ))}
+                      </>
+                    )}
+                  </React.Fragment>
+                ))}
+              </tbody>
+            </table>
+         </div>
+         
+         {/* Table Footer Totals */}
+         <div className="bg-slate-50 border-t border-slate-200 p-4 shrink-0 flex items-center shadow-[0_-2px_10px_rgba(0,0,0,0.02)]">
+            <div className="font-black text-slate-800 text-sm uppercase tracking-widest w-[690px] text-right pr-4">Grand Totals :</div>
+            <div className="flex-1 grid grid-cols-[100px_100px_100px_120px_60px_100px_100px_100px_120px] divide-x divide-slate-200 text-right font-black text-sm text-slate-800">
+               <div className="px-4">{fmt(calcTotal('totalAmt'))}</div>
+               <div className="px-4">{fmt(calcTotal('discount'))}</div>
+               <div className="px-4">{fmt(calcTotal('addChgs'))}</div>
+               <div className="px-4 text-indigo-700">{fmt(calcTotal('taxableAmt'))}</div>
+               <div className="px-4 text-center">-</div>
+               <div className="px-4 text-slate-600">{fmt(calcTotal('cgstAmt'))}</div>
+               <div className="px-4 text-slate-600">{fmt(calcTotal('sgstAmt'))}</div>
+               <div className="px-4 text-slate-600">{fmt(calcTotal('igstAmt'))}</div>
+               <div className="px-4 text-emerald-600 text-base">{fmt(calcTotal('netAmount'))}</div>
+            </div>
+         </div>
+      </div>
+    </PremiumReportTemplate>
   );
 }

@@ -1,16 +1,43 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Helmet } from 'react-helmet-async';
+import { Mail, Lock, LogIn, ArrowRight, Activity, Eye, EyeOff } from 'lucide-react';
 
 export default function Login() {
   const navigate = useNavigate();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (username && password) {
+    if (!username || !password) return;
+    
+    setError("");
+    setLoading(true);
+    
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: username, password })
+      });
+      const data = await res.json();
+      
+      if (!res.ok) {
+        throw new Error(data.error || "Login failed");
+      }
+      
+      // Success
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("user", JSON.stringify(data.user));
       navigate("/dashboard");
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -20,96 +47,147 @@ export default function Login() {
         <title>Login | RetailNode ERP</title>
       </Helmet>
       
-      {/* RetailNode Main Background */}
-      <div className="flex flex-col h-screen font-sans text-[14px] selection:bg-transparent overflow-hidden bg-[#e0efeb] w-full">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex flex-col justify-center py-12 sm:px-6 lg:px-8 font-sans relative overflow-hidden">
         
-        
-
-        {/* Main Content Area */}
-        <div className="flex flex-1 p-1 gap-1 overflow-hidden h-full">
-          {/* Main Container */}
-          <div className="flex-1 bg-[#fcfaf2] border-2 border-[#81a09d] flex items-center justify-center overflow-hidden shadow-inner relative">
-            
-            {/* The Login Modal Box */}
-            <div className="w-[400px] bg-[#eef5ed] border-2 border-slate-400 shadow-[2px_2px_5px_rgba(0,0,0,0.3)] relative">
-              {/* Modal Header */}
-              <div className="bg-[#1b5e58] text-white font-bold text-center py-1 tracking-wider text-sm border-b-2 border-[#12423d]">
-                Company Login
-              </div>
-              
-              <div className="p-6">
-                <form onSubmit={handleLogin} className="flex flex-col gap-4">
-                  
-                  <div className="flex justify-between items-center">
-                    <label className="font-bold text-black text-sm w-1/3">Name of User</label>
-                    <input 
-                      type="text" 
-                      className="w-2/3 border border-slate-500 p-1 px-2 focus:bg-white focus:outline-none focus:border-black shadow-inner" 
-                      value={username}
-                      onChange={(e) => setUsername(e.target.value)}
-                      autoFocus
-                    />
-                  </div>
-
-                  <div className="flex justify-between items-center">
-                    <label className="font-bold text-black text-sm w-1/3">Password</label>
-                    <input 
-                      type="password" 
-                      className="w-2/3 border border-slate-500 p-1 px-2 focus:bg-white focus:outline-none focus:border-black shadow-inner tracking-widest" 
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                    />
-                  </div>
-
-                  {/* Hidden submit button to allow Enter key to submit */}
-                  <button type="submit" className="hidden">Submit</button>
-
-                </form>
-              </div>
-
-              {/* Instructions text mimicking RetailNode */}
-              <div className="border-t border-[#81a09d] p-2 text-center text-xs font-semibold text-slate-700 italic">
-                Press Enter to Login or Esc to Quit
-              </div>
-            </div>
-
-            {/* Version / Info text at bottom of the white area */}
-            <div className="absolute bottom-4 right-4 text-xs font-bold text-slate-500">
-              RetailNode V2
-            </div>
-          </div>
-
-          {/* Right Action Sidebar (F-keys) - mostly empty for login, but structure kept */}
-          <div className="w-[120px] flex-col gap-[2px] overflow-y-auto hidden lg:flex bg-[#e0efeb]">
-             {/* Just a quit button to match structure */}
-             <div className="flex-1" />
-             <div className="flex flex-col items-center justify-center p-2 mb-2 border-t border-[#a3c3be] mx-2 pt-4">
-               <svg width="64" height="64" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-                 <circle cx="100" cy="100" r="86" fill="transparent" stroke="#1b5e58" strokeWidth="14" />
-                 <circle cx="14" cy="100" r="8" fill="transparent" stroke="#1b5e58" strokeWidth="5" />
-                 <circle cx="186" cy="100" r="8" fill="transparent" stroke="#1b5e58" strokeWidth="5" />
-                 <text x="100" y="100" fontFamily="system-ui, -apple-system, sans-serif" fontWeight="900" fontSize="72" textAnchor="middle" dominantBaseline="central">
-                   <tspan fill="#12423d">RN</tspan><tspan fill="#1b5e58">.</tspan>
-                 </text>
-               </svg>
-               <span className="font-extrabold text-[13px] text-[#12423d] mt-2 uppercase tracking-widest text-center">RetailNode</span>
-             </div>
-
-             <button 
-               onClick={() => {}}
-               className="flex flex-row items-center px-2 py-1 bg-[#e0efeb] border border-[#a3c3be] hover:bg-[#c9e1dd] hover:border-[#81a09d] text-left transition-all shadow-[inset_1px_1px_0_rgba(255,255,255,0.8)]"
-             >
-                 <span className="font-bold text-black text-xs w-[25px] underline">Q</span>
-                 <span className="text-black text-xs font-medium border-l border-[#a3c3be] pl-1 ml-1">Quit</span>
-             </button>
-          </div>
+        {/* Background Decorative Elements */}
+        <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0 pointer-events-none">
+          <div className="absolute -top-[20%] -left-[10%] w-[50%] h-[50%] rounded-full bg-emerald-100/40 blur-3xl" />
+          <div className="absolute top-[20%] -right-[10%] w-[40%] h-[60%] rounded-full bg-indigo-100/40 blur-3xl" />
         </div>
 
-        {/* Bottom Status Bar */}
-        <div className="bg-[#1b5e58] text-white text-[11px] px-4 py-1 flex justify-between items-center border-t-2 border-[#12423d]">
-          <div className="font-medium tracking-wide">Login Screen</div>
-          <div className="flex gap-6">
-            <span>Version: 1.0</span>
+        <div className="sm:mx-auto sm:w-full sm:max-w-md z-10">
+          <div className="flex justify-center mb-6 items-center gap-3">
+             <img src="/logo.svg" alt="RetailNode Logo" className="w-16 h-16 drop-shadow-md" />
+             <h2 className="text-4xl font-black tracking-tight text-slate-800">
+               Retail<span className="text-sky-500">Node</span>
+             </h2>
+          </div>
+          <h2 className="text-center text-2xl font-bold tracking-tight text-slate-900">
+            Sign in to your account
+          </h2>
+          <p className="mt-2 text-center text-sm text-slate-600 font-medium">
+            Or contact your admin for access
+          </p>
+        </div>
+
+        <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md z-10">
+          <div className="bg-white/70 backdrop-blur-xl py-8 px-4 shadow-xl shadow-slate-200/50 sm:rounded-2xl sm:px-10 border border-slate-200/60">
+            <form className="space-y-6" onSubmit={handleLogin}>
+              
+              {error && (
+                <div className="bg-rose-50 border-l-4 border-rose-500 p-4 rounded-md">
+                  <div className="flex">
+                    <div className="ml-3">
+                      <p className="text-sm text-rose-700 font-medium">
+                        {error}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <label htmlFor="email" className="block text-sm font-semibold leading-6 text-slate-900">
+                  Username / Mobile / Email
+                </label>
+                <div className="mt-2 relative">
+                  <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                    <Mail className="h-5 w-5 text-slate-400" />
+                  </div>
+                  <input
+                    id="email"
+                    name="email"
+                    type="text"
+                    autoComplete="username"
+                    required
+                    disabled={loading}
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    className="block w-full rounded-xl border-0 py-2.5 pl-10 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-emerald-600 sm:text-sm sm:leading-6 bg-white/50 transition-shadow font-medium"
+                    placeholder="Enter username, mobile or email"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="password" className="block text-sm font-semibold leading-6 text-slate-900">
+                  Password
+                </label>
+                <div className="mt-2 relative">
+                  <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                    <Lock className="h-5 w-5 text-slate-400" />
+                  </div>
+                  <input
+                    id="password"
+                    name="password"
+                    type={showPassword ? "text" : "password"}
+                    autoComplete="current-password"
+                    required
+                    disabled={loading}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="block w-full rounded-xl border-0 py-2.5 pl-10 pr-10 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-emerald-600 sm:text-sm sm:leading-6 bg-white/50 transition-shadow font-medium tracking-wider"
+                    placeholder={showPassword ? "password" : "••••••••"}
+                  />
+                  <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+                    <button 
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="text-slate-400 hover:text-slate-600 focus:outline-none"
+                    >
+                      {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <input
+                    id="remember-me"
+                    name="remember-me"
+                    type="checkbox"
+                    className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-600"
+                  />
+                  <label htmlFor="remember-me" className="ml-2 block text-sm text-slate-900 font-medium">
+                    Remember me
+                  </label>
+                </div>
+
+                <div className="text-sm leading-6">
+                  <a href="#" className="font-semibold text-emerald-600 hover:text-emerald-500 transition-colors">
+                    Forgot password?
+                  </a>
+                </div>
+              </div>
+
+              <div>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="group relative flex w-full justify-center rounded-xl bg-emerald-600 px-3 py-3 text-sm font-semibold text-white shadow-sm hover:bg-emerald-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 disabled:opacity-70 disabled:cursor-not-allowed transition-all"
+                >
+                  {loading ? (
+                    "Signing in..."
+                  ) : (
+                    <>
+                      Sign in
+                      <ArrowRight className="ml-2 h-5 w-5 opacity-70 group-hover:opacity-100 transition-opacity" />
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+          
+          <div className="text-center mt-8 space-y-2">
+            <p className="text-xs font-semibold text-slate-400">
+              © {new Date().getFullYear()} RetailNode. All rights reserved.
+            </p>
+            <div className="flex justify-center space-x-4 text-xs font-medium text-slate-500">
+              <a href="/privacy-policy" className="hover:text-emerald-600 transition-colors">Privacy Policy</a>
+              <a href="/terms-of-service" className="hover:text-emerald-600 transition-colors">Terms of Service</a>
+            </div>
           </div>
         </div>
       </div>

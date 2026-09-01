@@ -1,42 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
+import MultiAttributeModal from '../../components/inventory/MultiAttributeModal';
+import PartyModal from '../../components/inventory/PartyModal';
+import MasterCreationModal from '../../components/inventory/MasterCreationModal';
+import SearchableDropdown from '../../components/SearchableDropdown';
 
-const ITEM_SUGGESTIONS = [
-  { id: 101, name: 'Basic Cotton T-Shirt', type: 'Readymade', stock: 15, sizes: { S: 5, M: 8, L: 2, XL: 0 }, sales: 40, status: 'Reorder', brand: 'Nike', rate: 450 },
-  { id: 102, name: 'Classic Denim Jeans', type: 'Readymade', stock: 120, sizes: { '28': 20, '30': 40, '32': 50, '34': 10 }, sales: 15, status: 'Sufficient', brand: 'Levi', rate: 1200 },
-  { id: 103, name: 'Banarasi Silk Saree', type: 'Saree', stock: 5, sales: 50, status: 'Critical', brand: 'FabIndia', rate: 4800 },
-  { id: 104, name: 'Casual Chinos', type: 'Readymade', stock: 60, sizes: { '30': 20, '32': 30, '34': 10 }, sales: 20, status: 'Sufficient', brand: 'Zara', rate: 1500 },
-  { id: 105, name: 'Winter Jacket', type: 'Readymade', stock: 8, sizes: { M: 2, L: 4, XL: 2 }, sales: 2, status: 'Reorder', brand: 'H&M', rate: 3500 },
-  { id: 106, name: 'Running Sneakers', type: 'Footwear', stock: 45, sizes: { '7': 5, '8': 15, '9': 15, '10': 10 }, sales: 30, status: 'Sufficient', brand: 'Adidas', rate: 2500 },
-  { id: 107, name: 'Designer Wedding Saree', type: 'Saree', stock: 2, sales: 10, status: 'Critical', brand: 'Manyavar', rate: 15000 },
-];
 
-const ACTIVE_USERS = [
-  { id: 1, name: 'Arjun Kapoor', role: 'Admin' },
-  { id: 2, name: 'Rahul Sharma', role: 'Manager' },
-  { id: 3, name: 'Priya Singh', role: 'Purchaser' },
-  { id: 4, name: 'Vikram Mehta', role: 'Purchaser' },
-  { id: 5, name: 'Neha Gupta', role: 'Staff' }
-];
-
-const SUPPLIERS = [
-  { id: 1, name: 'Apex Suppliers Ltd.', gst: '27AADCA1234F1Z9', state: 'Maharashtra', gstStatus: 'Active' },
-  { id: 2, name: 'Global Textiles', gst: '24AAFCG5678G1Z2', state: 'Gujarat', gstStatus: 'Active' },
-  { id: 3, name: 'Metro Apparel Hub', gst: '07BBDCM9012H1Z5', state: 'Delhi', gstStatus: 'Suspended' },
-  { id: 4, name: 'Southern Silks', gst: '29CCDSN3456J1Z8', state: 'Karnataka', gstStatus: 'Active' },
-  { id: 5, name: 'Eastern Garments', gst: '19EEFTE7890K1Z1', state: 'West Bengal', gstStatus: 'Cancelled' }
-];
 
 export default function PurchaseInvoice() {
   const navigate = useNavigate();
+  const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+  const modKey = isMac ? 'Option' : 'Alt';
 
   const [invoiceData, setInvoiceData] = useState({
     invoiceDate: new Date().toISOString().split('T')[0],
-    supplier: 'Apex Suppliers Ltd.',
-    firm: 'TechCorp India',
-    location: 'Mumbai Warehouse',
-    purchaser: 'Arjun Kapoor',
+    supplier: '',
+    firm: '',
+    location: '',
+    purchaser: '',
     requireBoxPacking: false,
     taxType: 'CGST_SGST' as 'IGST' | 'CGST_SGST',
     discountPercent: 0,
@@ -59,6 +41,7 @@ export default function PurchaseInvoice() {
     designNo: false,
     colourNo: false,
     showSize: false,
+    showLocation: false,
     showPurchaseDiscount: false,
     showMarkdown: false
   });
@@ -70,43 +53,129 @@ export default function PurchaseInvoice() {
   const [activeSuggestionRow, setActiveSuggestionRow] = useState<number | null>(null);
   const [suggestionIndex, setSuggestionIndex] = useState<number>(0);
 
+  // Multi-Attribute Modal State
+  const [activeModalRow, setActiveModalRow] = useState<number | null>(null);
+  const [showPartyModal, setShowPartyModal] = useState(false);
+  const [masterModal, setMasterModal] = useState<{ type: 'brand' | 'size' | 'item' | 'hsn', initialValue: string, rowIndex: number } | null>(null);
+
   const [showPurchaserDropdown, setShowPurchaserDropdown] = useState(false);
   const [purchaserIndex, setPurchaserIndex] = useState(0);
 
   const [showSupplierDropdown, setShowSupplierDropdown] = useState(false);
   const [supplierIndex, setSupplierIndex] = useState(0);
 
+  const [activeUsers, setActiveUsers] = useState<any[]>([]);
+  const [vendors, setVendors] = useState<any[]>([]);
+  const [availableItems, setAvailableItems] = useState<any[]>([]);
+  const [availableBrands, setAvailableBrands] = useState<any[]>([]);
+  const [brandSuggestionIndex, setBrandSuggestionIndex] = useState(0);
+  const [activeBrandRow, setActiveBrandRow] = useState<number | null>(null);
+  
+  const [availableHsns, setAvailableHsns] = useState<any[]>([]);
+  const [hsnSuggestionIndex, setHsnSuggestionIndex] = useState(0);
+  const [activeHsnRow, setActiveHsnRow] = useState<number | null>(null);
+  
+  const [locations, setLocations] = useState<any[]>([]);
+
   useEffect(() => {
+    // Fetch Items
+    fetch('https://api.retailnode.in/api/items', {
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    })
+    .then(res => res.json())
+    .then(data => setAvailableItems(Array.isArray(data) ? data : []))
+    .catch(console.error);
+
+    // Fetch Brands
+    fetch('https://api.retailnode.in/api/masters/brand', {
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    })
+    .then(res => res.json())
+    .then(data => setAvailableBrands(Array.isArray(data) ? data : []))
+    .catch(console.error);
+
+    // Fetch Locations
+    fetch('https://api.retailnode.in/api/masters/generic/Locations', {
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    })
+    .then(res => res.json())
+    .then(data => setLocations(Array.isArray(data) ? data : []))
+    .catch(console.error);
+
+    // Fetch Vendors
+    fetch('https://api.retailnode.in/api/vendors', {
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    })
+    .then(res => res.json())
+    .then(data => setVendors(Array.isArray(data) ? data : []))
+    .catch(console.error);
+
+    // Fetch Purchasers
+    fetch('https://api.retailnode.in/api/users/purchasers', {
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    })
+    .then(res => res.json())
+    .then(data => setActiveUsers(Array.isArray(data) ? data : []))
+    .catch(console.error);
+
+    // Fetch HSNs
+    fetch('https://api.retailnode.in/api/masters/generic/hsnsacs', {
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    })
+    .then(res => res.json())
+    .then(data => setAvailableHsns(Array.isArray(data) ? data : []))
+    .catch(console.error);
+
     // Auto-focus first field
     setTimeout(() => {
       document.getElementById('input-orderNo')?.focus();
     }, 100);
+  }, []);
 
+  useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.preventDefault();
-        if (showSupplierDropdown) setShowSupplierDropdown(false);
+        if (showPartyModal) setShowPartyModal(false);
+        else if (showSupplierDropdown) setShowSupplierDropdown(false);
         else if (showPurchaserDropdown) setShowPurchaserDropdown(false);
         else if (activeSuggestionRow !== null) setActiveSuggestionRow(null);
+        else if (activeHsnRow !== null) setActiveHsnRow(null);
         else navigate('/dashboard');
       }
       
       if (e.altKey) {
-        if (e.key.toLowerCase() === 's') {
+        if (e.code === 'KeyS') {
           e.preventDefault();
           console.log('Submit Order');
-        } else if (e.key.toLowerCase() === 'd') {
+        } else if (e.code === 'KeyD') {
           e.preventDefault();
           console.log('Save Draft');
-        } else if (e.key.toLowerCase() === 'b') {
+        } else if (e.code === 'KeyB') {
           e.preventDefault();
           setInvoiceData(prev => ({ ...prev, requireBoxPacking: !prev.requireBoxPacking }));
+        } else if (e.code === 'KeyZ') {
+          e.preventDefault();
+          setInvoiceData(prev => ({ ...prev, designNo: !prev.designNo }));
+        } else if (e.code === 'KeyX') {
+          e.preventDefault();
+          setInvoiceData(prev => ({ ...prev, showSize: !prev.showSize }));
+        } else if (e.code === 'KeyL') {
+          e.preventDefault();
+          setInvoiceData(prev => ({ ...prev, showLocation: !prev.showLocation }));
+        } else if (e.code === 'KeyV') {
+          e.preventDefault();
+          setInvoiceData(prev => ({ ...prev, showPurchaseDiscount: !prev.showPurchaseDiscount }));
+        } else if (e.code === 'KeyM') {
+          e.preventDefault();
+          setInvoiceData(prev => ({ ...prev, showMarkdown: !prev.showMarkdown }));
         }
       }
     };
     window.addEventListener('keydown', handleGlobalKeyDown);
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-  }, [showSupplierDropdown, showPurchaserDropdown, activeSuggestionRow, navigate]);
+  }, [showSupplierDropdown, showPurchaserDropdown, activeSuggestionRow, showPartyModal, navigate]);
+
 
   const handleInvoiceChange = (field: string, value: any) => {
     setInvoiceData(prev => ({ ...prev, [field]: value }));
@@ -121,7 +190,7 @@ export default function PurchaseInvoice() {
   };
 
   const addProduct = () => {
-    setProducts([...products, { id: Date.now(), item: '', brand: '', qty: '', rate: '', disc: 0, gst: 0, design: '', colour: '', size: '', mrp: 0 }]);
+    setProducts([...products, { id: Date.now(), item: '', hsn: '', brand: '', qty: '', rate: '', disc: 0, gst: 0, design: '', colour: '', size: '', mrp: 0 }]);
   };
 
   const removeProduct = (index: number) => {
@@ -132,6 +201,8 @@ export default function PurchaseInvoice() {
     }
   };
 
+
+
   const handleHeaderKeyDown = (e: React.KeyboardEvent<HTMLInputElement | HTMLSelectElement>, nextFieldId: string) => {
     if (e.key === 'Enter') {
       e.preventDefault();
@@ -139,75 +210,77 @@ export default function PurchaseInvoice() {
     }
   };
 
-  const handleSupplierKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    const query = (invoiceData.supplier || '').toLowerCase();
-    const filtered = SUPPLIERS.filter(s => s.name.toLowerCase().includes(query) || s.gst.toLowerCase().includes(query));
-
-    if (showSupplierDropdown) {
-      if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        setSupplierIndex(prev => Math.min(prev + 1, filtered.length - 1));
-        return;
-      } else if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        setSupplierIndex(prev => Math.max(prev - 1, 0));
-        return;
-      } else if (e.key === 'Enter' && filtered.length > 0) {
-        e.preventDefault();
-        const selected = filtered[supplierIndex];
-        handleInvoiceChange('supplier', selected.name);
-        if (selected.state !== 'Maharashtra') {
-          handleInvoiceChange('taxType', 'IGST');
-        } else {
-          handleInvoiceChange('taxType', 'CGST_SGST');
-        }
-        setShowSupplierDropdown(false);
-        document.getElementById('input-billNo')?.focus();
-        return;
-      }
-    }
-    
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      document.getElementById('input-billNo')?.focus();
-    }
-  };
-
-  const handlePurchaserKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    const query = (invoiceData.purchaser || '').toLowerCase();
-    const filtered = ACTIVE_USERS.filter(u => u.name.toLowerCase().includes(query));
-
-    if (showPurchaserDropdown) {
-      if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        setPurchaserIndex(prev => Math.min(prev + 1, filtered.length - 1));
-        return;
-      } else if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        setPurchaserIndex(prev => Math.max(prev - 1, 0));
-        return;
-      } else if (e.key === 'Enter' && filtered.length > 0) {
-        e.preventDefault();
-        handleInvoiceChange('purchaser', filtered[purchaserIndex].name);
-        setShowPurchaserDropdown(false);
-        document.getElementById('input-transporter')?.focus();
-        return;
-      }
-    }
-    
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      document.getElementById('input-transporter')?.focus();
-    }
-  };
-
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, index: number, field: string) => {
-    const fields = ['item', 'brand', 'qty', 'rate', 'disc', 'mrp'];
+    const fields = ['brand', 'item', 'hsn', 'qty', 'rate', 'disc', 'mrp'];
     const currentFieldIndex = fields.indexOf(field);
+
+    if (e.altKey && (e.key.toLowerCase() === 'c' || e.code === 'KeyC')) {
+      e.preventDefault();
+      if (['brand', 'size', 'item', 'gst'].includes(field)) {
+        setMasterModal({ 
+          type: field === 'gst' ? 'hsn' : field as any,
+          initialValue: e.currentTarget.value || '',
+          rowIndex: index
+        });
+      }
+      return;
+    }
+
+    if (field === 'brand' && activeBrandRow === index) {
+      const query = (products[index].brand || '').toLowerCase();
+      const filtered = availableBrands.filter(b => (b.name || '').toLowerCase().startsWith(query)).slice(0, 8);
+      
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setBrandSuggestionIndex(prev => Math.min(prev + 1, filtered.length - 1));
+        return;
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setBrandSuggestionIndex(prev => Math.max(prev - 1, 0));
+        return;
+      } else if (e.key === 'Enter' && filtered.length > 0) {
+        e.preventDefault();
+        const selected = filtered[brandSuggestionIndex];
+        const newProducts = [...products];
+        newProducts[index] = { ...newProducts[index], brand: selected.name || '' };
+        setProducts(newProducts);
+        setActiveBrandRow(null);
+        document.getElementById(`row-${index}-item`)?.focus();
+        return;
+      }
+    }
+
+    if (field === 'hsn' && activeHsnRow === index) {
+      const query = (products[index].hsn || '').toLowerCase();
+      const filtered = availableHsns.filter(s => (s.name || '').toLowerCase().startsWith(query)).slice(0, 8);
+      
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setHsnSuggestionIndex(prev => Math.min(prev + 1, filtered.length - 1));
+        return;
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setHsnSuggestionIndex(prev => Math.max(prev - 1, 0));
+        return;
+      } else if (e.key === 'Enter' && filtered.length > 0) {
+        e.preventDefault();
+        const selected = filtered[hsnSuggestionIndex];
+        const newProducts = [...products];
+        newProducts[index] = { 
+          ...newProducts[index], 
+          hsn: selected.name || '', 
+          gst: selected.tax_percent !== undefined ? selected.tax_percent : 0 
+        };
+        setProducts(newProducts);
+        setActiveHsnRow(null);
+        document.getElementById(`row-${index}-qty`)?.focus();
+        return;
+      }
+    }
 
     if (field === 'item' && activeSuggestionRow === index) {
       const query = products[index].item.toLowerCase();
-      const filtered = ITEM_SUGGESTIONS.filter(s => s.name.toLowerCase().includes(query)).slice(0, 8);
+      const filtered = availableItems.filter(s => (s.name || s.item_name || '').toLowerCase().includes(query)).slice(0, 8);
       
       if (e.key === 'ArrowDown') {
         e.preventDefault();
@@ -221,7 +294,7 @@ export default function PurchaseInvoice() {
         e.preventDefault();
         const selected = filtered[suggestionIndex];
         const newProducts = [...products];
-        newProducts[index] = { ...newProducts[index], item: selected.name, brand: selected.brand, rate: selected.rate };
+        newProducts[index] = { ...newProducts[index], item: selected.name || selected.item_name, brand: selected.brand || '', rate: selected.purchase_price || selected.rate || '' };
         setProducts(newProducts);
         setActiveSuggestionRow(null);
         document.getElementById(`row-${index}-qty`)?.focus();
@@ -269,6 +342,26 @@ export default function PurchaseInvoice() {
 
   const handleItemBlur = () => {
     setTimeout(() => setActiveSuggestionRow(null), 200);
+  };
+
+  const handleBrandFocus = (e: React.FocusEvent<HTMLInputElement>, index: number) => {
+    e.target.select();
+    setActiveBrandRow(index);
+    setBrandSuggestionIndex(0);
+  };
+
+  const handleBrandBlur = () => {
+    setTimeout(() => setActiveBrandRow(null), 200);
+  };
+
+  const handleHsnFocus = (e: React.FocusEvent<HTMLInputElement>, index: number) => {
+    e.target.select();
+    setActiveHsnRow(index);
+    setHsnSuggestionIndex(0);
+  };
+
+  const handleHsnBlur = () => {
+    setTimeout(() => setActiveHsnRow(null), 200);
   };
 
   const subtotal = products.reduce((acc, p) => acc + ((p.qty || 0) * (p.rate || 0) * (1 - (p.disc || 0) / 100)), 0);
@@ -339,18 +432,23 @@ export default function PurchaseInvoice() {
                   </div>
 
                   <div className="flex items-center">
-                    <span className="w-[100px] text-slate-800 font-bold mr-2">Order By :</span>
-                    <div className="relative flex-1">
-                      <input type="text" id="input-purchaser" value={invoiceData.purchaser} onChange={e => { handleInvoiceChange('purchaser', e.target.value); setPurchaserIndex(0); }} onFocus={(e) => { e.target.select(); setShowPurchaserDropdown(true); }} onBlur={() => setTimeout(() => setShowPurchaserDropdown(false), 200)} onKeyDown={handlePurchaserKeyDown} className="border border-slate-500 bg-white px-1 w-full focus:outline-none focus:border-black focus:bg-[#ffffe0]" autoComplete="off" />
-                      {showPurchaserDropdown && (
-                        <div className="absolute top-full left-0 right-0 mt-0 bg-white border-2 border-black z-50 max-h-[150px] overflow-y-auto shadow-md">
-                          {ACTIVE_USERS.filter(u => u.name.toLowerCase().includes((invoiceData.purchaser || '').toLowerCase())).map((user, uIdx) => (
-                            <div key={user.id} className={`px-2 py-1 text-xs cursor-pointer ${uIdx === purchaserIndex ? 'bg-[#ffe000] text-black font-bold' : 'hover:bg-slate-200'}`} onClick={() => { handleInvoiceChange('purchaser', user.name); document.getElementById('input-transporter')?.focus(); }}>
-                              {user.name}
-                            </div>
-                          ))}
-                        </div>
-                      )}
+                    <div className="flex items-center flex-1 relative">
+                      <span className="w-[100px] text-slate-800 font-bold mr-2">Order By :</span>
+                      <div className="relative flex-1">
+                        <SearchableDropdown
+                          id="input-purchaser"
+                          value={invoiceData.purchaser}
+                          onChange={val => handleInvoiceChange('purchaser', val)}
+                          onKeyDown={e => handleHeaderKeyDown(e, 'input-transporter')}
+                          onSelect={opt => {
+                            setTimeout(() => document.getElementById('input-transporter')?.focus(), 10);
+                          }}
+                          options={activeUsers}
+                          displayKey="name"
+                          className="border border-slate-500 bg-white px-1 w-full focus:outline-none focus:border-black focus:bg-[#ffffe0]"
+                          width="100%"
+                        />
+                      </div>
                     </div>
                   </div>
 
@@ -379,16 +477,31 @@ export default function PurchaseInvoice() {
                     <div className="flex items-center flex-1 relative">
                       <span className="w-[80px] text-slate-800 font-bold mr-2">Party :</span>
                       <div className="relative flex-1">
-                        <input type="text" id="input-supplier" value={invoiceData.supplier} onChange={e => { handleInvoiceChange('supplier', e.target.value); setSupplierIndex(0); }} onFocus={(e) => { e.target.select(); setShowSupplierDropdown(true); }} onBlur={() => setTimeout(() => setShowSupplierDropdown(false), 200)} onKeyDown={handleSupplierKeyDown} className="border border-slate-500 bg-white px-1 w-full focus:outline-none focus:border-black focus:bg-[#ffffe0] font-bold" autoComplete="off" />
-                        {showSupplierDropdown && (
-                          <div className="absolute top-full left-0 right-0 mt-0 bg-white border-2 border-black z-50 max-h-[150px] overflow-y-auto shadow-md">
-                            {SUPPLIERS.filter(s => s.name.toLowerCase().includes((invoiceData.supplier || '').toLowerCase())).map((supplier, sIdx) => (
-                              <div key={supplier.id} className={`px-2 py-1 text-xs cursor-pointer ${sIdx === supplierIndex ? 'bg-[#ffe000] text-black font-bold' : 'hover:bg-slate-200'}`} onClick={() => { handleInvoiceChange('supplier', supplier.name); document.getElementById('input-billNo')?.focus(); }}>
-                                {supplier.name} <span className="font-normal text-[10px] ml-2">({supplier.gst})</span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
+                        <SearchableDropdown
+                          id="input-supplier"
+                          value={invoiceData.supplier}
+                          onChange={val => handleInvoiceChange('supplier', val)}
+                          onKeyDown={e => {
+                            if (e.altKey && (e.key.toLowerCase() === 'c' || e.code === 'KeyC')) {
+                              e.preventDefault();
+                              setShowPartyModal(true);
+                            } else {
+                              handleHeaderKeyDown(e, 'input-billNo');
+                            }
+                          }}
+                          onSelect={opt => {
+                            if (opt?.state !== 'Maharashtra') {
+                              handleInvoiceChange('taxType', 'IGST');
+                            } else {
+                              handleInvoiceChange('taxType', 'CGST_SGST');
+                            }
+                            setTimeout(() => document.getElementById('input-billNo')?.focus(), 10);
+                          }}
+                          options={vendors}
+                          displayKey="name"
+                          className="border border-slate-500 bg-white px-1 w-full focus:outline-none focus:border-black focus:bg-[#ffffe0] font-bold"
+                          width="100%"
+                        />
                       </div>
                     </div>
                     <div className="flex items-center w-[250px]">
@@ -444,6 +557,9 @@ export default function PurchaseInvoice() {
                       <label className="flex items-center gap-1 cursor-pointer">
                          <input type="checkbox" checked={invoiceData.showSize} onChange={e => setInvoiceData({...invoiceData, showSize: e.target.checked})} className="accent-[#1b5e58]" /> Size
                       </label>
+                      <label className="flex items-center gap-1 cursor-pointer text-indigo-700">
+                         <input type="checkbox" checked={invoiceData.showLocation} onChange={e => setInvoiceData({...invoiceData, showLocation: e.target.checked})} className="accent-indigo-600" /> Location
+                      </label>
                       <label className="flex items-center gap-1 cursor-pointer">
                          <input type="checkbox" checked={invoiceData.showPurchaseDiscount} onChange={e => setInvoiceData({...invoiceData, showPurchaseDiscount: e.target.checked})} className="accent-[#1b5e58]" /> Discount %
                       </label>
@@ -454,12 +570,13 @@ export default function PurchaseInvoice() {
 
                     <div className="flex items-center gap-3">
                       <select value={invoiceData.firm} onChange={e => handleInvoiceChange('firm', e.target.value)} className="border border-slate-500 bg-white px-1 text-xs font-bold focus:outline-none focus:border-black focus:bg-[#ffffe0]">
-                        <option>TechCorp India</option>
-                        <option>RetailNode Global</option>
+                        <option value="1">VRP</option>
                       </select>
                       <select value={invoiceData.location} onChange={e => handleInvoiceChange('location', e.target.value)} className="border border-slate-500 bg-white px-1 text-xs font-bold focus:outline-none focus:border-black focus:bg-[#ffffe0]">
-                        <option>Mumbai Warehouse</option>
-                        <option>Delhi Hub</option>
+                        <option value="">Select Location</option>
+                        {locations.map((loc: any) => (
+                          <option key={loc.id} value={loc.name}>{loc.name}</option>
+                        ))}
                       </select>
                     </div>
                   </div>
@@ -475,6 +592,7 @@ export default function PurchaseInvoice() {
                       <th className="px-1 py-1 border-r border-slate-300 w-8 text-center">#</th>
                       <th className="px-1 py-1 border-r border-slate-300 w-[100px] text-center">Brand</th>
                       <th className="px-1 py-1 border-r border-slate-300 w-[200px] text-center">Name of Item</th>
+                      <th className="px-1 py-1 border-r border-slate-300 w-[80px] text-center">HSN/SAC</th>
                       {invoiceData.designNo && <th className="px-1 py-1 border-r border-slate-300 w-[80px] text-center">Design</th>}
                       {invoiceData.colourNo && <th className="px-1 py-1 border-r border-slate-300 w-[80px] text-center">Colour</th>}
                       {invoiceData.showSize && <th className="px-1 py-1 border-r border-slate-300 w-[60px] text-center">Size</th>}
@@ -490,16 +608,60 @@ export default function PurchaseInvoice() {
                     {products.map((item, index) => (
                       <tr key={item.id} className="text-[13px] border-b border-slate-300">
                         <td className="border-r border-slate-300 px-1 py-[2px] text-center font-bold text-slate-500">{index + 1}</td>
-                        <td className="border-r border-slate-300 px-1 py-[2px]">
-                          <input id={`row-${index}-brand`} type="text" value={item.brand} onChange={e => updateProduct(index, 'brand', e.target.value)} onKeyDown={(e) => handleKeyDown(e, index, 'brand')} className="w-full bg-transparent focus:bg-[#ffffe0] focus:outline-none px-1" />
+                        <td className="border-r border-slate-300 px-1 py-[2px] relative">
+                          <input id={`row-${index}-brand`} type="text" value={item.brand} onChange={e => { updateProduct(index, 'brand', e.target.value); setBrandSuggestionIndex(0); }} onFocus={(e) => handleBrandFocus(e, index)} onBlur={handleBrandBlur} onKeyDown={(e) => handleKeyDown(e, index, 'brand')} className="w-full bg-transparent focus:bg-[#ffffe0] focus:outline-none px-1" autoComplete="off" />
+                          {activeBrandRow === index && (
+                            <div className="absolute top-full left-0 mt-0 bg-white border-2 border-black z-50 w-[200px] shadow-md max-h-[150px] overflow-y-auto">
+                              {availableBrands.filter(b => (b.name || '').toLowerCase().startsWith((products[index].brand || '').toLowerCase())).slice(0, 8).map((suggestion, sIdx) => (
+                                <div key={suggestion.id} className={`px-2 py-1 flex justify-between cursor-pointer ${sIdx === brandSuggestionIndex ? 'bg-[#ffe000] text-black font-bold' : 'hover:bg-slate-200'}`} onClick={() => {
+                                  const newProducts = [...products];
+                                  newProducts[index] = { ...newProducts[index], brand: suggestion.name || '' };
+                                  setProducts(newProducts);
+                                  setActiveBrandRow(null);
+                                  document.getElementById(`row-${index}-item`)?.focus();
+                                }}>
+                                  <span>{suggestion.name}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </td>
                         <td className="border-r border-slate-300 px-1 py-[2px] relative">
                           <input id={`row-${index}-item`} type="text" value={item.item} onChange={e => { updateProduct(index, 'item', e.target.value); setSuggestionIndex(0); }} onFocus={(e) => handleItemFocus(e, index)} onBlur={handleItemBlur} onKeyDown={(e) => handleKeyDown(e, index, 'item')} className="w-full bg-transparent focus:bg-[#ffffe0] focus:outline-none px-1" autoComplete="off" />
                           {activeSuggestionRow === index && (
                             <div className="absolute top-full left-0 mt-0 bg-white border-2 border-black z-50 w-[300px] shadow-md max-h-[150px] overflow-y-auto">
-                              {ITEM_SUGGESTIONS.filter(s => s.name.toLowerCase().includes(item.item.toLowerCase())).slice(0, 8).map((suggestion, sIdx) => (
-                                <div key={suggestion.id} className={`px-2 py-1 text-xs cursor-pointer ${sIdx === suggestionIndex ? 'bg-[#ffe000] text-black font-bold' : 'hover:bg-slate-200'}`} onClick={() => { updateProduct(index, 'item', suggestion.name); updateProduct(index, 'brand', suggestion.brand); updateProduct(index, 'rate', suggestion.rate); setActiveSuggestionRow(null); document.getElementById(`row-${index}-qty`)?.focus(); }}>
-                                  {suggestion.name} - <span className="font-normal text-[10px]">{suggestion.brand}</span>
+                              {availableItems.filter(s => (s.name || s.item_name || '').toLowerCase().includes((products[index].item || '').toLowerCase())).slice(0, 8).map((suggestion, sIdx) => (
+                                <div key={suggestion.id} className={`px-2 py-1 flex justify-between cursor-pointer ${sIdx === suggestionIndex ? 'bg-[#ffe000] text-black font-bold' : 'hover:bg-slate-200'}`} onClick={() => {
+                                  const newProducts = [...products];
+                                  newProducts[index] = { ...newProducts[index], item: suggestion.name || suggestion.item_name, brand: suggestion.brand || '', rate: suggestion.purchase_price || suggestion.rate || '' };
+                                  setProducts(newProducts);
+                                  setActiveSuggestionRow(null);
+                                  document.getElementById(`row-${index}-qty`)?.focus();
+                                }}>
+                                  <span>{suggestion.name || suggestion.item_name} <span className="text-[10px] text-slate-500 font-normal ml-2">{suggestion.type || suggestion.item_type}</span></span>
+                                  <span className="text-slate-600">Stock: {suggestion.stock || 0}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </td>
+                        <td className="border-r border-slate-300 px-1 py-[2px] relative">
+                          <input id={`row-${index}-hsn`} type="text" value={item.hsn || ''} onChange={e => { updateProduct(index, 'hsn', e.target.value); setHsnSuggestionIndex(0); }} onFocus={(e) => handleHsnFocus(e, index)} onBlur={handleHsnBlur} onKeyDown={(e) => handleKeyDown(e, index, 'hsn')} className="w-full bg-transparent focus:bg-[#ffffe0] focus:outline-none px-1" autoComplete="off" />
+                          {activeHsnRow === index && (
+                            <div className="absolute top-full left-0 mt-0 bg-white border-2 border-black z-50 w-[300px] shadow-md max-h-[150px] overflow-y-auto">
+                              {availableHsns.filter(s => (s.name || '').toLowerCase().startsWith((products[index].hsn || '').toLowerCase())).slice(0, 8).map((suggestion, sIdx) => (
+                                <div key={suggestion.id} className={`px-2 py-1 flex flex-col cursor-pointer ${sIdx === hsnSuggestionIndex ? 'bg-[#ffe000] text-black font-bold' : 'hover:bg-slate-200'}`} onClick={() => {
+                                  const newProducts = [...products];
+                                  newProducts[index] = { 
+                                    ...newProducts[index], 
+                                    hsn: suggestion.name || '', 
+                                    gst: suggestion.tax_percent !== undefined ? suggestion.tax_percent : 0 
+                                  };
+                                  setProducts(newProducts);
+                                  setActiveHsnRow(null);
+                                  document.getElementById(`row-${index}-qty`)?.focus();
+                                }}>
+                                  <span className="text-[11px]"><span className="font-bold text-[#1b5e58]">{suggestion.name}</span> - {suggestion.description} ({suggestion.tax_percent !== undefined ? suggestion.tax_percent : 0}%)</span>
                                 </div>
                               ))}
                             </div>
@@ -521,7 +683,40 @@ export default function PurchaseInvoice() {
                           </td>
                         )}
                         <td className="border-r border-slate-300 px-1 py-[2px]">
-                          <input id={`row-${index}-qty`} type="number" value={item.qty} onChange={e => updateProduct(index, 'qty', e.target.value)} onKeyDown={(e) => handleKeyDown(e, index, 'qty')} className="w-full bg-transparent focus:bg-[#ffffe0] focus:outline-none px-1 text-right font-bold" />
+                          <input 
+                            id={`row-${index}-qty`} 
+                            type="number" 
+                            value={item.qty} 
+                            onChange={e => updateProduct(index, 'qty', e.target.value)} 
+                            onKeyDown={(e) => {
+                              if (e.altKey && e.code === 'KeyX') {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setInvoiceData(prev => ({ ...prev, showSize: true }));
+                                setActiveModalRow(index);
+                              } else if (e.altKey && e.code === 'KeyZ') {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setInvoiceData(prev => ({ ...prev, designNo: true }));
+                                setActiveModalRow(index);
+                              } else if (e.altKey && e.code === 'KeyL') {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setInvoiceData(prev => ({ ...prev, showLocation: true }));
+                                setActiveModalRow(index);
+                              } else if (e.key === 'Enter') {
+                                e.preventDefault();
+                                if (invoiceData.showSize || invoiceData.designNo || invoiceData.colourNo || invoiceData.showLocation) {
+                                  setActiveModalRow(index);
+                                } else {
+                                  handleKeyDown(e, index, 'qty');
+                                }
+                              } else {
+                                handleKeyDown(e, index, 'qty');
+                              }
+                            }} 
+                            className="w-full bg-transparent focus:bg-[#ffffe0] focus:outline-none px-1 text-right font-bold" 
+                          />
                         </td>
                         <td className="border-r border-slate-300 px-1 py-[2px]">
                           <input id={`row-${index}-rate`} type="number" value={item.rate} onChange={e => updateProduct(index, 'rate', e.target.value)} onKeyDown={(e) => handleKeyDown(e, index, 'rate')} className="w-full bg-transparent focus:bg-[#ffffe0] focus:outline-none px-1 text-right font-bold" />
@@ -734,12 +929,82 @@ export default function PurchaseInvoice() {
 
         {/* Bottom Status Bar */}
         <div className="bg-[#1b5e58] text-white text-[11px] px-4 py-1 flex justify-between items-center border-t-2 border-[#12423d]">
-          <div className="font-medium tracking-wide">Purchase Voucher</div>
+          <div className="font-medium tracking-wide flex gap-4">
+            <span>Purchase Voucher</span>
+            <span className="text-[#a4d4cc]">
+              Shortcuts: <strong>{modKey}+Z</strong> (Design) | <strong>{modKey}+C</strong> (Colour) | <strong>{modKey}+X</strong> (Size) | <strong>{modKey}+L</strong> (Location) | <strong>{modKey}+V</strong> (Discount) | <strong>{modKey}+M</strong> (Markdown)
+            </span>
+          </div>
           <div className="flex gap-6">
             <span>Version: 1.0</span>
           </div>
         </div>
       </div>
+
+      <MultiAttributeModal 
+        isOpen={activeModalRow !== null}
+        onClose={() => setActiveModalRow(null)}
+        item={activeModalRow !== null ? products[activeModalRow] : null}
+        showSize={invoiceData.showSize}
+        showColour={invoiceData.colourNo}
+        showDesign={invoiceData.designNo}
+        showLocation={invoiceData.showLocation}
+        availableLocations={locations.map((loc: any) => loc.name)}
+        onSave={(attributes, totalQty) => {
+          if (activeModalRow !== null) {
+            updateProduct(activeModalRow, 'qty', totalQty);
+            updateProduct(activeModalRow, 'attributes', attributes);
+          }
+          setActiveModalRow(null);
+          // Focus next field
+          setTimeout(() => {
+            if (activeModalRow !== null) {
+              document.getElementById(`row-${activeModalRow}-rate`)?.focus();
+            }
+          }, 100);
+        }}
+      />
+
+      <PartyModal 
+        isOpen={showPartyModal}
+        onClose={() => setShowPartyModal(false)}
+        onSave={(newParty) => {
+          setVendors(prev => [...prev, newParty]);
+          handleInvoiceChange('supplier', newParty.name);
+          setShowPartyModal(false);
+          setTimeout(() => {
+            document.getElementById('input-billNo')?.focus();
+          }, 100);
+        }}
+      />
+
+      <MasterCreationModal 
+        isOpen={masterModal !== null}
+        onClose={() => setMasterModal(null)}
+        masterType={masterModal?.type || null}
+        initialValue={masterModal?.initialValue || ''}
+        onSave={(type, data) => {
+           console.log(`Created new master of type ${type}:`, data);
+           if (masterModal) {
+             const { type: savedType, rowIndex } = masterModal;
+             const fieldMap: any = { hsn: 'hsn', brand: 'brand', item: 'item', size: 'size' };
+             const field = fieldMap[savedType];
+             if (field) {
+               updateProduct(rowIndex, field, data.name);
+               // Move focus to next field
+               const fields = ['brand', 'item', 'hsn', 'qty', 'rate', 'disc', 'mrp'];
+               const currentFieldIndex = fields.indexOf(field);
+               setTimeout(() => {
+                 if (currentFieldIndex < fields.length - 1) {
+                   document.getElementById(`row-${rowIndex}-${fields[currentFieldIndex + 1]}`)?.focus();
+                 }
+               }, 100);
+             }
+           }
+           setMasterModal(null);
+           // In a real implementation, we would POST to the backend and then set the local input value
+        }}
+      />
     </>
   );
 }

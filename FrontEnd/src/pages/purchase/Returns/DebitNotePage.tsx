@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Helmet } from 'react-helmet-async';
+import PremiumReportTemplate from '../../../components/layout/PremiumReportTemplate';
+import { FileWarning } from 'lucide-react';
 
 export default function DebitNotePage() {
   const navigate = useNavigate();
@@ -20,145 +21,109 @@ export default function DebitNotePage() {
   }, [navigate]);
 
   return (
-    <>
-      <Helmet>
-        <title>Debit Note View | RetailNode ERP</title>
-      </Helmet>
-      
-      <div className='flex flex-col h-screen font-sans text-[13px] selection:bg-transparent overflow-hidden bg-[#e0efeb] w-full print:bg-white print:h-auto'>
-        <div className='flex flex-1 p-1 gap-1 overflow-hidden h-full print:p-0'>
-          
-          {/* Main Container */}
-          <div className='flex-1 bg-[#fcfaf2] border-2 border-[#81a09d] flex flex-col overflow-hidden shadow-inner relative print:border-none print:shadow-none print:bg-white'>
-            <div className='bg-[#1b5e58] text-white font-bold px-2 py-1 flex justify-between shrink-0 print:hidden'>
-               <div>View Debit Note</div>
-               <div className='text-yellow-300'>RetailNode ERP</div>
-            </div>
+    <PremiumReportTemplate
+      title="Debit Note Preview"
+      subtitle="RetailNode ERP • Document No: DN-26-001"
+      icon={<FileWarning className="w-6 h-6" />}
+      onPrint={() => window.print()}
+      maxWidth="max-w-[900px]"
+    >
+      <div className="flex-1 bg-white/90 backdrop-blur-xl border border-slate-200/60 rounded-2xl shadow-sm overflow-y-auto print:overflow-visible print:border-none print:shadow-none print:bg-white custom-scrollbar">
+         
+         {/* Printable Area - A4 Size Simulation */}
+         <div className='w-full max-w-[800px] mx-auto bg-white p-8 sm:p-12 min-h-[1122px] print:w-full print:max-w-none print:min-h-0 print:p-0'>
             
-            <div className='p-2 flex-1 overflow-y-auto print:overflow-visible print:p-0'>
-               
-               {/* Printable Area */}
-               <div className='max-w-[800px] mx-auto bg-white border border-gray-400 p-8 shadow-sm print:shadow-none print:border-none print:w-full print:max-w-none print:p-2'>
-                  <div className='text-center border-b border-gray-400 pb-4 mb-4'>
-                    <h1 className='text-2xl font-bold uppercase'>Debit Note</h1>
-                    <h2 className='text-lg font-bold'>RetailNode Default Firm</h2>
-                    <p>123 Business Road, Tech City, State - 400001</p>
-                    <p>GSTIN: 27AABCU9603R1ZX</p>
-                  </div>
-
-                  <div className='flex justify-between mb-6'>
-                    <div>
-                      <p className='font-bold'>To,</p>
-                      <p className='font-bold'>Supplier Name</p>
-                      <p>Supplier Address Line 1</p>
-                      <p>City, State - 123456</p>
-                      <p>GSTIN: 27XYZ123456</p>
-                    </div>
-                    <div className='text-right'>
-                      <p><span className='font-bold'>Debit Note No:</span> DN-26-001</p>
-                      <p><span className='font-bold'>Date:</span> 20-Aug-2026</p>
-                      <p><span className='font-bold'>Ref PR:</span> PR-26-001</p>
-                    </div>
-                  </div>
-
-                  <table className='w-full border-collapse border border-gray-400 mb-6'>
-                    <thead>
-                      <tr className='bg-gray-100'>
-                        <th className='border border-gray-400 px-2 py-1 text-center w-12'>Sr.</th>
-                        <th className='border border-gray-400 px-2 py-1 text-left'>Description of Goods</th>
-                        <th className='border border-gray-400 px-2 py-1 text-center w-24'>HSN/SAC</th>
-                        <th className='border border-gray-400 px-2 py-1 text-center w-20'>Qty</th>
-                        <th className='border border-gray-400 px-2 py-1 text-right w-24'>Rate</th>
-                        <th className='border border-gray-400 px-2 py-1 text-right w-28'>Amount</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr>
-                        <td className='border border-gray-400 px-2 py-1 text-center'>1</td>
-                        <td className='border border-gray-400 px-2 py-1'>Sample Defective Product A</td>
-                        <td className='border border-gray-400 px-2 py-1 text-center'>6109</td>
-                        <td className='border border-gray-400 px-2 py-1 text-center'>10 PCS</td>
-                        <td className='border border-gray-400 px-2 py-1 text-right'>500.00</td>
-                        <td className='border border-gray-400 px-2 py-1 text-right'>5,000.00</td>
-                      </tr>
-                      <tr>
-                        <td className='border border-gray-400 px-2 py-1 text-center'>2</td>
-                        <td className='border border-gray-400 px-2 py-1'>Sample Defective Product B</td>
-                        <td className='border border-gray-400 px-2 py-1 text-center'>6109</td>
-                        <td className='border border-gray-400 px-2 py-1 text-center'>5 PCS</td>
-                        <td className='border border-gray-400 px-2 py-1 text-right'>1,500.00</td>
-                        <td className='border border-gray-400 px-2 py-1 text-right'>7,500.00</td>
-                      </tr>
-                      <tr>
-                        <td colSpan={5} className='border border-gray-400 px-2 py-1 text-right font-bold'>Total Taxable Amount</td>
-                        <td className='border border-gray-400 px-2 py-1 text-right font-bold'>12,500.00</td>
-                      </tr>
-                      <tr>
-                        <td colSpan={5} className='border border-gray-400 px-2 py-1 text-right'>CGST @ 2.5%</td>
-                        <td className='border border-gray-400 px-2 py-1 text-right'>312.50</td>
-                      </tr>
-                      <tr>
-                        <td colSpan={5} className='border border-gray-400 px-2 py-1 text-right'>SGST @ 2.5%</td>
-                        <td className='border border-gray-400 px-2 py-1 text-right'>312.50</td>
-                      </tr>
-                      <tr>
-                        <td colSpan={5} className='border border-gray-400 px-2 py-1 text-right font-bold'>Grand Total</td>
-                        <td className='border border-gray-400 px-2 py-1 text-right font-bold'>13,125.00</td>
-                      </tr>
-                    </tbody>
-                  </table>
-
-                  <div className='mb-6'>
-                    <p className='font-bold text-sm'>Amount Chargeable (in words)</p>
-                    <p className='italic'>INR Thirteen Thousand One Hundred Twenty Five Only</p>
-                  </div>
-
-                  <div className='flex justify-between items-end mt-16'>
-                    <div className='text-center'>
-                      <p className='border-t border-gray-400 px-4 pt-1'>Receiver's Signature</p>
-                    </div>
-                    <div className='text-center'>
-                      <p className='font-bold mb-4'>For RetailNode Default Firm</p>
-                      <p className='border-t border-gray-400 px-4 pt-1'>Authorised Signatory</p>
-                    </div>
-                  </div>
-
-               </div>
-               
+            {/* Header */}
+            <div className='text-center border-b-2 border-slate-800 pb-6 mb-8'>
+              <h1 className='text-3xl font-black uppercase tracking-widest text-slate-800 mb-2'>Debit Note</h1>
+              <h2 className='text-xl font-bold text-slate-700'>RetailNode Default Firm</h2>
+              <p className="text-slate-600 mt-1 font-medium">123 Business Road, Tech City, State - 400001</p>
+              <p className="text-slate-600 font-bold mt-1">GSTIN: <span className="font-medium">27AABCU9603R1ZX</span></p>
             </div>
-          </div>
 
-          {/* Right Sidebar */}
-          <div className='w-[120px] flex-col gap-[2px] overflow-y-auto hidden lg:flex bg-[#e0efeb] print:hidden'>
-             {[
-               { key: 'F1', label: 'Help' },
-               { key: 'Alt+P', label: 'Print' },
-             ].map((f) => (
-               <button 
-                 key={f.key} 
-                 onClick={() => { if(f.key === 'Alt+P') window.print(); }}
-                 className='flex flex-row items-center px-2 py-1 bg-[#e0efeb] border border-[#a3c3be] hover:bg-[#c9e1dd] hover:border-[#81a09d] text-left transition-all shadow-[inset_1px_1px_0_rgba(255,255,255,0.8)]'
-               >
-                 <span className='font-bold text-black text-[11px] w-[35px]'>{f.key}</span>
-                 <span className='text-black text-[11px] font-medium border-l border-[#a3c3be] pl-1 ml-1'>{f.label}</span>
-               </button>
-             ))}
-             <div className='flex-1' />
-             <button 
-               onClick={() => navigate(-1)}
-               className='flex flex-row items-center px-2 py-1 bg-[#e0efeb] border border-[#a3c3be] hover:bg-[#c9e1dd] hover:border-[#81a09d] text-left transition-all shadow-[inset_1px_1px_0_rgba(255,255,255,0.8)]'
-             >
-                 <span className='font-bold text-black text-[11px] w-[35px] underline'>Q</span>
-                 <span className='text-black text-[11px] font-medium border-l border-[#a3c3be] pl-1 ml-1'>Quit</span>
-             </button>
-          </div>
-        </div>
-        
-        {/* Footer */}
-        <div className='bg-[#1b5e58] text-white text-[11px] px-4 py-1 flex justify-between items-center border-t-2 border-[#12423d] print:hidden'>
-          <div className='font-medium tracking-wide'>Debit Note Preview</div>
-        </div>
+            {/* Addresses and Info */}
+            <div className='flex justify-between mb-8'>
+              <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl w-[45%] print:bg-white print:border-slate-300 print:rounded-none">
+                <p className='font-bold text-slate-500 text-xs uppercase tracking-wider mb-2'>To (Supplier)</p>
+                <p className='font-bold text-lg text-slate-800'>Supplier Name</p>
+                <p className="text-slate-600 mt-1">Supplier Address Line 1</p>
+                <p className="text-slate-600">City, State - 123456</p>
+                <p className="text-slate-600 font-bold mt-2">GSTIN: <span className="font-medium">27XYZ123456</span></p>
+              </div>
+              <div className='text-right flex flex-col justify-center'>
+                <div className="mb-2"><span className='font-bold text-slate-500 uppercase tracking-wider text-xs mr-2'>Debit Note No:</span> <span className="font-bold text-slate-800 text-lg">DN-26-001</span></div>
+                <div className="mb-2"><span className='font-bold text-slate-500 uppercase tracking-wider text-xs mr-2'>Date:</span> <span className="font-bold text-slate-800">20-Aug-2026</span></div>
+                <div><span className='font-bold text-slate-500 uppercase tracking-wider text-xs mr-2'>Ref PR:</span> <span className="font-bold text-slate-800">PR-26-001</span></div>
+              </div>
+            </div>
+
+            {/* Items Table */}
+            <table className='w-full border-collapse mb-8'>
+              <thead>
+                <tr className='bg-slate-100 border-y-2 border-slate-800 print:bg-white'>
+                  <th className='px-4 py-3 text-center text-xs font-black text-slate-700 uppercase tracking-wider w-12'>Sr</th>
+                  <th className='px-4 py-3 text-left text-xs font-black text-slate-700 uppercase tracking-wider'>Description of Goods</th>
+                  <th className='px-4 py-3 text-center text-xs font-black text-slate-700 uppercase tracking-wider w-24'>HSN/SAC</th>
+                  <th className='px-4 py-3 text-center text-xs font-black text-slate-700 uppercase tracking-wider w-24'>Qty</th>
+                  <th className='px-4 py-3 text-right text-xs font-black text-slate-700 uppercase tracking-wider w-28'>Rate</th>
+                  <th className='px-4 py-3 text-right text-xs font-black text-slate-700 uppercase tracking-wider w-32'>Amount</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-200 border-b-2 border-slate-800">
+                <tr>
+                  <td className='px-4 py-4 text-center font-bold text-slate-500'>1</td>
+                  <td className='px-4 py-4 font-bold text-slate-800'>Sample Defective Product A</td>
+                  <td className='px-4 py-4 text-center text-slate-600'>6109</td>
+                  <td className='px-4 py-4 text-center font-bold text-slate-700'>10 PCS</td>
+                  <td className='px-4 py-4 text-right text-slate-600'>500.00</td>
+                  <td className='px-4 py-4 text-right font-bold text-slate-800'>5,000.00</td>
+                </tr>
+                <tr>
+                  <td className='px-4 py-4 text-center font-bold text-slate-500'>2</td>
+                  <td className='px-4 py-4 font-bold text-slate-800'>Sample Defective Product B</td>
+                  <td className='px-4 py-4 text-center text-slate-600'>6109</td>
+                  <td className='px-4 py-4 text-center font-bold text-slate-700'>5 PCS</td>
+                  <td className='px-4 py-4 text-right text-slate-600'>1,500.00</td>
+                  <td className='px-4 py-4 text-right font-bold text-slate-800'>7,500.00</td>
+                </tr>
+                {/* Tax Rows */}
+                <tr className="bg-slate-50 print:bg-white">
+                  <td colSpan={5} className='px-4 py-3 text-right font-bold text-slate-600'>Total Taxable Amount</td>
+                  <td className='px-4 py-3 text-right font-black text-slate-800'>12,500.00</td>
+                </tr>
+                <tr className="bg-slate-50 print:bg-white">
+                  <td colSpan={5} className='px-4 py-2 text-right font-medium text-slate-500'>CGST @ 2.5%</td>
+                  <td className='px-4 py-2 text-right text-slate-700'>312.50</td>
+                </tr>
+                <tr className="bg-slate-50 print:bg-white">
+                  <td colSpan={5} className='px-4 py-2 text-right font-medium text-slate-500'>SGST @ 2.5%</td>
+                  <td className='px-4 py-2 text-right text-slate-700'>312.50</td>
+                </tr>
+                <tr className="bg-indigo-50 border-t-2 border-slate-800 print:bg-white">
+                  <td colSpan={5} className='px-4 py-4 text-right font-black text-indigo-900 text-lg print:text-slate-900'>Grand Total</td>
+                  <td className='px-4 py-4 text-right font-black text-indigo-900 text-xl print:text-slate-900'>₹ 13,125.00</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <div className='mb-12 bg-slate-50 p-4 rounded-xl border border-slate-200 print:bg-white print:border-none print:p-0'>
+              <p className='font-bold text-xs text-slate-500 uppercase tracking-wider mb-1'>Amount Chargeable (in words)</p>
+              <p className='italic font-bold text-slate-800 text-lg'>INR Thirteen Thousand One Hundred Twenty Five Only</p>
+            </div>
+
+            <div className='flex justify-between items-end mt-24 pt-8 border-t-2 border-slate-200'>
+              <div className='text-center'>
+                <p className='font-bold text-slate-400'>Receiver's Signature</p>
+              </div>
+              <div className='text-center flex flex-col items-center'>
+                <p className='font-black text-slate-800 mb-16 uppercase tracking-wider text-sm'>For RetailNode Default Firm</p>
+                <p className='font-bold text-slate-400'>Authorised Signatory</p>
+              </div>
+            </div>
+
+         </div>
+         
       </div>
-    </>
+    </PremiumReportTemplate>
   );
 }

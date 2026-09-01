@@ -8,6 +8,13 @@ const tenantMiddleware = (req, res, next) => {
     return res.status(401).json({ error: 'Authentication required before verifying tenant' });
   }
 
+  // Superadmins might not have a firm_id in their user record.
+  // Allow them to pass it via query, or default to 1 (VRP)
+  if (req.user.role === 'superadmin') {
+    req.firm_id = req.query.firm_id || 1;
+    return next();
+  }
+
   if (!req.user.firm_id) {
     return res.status(403).json({ error: 'User does not belong to a valid firm (tenant)' });
   }
@@ -18,4 +25,4 @@ const tenantMiddleware = (req, res, next) => {
   next();
 };
 
-module.exports = tenantMiddleware;
+module.exports = { tenantMiddleware };

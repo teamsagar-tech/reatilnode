@@ -67,7 +67,7 @@ export default function SearchableDropdown({
       }
     }
     
-    if (onKeyDown && (e.key === 'Enter' || e.key === 'Escape' || e.key === 'Tab')) {
+    if (onKeyDown) {
        onKeyDown(e);
     }
   };

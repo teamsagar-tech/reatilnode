@@ -4,6 +4,7 @@ import Login from "./pages/Login"
 import PrivacyPolicy from "./pages/PrivacyPolicy"
 import TermsOfService from "./pages/TermsOfService"
 import Contact from "./pages/Contact"
+import ImpersonateAuth from "./pages/auth/ImpersonateAuth"
 import DashboardLayout from "./components/layout/DashboardLayout"
 import Dashboard from "./pages/Dashboard"
 import PurchaseInvoice from "./pages/inventory/PurchaseInvoice"
@@ -61,6 +62,7 @@ import SalaryManagement from "./pages/hr/Payroll/SalaryManagement";
 import Payroll from "./pages/hr/Payroll/Payroll";
 import ExpenseEntries from "./pages/hr/Payroll/ExpenseEntries";
 import ExpenseDashboard from "./pages/hr/Payroll/ExpenseDashboard";
+import TenantUsers from "./pages/superadmin/TenantUsers";
 import HSNSalesReport from "./pages/reports/Sales/HSNSalesReport";
 import DepartmentSalesReport from "./pages/reports/Sales/DepartmentSalesReport";
 import SalesmanPerformanceReport from "./pages/reports/Sales/SalesmanPerformanceReport";
@@ -87,6 +89,7 @@ import AdminVendorPOTracker from "./pages/settings/Portals/AdminVendorPOTracker"
 import SectionMaster from "./pages/masters/inventory/SectionMaster"
 import StyleMaster from "./pages/masters/inventory/StyleMaster"
 import SubStyleMaster from "./pages/masters/inventory/SubStyleMaster"
+import DesignMaster from "./pages/masters/inventory/DesignMaster"
 import SizeMaster from "./pages/masters/inventory/SizeMaster"
 import ColorMaster from "./pages/masters/inventory/ColorMaster"
 import MaterialMaster from "./pages/masters/inventory/MaterialMaster"
@@ -99,6 +102,7 @@ import CommissionMaster from "./pages/masters/accounting/CommissionMaster"
 import LocationMaster from "./pages/masters/config/LocationMaster"
 import ChargesTypeMaster from "./pages/masters/config/ChargesTypeMaster"
 import ItemPercentageMaster from "./pages/masters/config/ItemPercentageMaster"
+import MastersHub from "./pages/masters/MastersHub"
 
 import LRList from "./pages/purchase/LRList"
 import ManageReceivable from "./pages/inventory/ManageReceivable/ManageReceivable"
@@ -113,9 +117,11 @@ function App() {
           <Route path="/privacy-policy" element={<PrivacyPolicy />} />
           <Route path="/terms-of-service" element={<TermsOfService />} />
           <Route path="/contact" element={<Contact />} />
+          <Route path="/impersonate-auth" element={<ImpersonateAuth />} />
           
           <Route element={<DashboardLayout />}>
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/superadmin/firms/:id/users" element={<TenantUsers />} />
 
             <Route path="/purchase-order" element={<PurchaseOrder />} />
 
@@ -199,6 +205,7 @@ function App() {
             <Route path="/masters/section" element={<SectionMaster />} />
             <Route path="/masters/style" element={<StyleMaster />} />
             <Route path="/masters/substyle" element={<SubStyleMaster />} />
+            <Route path="/masters/design" element={<DesignMaster />} />
             <Route path="/masters/size" element={<SizeMaster />} />
             <Route path="/masters/color" element={<ColorMaster />} />
             <Route path="/masters/material" element={<MaterialMaster />} />
@@ -213,6 +220,9 @@ function App() {
             <Route path="/masters/location" element={<LocationMaster />} />
             <Route path="/masters/chargestype" element={<ChargesTypeMaster />} />
             <Route path="/masters/itempercentage" element={<ItemPercentageMaster />} />
+            
+            {/* Masters Hub */}
+            <Route path="/masters" element={<MastersHub />} />
           </Route>
           
           <Route path="*" element={<Navigate to="/dashboard" replace />} />

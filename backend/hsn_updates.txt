@@ -1,0 +1,38 @@
+Packaging Materials and Basic Hardware
+Corrugated paper or cardboard boxes — Common HSN (4-digit): 4819; GST rate: 18%
+Plastic woven sacks or bags — Common HSN (4-digit): 3923; GST rate: 18%
+Flexible intermediate bulk containers (FIBC) — Common HSN (4-digit): 6305; GST rate: 5%
+MS angles, channels, sections — Common HSN (4-digit): 7216; GST rate: 18%
+Stainless steel articles, household — Common HSN (4-digit): 7323; GST rate: 12%
+Nuts, bolts, screws, iron or steel — Common HSN (4-digit): 7318; GST rate: 18%
+Aluminium structurals — Common HSN (4-digit): 7604; GST rate: 18%
+Electricals, Electronics, and IT
+Electrical switches, sockets, boards — Common HSN (4-digit): 8536; GST rate: 18%
+Insulated wires and cables — Common HSN (4-digit): 8544; GST rate: 18%
+LED lamps — Common HSN (4-digit): 8539; GST rate: 12%
+Computers and laptops — Common HSN (4-digit): 8471; GST rate: 18%
+Computer peripherals, keyboard or mouse — Common HSN (4-digit): 8471 or 8473; GST rate: 18%
+Mobile phones — Common HSN (4-digit): 8517; GST rate: 12%
+Printers — Common HSN (4-digit): 8443; GST rate: 18%
+Food Items
+Refined or crude edible oil, branded — Common HSN (4-digit): 1507–1515; GST rate: 5%
+Sugar, refined — Common HSN (4-digit): 1701; GST rate: 5%
+Wheat flour or atta, branded and packaged — Common HSN (4-digit): 1101; GST rate: 5%
+Wheat flour or atta, unbranded and loose — Common HSN (4-digit): 1101; GST rate: Nil
+Rice, packaged and branded — Common HSN (4-digit): 1006; GST rate: 5%
+Salt — Common HSN (4-digit): 2501; GST rate: Nil
+Furniture, Plastics, and Textiles
+Wooden furniture — Common HSN (4-digit): 9403; GST rate: 18%
+Metal furniture — Common HSN (4-digit): 9403; GST rate: 18%
+Plastic household articles — Common HSN (4-digit): 3924; GST rate: 18%
+Plastic articles, other — Common HSN (4-digit): 3926; GST rate: 18%
+Cotton fabrics, not dyed or printed — Common HSN (4-digit): 5208; GST rate: 5%
+Garments and apparel, up to ₹1,000 per piece — Common HSN (4-digit): 6101–6217; GST rate: 5%
+Garments and apparel, above ₹1,000 per piece — Common HSN (4-digit): 6101–6217; GST rate: 12%
+Stationery, Chemicals, and Auto Parts
+Ballpoint pens — Common HSN (4-digit): 9608; GST rate: 12%
+Exercise books or notebooks — Common HSN (4-digit): 4820; GST rate: 12%
+Solvents, acetone or toluene — Common HSN (4-digit): 2914 or 2902; GST rate: 18%
+Paints and varnishes — Common HSN (4-digit): 3208; GST rate: 18%
+Auto parts, general — Common HSN (4-digit): 8708; GST rate: 28%
+Tyres, motor vehicles — Common HSN (4-digit): 4011; GST rate: 28%

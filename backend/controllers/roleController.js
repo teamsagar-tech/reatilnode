@@ -1,57 +1,51 @@
 const db = require('../config/db');
 
-exports.createRole = async (req, res) => {
-  const { name, permissions } = req.body;
-  // permissions format: [{ module_name: 'inventory', can_read: true, can_write: false, can_delete: false }]
-
-  if (!name || !Array.isArray(permissions)) {
-    return res.status(400).json({ error: 'Role name and permissions array are required' });
-  }
-
-  let connection;
+exports.getAllRoles = async (req, res) => {
   try {
-    connection = await db.getConnection();
-    await connection.beginTransaction();
-
-    const [roleResult] = await connection.execute(
-      'INSERT INTO Roles (firm_id, name) VALUES (?, ?)',
-      [req.firm_id, name]
-    );
-    const roleId = roleResult.insertId;
-
-    for (const perm of permissions) {
-      await connection.execute(
-        'INSERT INTO RolePermissions (role_id, module_name, can_read, can_write, can_delete) VALUES (?, ?, ?, ?, ?)',
-        [roleId, perm.module_name, perm.can_read ? 1 : 0, perm.can_write ? 1 : 0, perm.can_delete ? 1 : 0]
-      );
-    }
-
-    await connection.commit();
-    connection.release();
-
-    res.status(201).json({ message: 'Role created successfully', roleId });
+    const firmId = req.user.role === 'superadmin' && req.query.firm_id ? req.query.firm_id : req.user.firm_id;
+    const [rows] = await db.execute('SELECT * FROM Roles WHERE firm_id = ? ORDER BY created_at DESC', [firmId]);
+    res.json(rows);
   } catch (error) {
-    if (connection) {
-      await connection.rollback();
-      connection.release();
-    }
-    console.error('Error creating role:', error);
-    if (error.code === 'ER_DUP_ENTRY') {
-      return res.status(409).json({ error: 'A role with this name already exists in your firm' });
-    }
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('Error fetching roles:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 };
 
-exports.getRoles = async (req, res) => {
+exports.createRole = async (req, res) => {
+  const { name, permissions } = req.body;
+  const firmId = req.user.role === 'superadmin' && req.body.firm_id ? req.body.firm_id : req.user.firm_id;
+
   try {
-    const [roles] = await db.execute(
-      'SELECT id, name, created_at FROM Roles WHERE firm_id = ?',
-      [req.firm_id]
+    const [result] = await db.execute(
+      'INSERT INTO Roles (firm_id, name, permissions) VALUES (?, ?, ?)',
+      [firmId, name, permissions ? JSON.stringify(permissions) : null]
     );
-    res.json(roles);
+    res.status(201).json({ id: result.insertId, message: 'Role created successfully' });
   } catch (error) {
-    console.error('Error fetching roles:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('Error creating role:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+exports.updateRole = async (req, res) => {
+  const { id } = req.params;
+  const { name, permissions } = req.body;
+
+  try {
+    // Verify ownership
+    const [roleRows] = await db.execute('SELECT firm_id FROM Roles WHERE id = ?', [id]);
+    if (roleRows.length === 0) return res.status(404).json({ error: 'Role not found' });
+    if (req.user.role !== 'superadmin' && roleRows[0].firm_id !== req.user.firm_id) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    await db.execute(
+      'UPDATE Roles SET name = ?, permissions = ? WHERE id = ?',
+      [name, permissions ? JSON.stringify(permissions) : null, id]
+    );
+    res.json({ message: 'Role updated successfully' });
+  } catch (error) {
+    console.error('Error updating role:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 };

@@ -4,14 +4,28 @@ import { LayoutDashboard, Package, ShoppingCart, Users, Settings, LogOut } from 
 export default function Sidebar() {
   const location = useLocation();
   const isActive = (path: string) => location.pathname.startsWith(path);
+  
+  const userStr = (sessionStorage.getItem('user') || localStorage.getItem('user'));
+  const user = userStr ? JSON.parse(userStr) : null;
+  const modules = user?.firm_modules || {};
+  const perms = user?.user_permissions || modules; // Fallback to firm modules if no user specific perms
 
-  const menuItems = [
-    { name: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
-    { name: "Inventory", icon: Package, path: "/inventory" },
-    { name: "Sales", icon: ShoppingCart, path: "/sales" },
-    { name: "Customers", icon: Users, path: "/customers" },
-    { name: "Settings", icon: Settings, path: "/settings" },
-  ];
+  const check = (mod: string) => {
+    if (modules[mod]?.enabled === false) return false;
+    if (perms[mod]?.enabled === false) return false;
+    return true;
+  };
+
+  // Build menu conditionally
+  let menuItems = [
+    { name: "Dashboard", icon: LayoutDashboard, path: "/dashboard", show: true },
+    { name: "Inventory", icon: Package, path: "/inventory", show: check('inventory') },
+    { name: "Sales", icon: ShoppingCart, path: "/sales", show: check('sales') },
+    { name: "Purchase", icon: ShoppingCart, path: "/purchase", show: check('purchase') },
+    { name: "Customers", icon: Users, path: "/customers", show: true },
+    { name: "Settings", icon: Settings, path: "/settings", show: true },
+    { name: "Support", icon: Settings, path: "/support/tickets", show: true },
+  ].filter(item => item.show);
 
   return (
     <aside className="w-64 flex flex-col h-screen sticky top-0 hidden md:flex shrink-0 border-r border-slate-200/50 bg-white/60 backdrop-blur-xl">

@@ -1,0 +1,6 @@
+{
+  "summary": "An implementation plan proposing a UserFirms mapping table and a \"Switch Firm\" auth flow to support multi-firm access for a single login (email).",
+  "updatedAt": "2026-09-01T15:26:20.049060Z",
+  "requestFeedback": true,
+  "userFacing": true
+}

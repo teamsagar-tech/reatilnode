@@ -1,16 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const roleController = require('../controllers/roleController');
-const authMiddleware = require('../middleware/authMiddleware');
-const tenantMiddleware = require('../middleware/tenantMiddleware');
-const requirePermission = require('../middleware/rbacMiddleware');
+const { authenticateToken } = require('../middleware/authMiddleware');
 
-// Apply auth and tenant isolation globally to these routes
-router.use(authMiddleware);
-router.use(tenantMiddleware);
+router.use(authenticateToken);
 
-// Only admins or users with 'settings' module write permission can create roles
-router.post('/', requirePermission('settings', 'write'), roleController.createRole);
-router.get('/', requirePermission('settings', 'read'), roleController.getRoles);
+router.get('/', roleController.getAllRoles);
+router.post('/', roleController.createRole);
+router.put('/:id', roleController.updateRole);
 
 module.exports = router;

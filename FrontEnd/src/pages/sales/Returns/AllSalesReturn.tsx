@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Helmet } from 'react-helmet-async';
+import PremiumReportTemplate from '../../../components/layout/PremiumReportTemplate';
 import SearchableDropdown from '../../../components/SearchableDropdown';
+import { BookCopy, Search, FilterX } from 'lucide-react';
 
 export default function AllSalesReturn() {
   const navigate = useNavigate();
@@ -10,137 +11,117 @@ export default function AllSalesReturn() {
     from: new Date().toISOString().split('T')[0],
     to: new Date().toISOString().split('T')[0]
   });
+  
+  const [selectedRow, setSelectedRow] = useState(0);
+
+  const sampleData = [
+    { id: 1, date: '22/08/2026', returnNo: 'SR-2026-102', origInvNo: 'INV-5012', customerName: 'Ramesh Enterprises', settlementMode: 'Credit Note', totQty: 3, amount: '4,500.00', status: 'Unsettled' },
+    { id: 2, date: '24/08/2026', returnNo: 'QSR-2026-045', origInvNo: '-', customerName: 'Walk-in Customer', settlementMode: 'Cash Refund', totQty: 1, amount: '499.00', status: 'Refunded' }
+  ];
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.preventDefault();
         navigate(-1);
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setSelectedRow(prev => Math.min(prev + 1, sampleData.length - 1));
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setSelectedRow(prev => Math.max(prev - 1, 0));
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [navigate]);
+  }, [navigate, sampleData.length]);
 
   return (
-    <>
-      <Helmet>
-        <title>All Sales Returns (Credit Notes) | RetailNode ERP</title>
-      </Helmet>
+    <PremiumReportTemplate
+      title="All Sales Returns"
+      subtitle="Credit Note Register • View and manage all customer returns"
+      icon={<BookCopy className="w-6 h-6" />}
+      onExport={() => alert('Exporting to Excel...')}
+      maxWidth="max-w-[1400px]"
+    >
       
-      <div className='flex flex-col h-screen font-sans text-[13px] selection:bg-transparent overflow-hidden bg-[#e0efeb] w-full'>
-        <div className='flex flex-1 p-1 gap-1 overflow-hidden h-full'>
-          
-          {/* Main Container */}
-          <div className='flex-1 bg-[#fcfaf2] border-2 border-[#81a09d] flex flex-col overflow-hidden shadow-inner relative'>
-            <div className='bg-[#1b5e58] text-white font-bold px-2 py-1 flex justify-between shrink-0'>
-               <div>All Sales Returns (Credit Note Register)</div>
-               <div className='text-yellow-300'>RetailNode ERP</div>
-            </div>
-            
-            <div className='p-2 flex-1 flex flex-col overflow-hidden'>
-               
-               {/* Filter Bar */}
-               <div className="p-2 border-b-2 border-[#1b5e58] flex gap-4 bg-[#fcfaf2] items-end">
-                 <div className="flex flex-col gap-1 w-[150px]">
-                   <label className="font-bold text-slate-800 text-[11px]">From Date</label>
-                   <input type="date" value={dateRange.from} onChange={e => setDateRange({...dateRange, from: e.target.value})} className="border border-slate-500 bg-white px-1 focus:outline-none focus:border-black focus:bg-[#ffffe0]" />
-                 </div>
-                 <div className="flex flex-col gap-1 w-[150px]">
-                   <label className="font-bold text-slate-800 text-[11px]">To Date</label>
-                   <input type="date" value={dateRange.to} onChange={e => setDateRange({...dateRange, to: e.target.value})} className="border border-slate-500 bg-white px-1 focus:outline-none focus:border-black focus:bg-[#ffffe0]" />
-                 </div>
-                 <div className="flex flex-col gap-1 flex-1">
-                   <label className="font-bold text-slate-800 text-[11px]">Search Customer</label>
-                   <SearchableDropdown id="search-cust" className="border border-slate-500 bg-white px-1 focus:outline-none focus:border-black focus:bg-[#ffffe0]" value={''} onChange={() => {}} options={['Walk-in Customer', 'Ramesh Enterprises']} placeholder="Type to search..." />
-                 </div>
-                 <button className="bg-[#1b5e58] text-white px-4 py-1 font-bold border border-[#12423d] hover:bg-[#12423d] shadow-[inset_1px_1px_0_rgba(255,255,255,0.3)]">
-                   Fetch Data
-                 </button>
-               </div>
+      {/* Top Filter Bar */}
+      <div className="bg-white/80 backdrop-blur-xl border border-slate-200/60 rounded-2xl shadow-sm p-4 shrink-0 flex flex-wrap items-end gap-4 z-20">
+         <div className="flex flex-col gap-1.5">
+           <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Date Range</label>
+           <div className="flex items-center gap-2">
+             <input type="date" className="bg-slate-50 border border-slate-200 px-3 py-2 rounded-xl text-sm font-bold text-slate-700 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100" value={dateRange.from} onChange={e => setDateRange({...dateRange, from: e.target.value})} />
+             <span className="text-slate-400 font-bold text-sm">to</span>
+             <input type="date" className="bg-slate-50 border border-slate-200 px-3 py-2 rounded-xl text-sm font-bold text-slate-700 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100" value={dateRange.to} onChange={e => setDateRange({...dateRange, to: e.target.value})} />
+           </div>
+         </div>
+         
+         <div className="flex flex-col gap-1.5 flex-1 min-w-[200px]">
+           <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Search Customer</label>
+           <SearchableDropdown id="search-cust" className="bg-slate-50 border border-slate-200 px-3 py-2 rounded-xl text-sm font-bold text-slate-700 outline-none w-full" value={''} onChange={() => {}} options={['Walk-in Customer', 'Ramesh Enterprises']} placeholder="Type to search..." />
+         </div>
 
-               {/* Data Grid */}
-               <div className='flex-1 border border-slate-400 bg-white overflow-auto outline-none mt-2 flex flex-col'>
-                 <table className='w-full text-left border-collapse min-h-full' style={{ tableLayout: 'fixed' }}>
-                   <thead className='bg-[#eef5ed] sticky top-0 shadow-sm z-20'>
-                     <tr className='border-b-2 border-slate-400 text-slate-900 font-bold text-[12px]'>
-                       <th className='px-2 py-1 border-r border-slate-300 w-[100px]'>Date</th>
-                       <th className='px-2 py-1 border-r border-slate-300 w-[140px]'>Return / CN No</th>
-                       <th className='px-2 py-1 border-r border-slate-300 w-[140px]'>Orig Inv No</th>
-                       <th className='px-2 py-1 border-r border-slate-300 flex-1'>Customer Name</th>
-                       <th className='px-2 py-1 border-r border-slate-300 w-[140px]'>Settlement Mode</th>
-                       <th className='px-2 py-1 border-r border-slate-300 w-[80px] text-right'>Tot Qty</th>
-                       <th className='px-2 py-1 border-r border-slate-300 w-[120px] text-right'>Amount (₹)</th>
-                       <th className='px-2 py-1 border-r border-slate-300 w-[120px] text-center'>Status</th>
-                     </tr>
-                   </thead>
-                   <tbody>
-                     <tr className='text-[12px] border-b border-slate-200 hover:bg-[#ffe000] cursor-pointer bg-white'>
-                       <td className='px-2 py-1 border-r border-slate-300 text-center'>22/08/2026</td>
-                       <td className='px-2 py-1 border-r border-slate-300 font-bold'>SR-2026-102</td>
-                       <td className='px-2 py-1 border-r border-slate-300'>INV-5012</td>
-                       <td className='px-2 py-1 border-r border-slate-300 font-medium'>Ramesh Enterprises</td>
-                       <td className='px-2 py-1 border-r border-slate-300'>Credit Note</td>
-                       <td className='px-2 py-1 border-r border-slate-300 text-right'>3</td>
-                       <td className='px-2 py-1 border-r border-slate-300 text-right font-bold'>4,500.00</td>
-                       <td className='px-2 py-1 border-r border-slate-300 text-center font-bold text-orange-600'>Unsettled</td>
-                     </tr>
-                     <tr className='text-[12px] border-b border-slate-200 hover:bg-[#ffe000] cursor-pointer bg-[#fcfaf2]'>
-                       <td className='px-2 py-1 border-r border-slate-300 text-center'>24/08/2026</td>
-                       <td className='px-2 py-1 border-r border-slate-300 font-bold'>QSR-2026-045</td>
-                       <td className='px-2 py-1 border-r border-slate-300'>-</td>
-                       <td className='px-2 py-1 border-r border-slate-300 font-medium'>Walk-in Customer</td>
-                       <td className='px-2 py-1 border-r border-slate-300'>Cash Refund</td>
-                       <td className='px-2 py-1 border-r border-slate-300 text-right'>1</td>
-                       <td className='px-2 py-1 border-r border-slate-300 text-right font-bold'>499.00</td>
-                       <td className='px-2 py-1 border-r border-slate-300 text-center font-bold text-green-600'>Refunded</td>
-                     </tr>
-                     <tr className="h-full">
-                       <td colSpan={8} className="border-none bg-white"></td>
-                     </tr>
-                   </tbody>
-                   <tfoot className="sticky bottom-0 bg-[#eef5ed] shadow-[0_-1px_3px_rgba(0,0,0,0.1)] z-10 border-t-2 border-slate-400">
-                      <tr className="font-bold text-slate-900 text-[14px]">
-                        <td colSpan={5} className="px-2 py-1 border-r border-slate-300 text-right italic">Grand Total:</td>
-                        <td className="px-2 py-1 border-r border-slate-300 text-right">4</td>
-                        <td className="px-2 py-1 border-r border-slate-300 text-right">4,999.00</td>
-                        <td className="px-2 py-1 border-r border-slate-300"></td>
-                      </tr>
-                   </tfoot>
-                 </table>
-               </div>
-            </div>
-          </div>
-
-          {/* Right Sidebar */}
-          <div className='w-[120px] flex-col gap-[2px] overflow-y-auto hidden lg:flex bg-[#e0efeb] shrink-0'>
-             {[
-               { key: 'Enter', label: 'View Note' }
-             ].map((f) => (
-               <button 
-                 key={f.key} 
-                 className='flex flex-row items-center px-2 py-1 bg-[#e0efeb] border border-[#a3c3be] hover:bg-[#c9e1dd] hover:border-[#81a09d] text-left transition-all shadow-[inset_1px_1px_0_rgba(255,255,255,0.8)]'
-               >
-                 <span className='font-bold text-black text-[11px] w-[35px]'>{f.key}</span>
-                 <span className='text-black text-[11px] font-medium border-l border-[#a3c3be] pl-1 ml-1'>{f.label}</span>
-               </button>
-             ))}
-             <div className='flex-1' />
-             <button 
-               onClick={() => navigate(-1)}
-               className='flex flex-row items-center px-2 py-1 bg-[#e0efeb] border border-[#a3c3be] hover:bg-[#c9e1dd] hover:border-[#81a09d] text-left transition-all shadow-[inset_1px_1px_0_rgba(255,255,255,0.8)]'
-             >
-                 <span className='font-bold text-black text-[11px] w-[35px] underline'>Q</span>
-                 <span className='text-black text-[11px] font-medium border-l border-[#a3c3be] pl-1 ml-1'>Quit</span>
-             </button>
-          </div>
-        </div>
-        
-        {/* Footer */}
-        <div className='bg-[#1b5e58] text-white text-[11px] px-4 py-1 flex justify-between items-center border-t-2 border-[#12423d]'>
-          <div className='font-medium tracking-wide'>All Sales Returns (Credit Note Register)</div>
-        </div>
+         <div className="flex gap-2 ml-auto">
+            <button className="flex items-center gap-2 px-6 py-2 rounded-xl bg-indigo-600 text-white font-bold hover:bg-indigo-700 shadow-sm transition-all h-[38px]">
+              <Search className="w-4 h-4" />
+              Fetch Data
+            </button>
+            <button className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-slate-200 text-slate-600 font-bold hover:bg-slate-50 shadow-sm transition-all h-[38px]" onClick={() => setDateRange({from: '', to: ''})}>
+              <FilterX className="w-4 h-4" />
+              Clear
+            </button>
+         </div>
       </div>
-    </>
+
+      {/* Main Data Grid */}
+      <div className="flex-1 bg-white/90 backdrop-blur-xl border border-slate-200/60 rounded-2xl shadow-sm flex flex-col overflow-hidden">
+         <div className="flex-1 overflow-auto">
+            <table className="w-full text-left border-collapse whitespace-nowrap min-w-full">
+              <thead className="bg-slate-50/90 backdrop-blur-md sticky top-0 z-10 shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
+                 <tr className="text-slate-500 font-black text-[10px] uppercase tracking-wider">
+                   <th className="px-4 py-3 border-b border-r border-slate-200 text-center w-[120px]">Date</th>
+                   <th className="px-4 py-3 border-b border-r border-slate-200 text-center w-[160px]">Return / CN No</th>
+                   <th className="px-4 py-3 border-b border-r border-slate-200 text-center w-[140px]">Orig Inv No</th>
+                   <th className="px-4 py-3 border-b border-r border-slate-200 w-full">Customer Name</th>
+                   <th className="px-4 py-3 border-b border-r border-slate-200 w-[160px]">Settlement Mode</th>
+                   <th className="px-4 py-3 border-b border-r border-slate-200 text-right w-[100px]">Tot Qty</th>
+                   <th className="px-4 py-3 border-b border-r border-slate-200 text-right w-[140px]">Amount (₹)</th>
+                   <th className="px-4 py-3 border-b border-slate-200 text-center w-[120px]">Status</th>
+                 </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {sampleData.map((row, idx) => (
+                  <tr 
+                    key={row.id} 
+                    className={`text-[13px] transition-colors cursor-pointer ${selectedRow === idx ? 'bg-indigo-50/60 shadow-[inset_3px_0_0_#4f46e5]' : 'hover:bg-slate-50'}`}
+                    onClick={() => setSelectedRow(idx)}
+                  >
+                    <td className="px-4 py-3 border-r border-slate-100 text-center text-slate-600 font-medium">{row.date}</td>
+                    <td className="px-4 py-3 border-r border-slate-100 text-center font-bold text-indigo-700">{row.returnNo}</td>
+                    <td className="px-4 py-3 border-r border-slate-100 text-center font-medium text-slate-500">{row.origInvNo}</td>
+                    <td className="px-4 py-3 border-r border-slate-100 font-bold text-slate-800">{row.customerName}</td>
+                    <td className="px-4 py-3 border-r border-slate-100 font-medium text-slate-600">{row.settlementMode}</td>
+                    <td className="px-4 py-3 border-r border-slate-100 text-right font-bold text-slate-700">{row.totQty}</td>
+                    <td className="px-4 py-3 border-r border-slate-100 text-right font-black text-slate-800">{row.amount}</td>
+                    <td className="px-4 py-3 text-center">
+                       <span className={`px-2.5 py-1 rounded-lg text-xs font-bold ${row.status === 'Unsettled' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                         {row.status}
+                       </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+         </div>
+         
+         {/* Table Footer Totals */}
+         <div className="bg-slate-50 border-t border-slate-200 p-4 shrink-0 flex items-center shadow-[0_-2px_10px_rgba(0,0,0,0.02)]">
+            <div className="font-black text-slate-800 text-sm uppercase tracking-widest flex-1 text-right pr-6 border-r border-slate-200">Grand Total :</div>
+            <div className="w-[100px] text-right px-4 font-black text-sm text-slate-700 border-r border-slate-200">4</div>
+            <div className="w-[140px] text-right px-4 font-black text-sm text-indigo-700 border-r border-slate-200">₹ 4,999.00</div>
+            <div className="w-[120px]"></div>
+         </div>
+      </div>
+    </PremiumReportTemplate>
   );
 }

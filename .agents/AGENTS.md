@@ -25,3 +25,10 @@
 ## 5. Frontend Standards (Voucher Layout)
 - All master/voucher forms must strictly follow the "premium" Tally-style 3-column layout (`flex-1 gap-6`) using the custom `InputRow` and `SectionTitle` components.
 - Do not revert to simple linear forms. Keyboard shortcuts (Alt+C, Ctrl+A, Escape) must be preserved in all masters.
+
+## 6. SaaS RBAC Module & Sub-module Structure (CRITICAL FOR AUTH)
+- The entire SaaS authorization mechanism relies on a strict tree of **Modules -> Submodules -> Pages**.
+- When creating ANY new page, you MUST map it into this tree. The source of truth for Firm Page-Level Access is the `AVAILABLE_MODULES` array in `FrontEnd/src/pages/superadmin/TenantUsers.tsx`.
+- **Primary Modules:** `masters`, `inventory`, `sales`, `purchase`, `logistics`.
+- **Submodules:** Typically `basic` and `advance`, or categorized (e.g., `inventory`, `accounting`, `config` inside `masters`).
+- If you add a new page (e.g. `Tax Config`), you MUST add it to `AVAILABLE_MODULES` (e.g. inside `masters -> config`) so that the Superadmin can grant/revoke access to it for tenant firms.

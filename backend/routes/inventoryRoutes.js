@@ -1,11 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const authMiddleware = require('../middleware/authMiddleware');
-const tenantMiddleware = require('../middleware/tenantMiddleware');
-const requirePermission = require('../middleware/rbacMiddleware');
+const { authenticateToken } = require('../middleware/authMiddleware');
+const { tenantMiddleware } = require('../middleware/tenantMiddleware');
+const { requirePermission } = require('../middleware/rbacMiddleware');
 const maskData = require('../utils/maskData');
 
-router.use(authMiddleware);
+router.use(authenticateToken);
 router.use(tenantMiddleware);
 
 // Mock inventory data representing what we would get from DB

@@ -1,7 +1,14 @@
 import { Helmet } from 'react-helmet-async';
 import { Package, ShoppingCart, TrendingUp, Users, DollarSign, Activity } from 'lucide-react';
+import SuperAdminDashboard from './superadmin/SuperAdminDashboard';
 
 export default function Dashboard() {
+  const user = JSON.parse((sessionStorage.getItem('user') || localStorage.getItem('user')) || '{}');
+  
+  if (user.role === 'superadmin') {
+    return <SuperAdminDashboard />;
+  }
+
   const stats = [
     { name: 'Total Revenue', value: '₹1,24,500', change: '+12.5%', icon: DollarSign, color: 'text-emerald-600', bg: 'bg-emerald-100' },
     { name: 'Total Orders', value: '342', change: '+5.2%', icon: ShoppingCart, color: 'text-indigo-600', bg: 'bg-indigo-100' },
@@ -21,7 +28,7 @@ export default function Dashboard() {
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-black text-slate-800 tracking-tight">Overview</h1>
-            <p className="text-sm font-medium text-slate-500 mt-1">Welcome back, Arjun! Here's what's happening today.</p>
+            <p className="text-sm font-medium text-slate-500 mt-1">Welcome back, <span className="capitalize">{user.name || 'User'}</span>! Here's what's happening today.</p>
           </div>
           <div className="flex items-center gap-3">
             <div className="px-4 py-2 bg-white rounded-xl border border-slate-200 shadow-sm text-sm font-bold text-slate-700 flex items-center gap-2">

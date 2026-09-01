@@ -1,0 +1,29 @@
+  try {
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS UserFirms (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        firm_id INT NOT NULL,
+        role VARCHAR(50) DEFAULT 'user',
+        role_id INT NULL,
+        is_active BOOLEAN DEFAULT true,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY idx_user_firm (user_id, firm_id),
+        FOREIGN KEY (user_id) REFERENCES Users(id) ON DELETE CASCADE,
+        FOREIGN KEY (firm_id) REFERENCES Firms(id) ON DELETE CASCADE
+      )
+    `);
+    console.log('UserFirms table checked/created');
+
+    // Initial migration: copy existing firm_id mappings from Users to UserFirms
+    const [existing] = await db.execute('SELECT COUNT(*) as cnt FROM UserFirms');
+    if (existing[0].cnt === 0) {
+      await db.execute(`
+        INSERT IGNORE INTO UserFirms (user_id, firm_id, role, role_id)
+        SELECT id, firm_id, role, role_id FROM Users WHERE firm_id IS NOT NULL
+      `);
+      console.log('Migrated existing users to UserFirms');
+    }
+  } catch (e) {
+    console.error('Migration error:', e);
+  }

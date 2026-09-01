@@ -1,10 +1,19 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Helmet } from 'react-helmet-async';
+import SuperAdminDashboard from './superadmin/SuperAdminDashboard';
 
 export default function Dashboard() {
   const navigate = useNavigate();
   const menuRef = useRef<HTMLDivElement>(null);
+
+  const user = JSON.parse((sessionStorage.getItem('user') || localStorage.getItem('user')) || '{}');
+  const [showFirmSwitcher, setShowFirmSwitcher] = useState(false);
+  const [firmSwitcherIndex, setFirmSwitcherIndex] = useState(0);
+  
+  if (user.role === 'superadmin') {
+    return <SuperAdminDashboard />;
+  }
 
   // Define the Tally-style menu hierarchy
   const allMenuData = {
@@ -33,9 +42,7 @@ export default function Dashboard() {
                   { title: "Sub Style", hotkey: "Y", to: "/masters/substyle" },
                   { title: "Size", hotkey: "Z", to: "/masters/size" },
                   { title: "Color", hotkey: "O", to: "/masters/color" },
-                  { title: "Material", hotkey: "M", to: "/masters/material" },
-                  { title: "Godown", hotkey: "G", to: "/masters/godown" },
-                  { title: "Firm", hotkey: "F", to: "/masters/firm" }
+                  { title: "Material", hotkey: "M", to: "/masters/material" }
                 ]
               }
             },
@@ -49,7 +56,19 @@ export default function Dashboard() {
                   { title: "Customer", hotkey: "C", to: "/masters/customer" },
                   { title: "Transporter", hotkey: "T", to: "/masters/transporter" },
                   { title: "Hundekari", hotkey: "H", to: "/masters/hundekari" },
-                  { title: "Commission", hotkey: "M", to: "/masters/commission" }
+                  { title: "Commission", hotkey: "M", to: "/masters/commission" },
+                  { title: "HSN Master", hotkey: "N", to: "/masters/hsnsac" }
+                ]
+              }
+            },
+            {
+              title: "Company Masters",
+              hotkey: "C",
+              children: {
+                title: "Company Masters",
+                items: [
+                  { title: "Location", hotkey: "L", to: "/masters/location" },
+                  { title: "Firm", hotkey: "F", to: "/masters/firm" }
                 ]
               }
             }
@@ -257,12 +276,42 @@ export default function Dashboard() {
         }
       },
       { title: "Assistant", hotkey: "A", fKey: "F9", action: "open-chatbot" },
+      { title: "Switch Firm", hotkey: "W", fKey: "F10", action: "switch-firm" },
       { section: "Quit" },
       { title: "Quit", hotkey: "Q", to: "quit" }
     ]
   };
 
   const [menuStack, setMenuStack] = useState([allMenuData]);
+
+  useEffect(() => {
+    try {
+      const savedPath = sessionStorage.getItem('dashboardMenuPath');
+      if (savedPath) {
+        const titles = JSON.parse(savedPath);
+        if (titles.length > 0 && titles[0] === "Gateway of RetailNode") {
+          let currentLevel = allMenuData;
+          const newStack = [currentLevel];
+          for (let i = 1; i < titles.length; i++) {
+            const nextLevel = currentLevel.items.find((item: any) => item.children && item.children.title === titles[i]);
+            if (nextLevel) {
+              currentLevel = nextLevel.children;
+              newStack.push(currentLevel);
+            } else {
+              break;
+            }
+          }
+          setMenuStack(newStack);
+        }
+      }
+    } catch (e) {}
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    sessionStorage.setItem('dashboardMenuPath', JSON.stringify(menuStack.map(m => m.title)));
+  }, [menuStack]);
+
   const currentMenu = menuStack[menuStack.length - 1];
   
   const focusableItems = currentMenu.items.filter((item: any) => !item.section);
@@ -275,6 +324,10 @@ export default function Dashboard() {
   const handleAction = (item: any) => {
     if (item.action === 'open-chatbot') {
       window.dispatchEvent(new CustomEvent('open-chatbot'));
+      return;
+    }
+    if (item.action === 'switch-firm') {
+      setShowFirmSwitcher(true);
       return;
     }
     if (item.children) {
@@ -294,6 +347,24 @@ export default function Dashboard() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (showFirmSwitcher) {
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          setShowFirmSwitcher(false);
+        } else if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          setFirmSwitcherIndex(prev => Math.min(prev + 1, (user.available_firms || []).length - 1));
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          setFirmSwitcherIndex(prev => Math.max(prev - 1, 0));
+        } else if (e.key === 'Enter') {
+          e.preventDefault();
+          const target = (user.available_firms || [])[firmSwitcherIndex];
+          if (target) handleSwitchFirm(target.firm_id);
+        }
+        return;
+      }
+
       if (e.key === "ArrowDown") {
         e.preventDefault();
         setSelectedIndex((prev) => (prev + 1) % focusableItems.length);
@@ -310,6 +381,9 @@ export default function Dashboard() {
         if (menuStack.length > 1) {
           setMenuStack(prev => prev.slice(0, -1));
         }
+      } else if (e.key === "F10") {
+        e.preventDefault();
+        setShowFirmSwitcher(true);
       } else {
         const key = e.key.toUpperCase();
         const item = focusableItems.find((i: any) => i.hotkey && i.hotkey.toUpperCase() === key);
@@ -321,7 +395,31 @@ export default function Dashboard() {
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [focusableItems, selectedIndex, menuStack]);
+  }, [focusableItems, selectedIndex, menuStack, showFirmSwitcher, firmSwitcherIndex]);
+
+  const handleSwitchFirm = async (firmId: number) => {
+    try {
+      const res = await fetch('https://api.retailnode.in/api/auth/switch-firm', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({ firm_id: firmId })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        window.location.reload();
+      } else {
+        alert('Failed to switch firm');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Error switching firm');
+    }
+  };
 
   const renderTitle = (title: string, hotkey: string, isSelected: boolean) => {
     if (!hotkey) return <span>{title}</span>;
@@ -371,7 +469,9 @@ export default function Dashboard() {
                   <div className="w-1/2 text-right">Date of Last Entry</div>
                 </div>
                 <div className="flex justify-between font-bold text-black px-1 py-1">
-                  <div className="w-1/2">RetailNode V2 System</div>
+                  <div className="w-1/2 cursor-pointer hover:bg-yellow-200" onClick={() => setShowFirmSwitcher(true)}>
+                    {user.available_firms?.find((f: any) => f.firm_id === user.firm_id)?.firm_name || 'RetailNode V2 System'}
+                  </div>
                   <div className="w-1/2 text-right font-normal italic">No Vouchers Entered</div>
                 </div>
               </div>
@@ -435,6 +535,7 @@ export default function Dashboard() {
                { key: "F7", label: "Settings" },
                { key: "F8", label: "Reports" },
                { key: "F9", label: "Assistant" },
+               { key: "F10", label: "Switch Firm" },
              ].map((f) => {
                const targetItem = allMenuData.items.find((i: any) => i.fKey === f.key);
                
@@ -471,12 +572,18 @@ export default function Dashboard() {
                onClick={() => {
                   if (menuStack.length > 1) {
                     setMenuStack(prev => prev.slice(0, -1));
+                  } else {
+                    if (window.confirm("Are you sure you want to log out?")) {
+                      sessionStorage.clear();
+                      localStorage.clear();
+                      window.location.href = '/login';
+                    }
                   }
                }}
                className="flex flex-row items-center px-2 py-1 bg-[#e0efeb] border border-[#a3c3be] hover:bg-[#c9e1dd] hover:border-[#81a09d] text-left transition-all shadow-[inset_1px_1px_0_rgba(255,255,255,0.8)]"
              >
                  <span className="font-bold text-black text-xs w-[25px] underline">Q</span>
-                 <span className="text-black text-xs font-medium border-l border-[#a3c3be] pl-1 ml-1">{menuStack.length > 1 ? "Quit" : "Quit"}</span>
+                 <span className="text-black text-xs font-medium border-l border-[#a3c3be] pl-1 ml-1">{menuStack.length > 1 ? "Quit" : "Log Out"}</span>
              </button>
           </div>
         </div>
@@ -489,6 +596,48 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+      
+      {sessionStorage.getItem('isImpersonating') === 'true' && (
+        <div className="fixed bottom-10 left-4 z-[9999] bg-rose-600 text-white px-5 py-3 rounded-2xl shadow-xl shadow-rose-600/30 flex items-center gap-4 animate-in fade-in slide-in-from-bottom-4">
+          <div className="flex flex-col">
+            <span className="font-bold text-sm">SuperAdmin Active</span>
+            <span className="text-[11px] opacity-90">Impersonating Mode</span>
+          </div>
+          <button 
+            onClick={() => {
+              sessionStorage.clear();
+              window.location.href = '/dashboard';
+            }}
+            className="bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-colors border border-white/10"
+          >
+            Exit Mode
+          </button>
+        </div>
+      )}
+
+      {showFirmSwitcher && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
+          <div className="bg-[#eef5ed] border-2 border-[#81a09d] p-4 w-[400px] shadow-2xl">
+            <h2 className="text-center font-bold text-[#1b5e58] text-[16px] mb-4 border-b border-[#a3c3be] pb-2 uppercase">Select Company</h2>
+            <div className="flex flex-col max-h-[300px] overflow-y-auto bg-white border border-[#a3c3be]">
+              {(user.available_firms || []).map((f: any, idx: number) => (
+                <div 
+                  key={f.firm_id}
+                  onClick={() => handleSwitchFirm(f.firm_id)}
+                  onMouseEnter={() => setFirmSwitcherIndex(idx)}
+                  className={`px-4 py-2 cursor-pointer font-bold flex justify-between ${
+                    idx === firmSwitcherIndex ? "bg-[#ffe000] text-black" : "text-[#1b5e58] hover:bg-[#f3f9f4]"
+                  }`}
+                >
+                  <span>{f.firm_name}</span>
+                  {f.firm_id === user.firm_id && <span className="text-[10px] bg-[#1b5e58] text-white px-1 rounded-sm uppercase">Active</span>}
+                </div>
+              ))}
+            </div>
+            <div className="text-center text-[10px] mt-2 font-bold text-slate-500">Use ↑ ↓ arrows to select, Enter to confirm, Esc to cancel</div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

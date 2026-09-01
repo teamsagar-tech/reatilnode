@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { Search } from 'lucide-react';
+import { Search, Box, Banknote, Settings } from 'lucide-react';
 
 export default function ItemMaster() {
   const navigate = useNavigate();
@@ -39,27 +39,30 @@ export default function ItemMaster() {
     { id: 3, name: 'Sample Item 3', category: 'Food', stock: 200, status: 'Active' },
   ];
 
-  const SectionTitle = ({ children }: { children: React.ReactNode }) => (
-    <div className="font-bold text-indigo-900 text-xs border-b-2 border-indigo-100 mb-4 mt-2 pb-1.5 uppercase tracking-widest bg-gradient-to-r from-indigo-50/80 to-transparent px-2 rounded-t-lg">
+  const SectionTitle = ({ children, icon: Icon }: any) => (
+    <div className="flex items-center gap-2 font-black text-slate-800 text-sm mb-5 pb-3 border-b-2 border-slate-100 uppercase tracking-widest mt-2">
+      {Icon && (
+        <div className="p-1.5 bg-indigo-50 text-indigo-600 rounded-lg">
+          <Icon className="w-4 h-4" />
+        </div>
+      )}
       {children}
     </div>
   );
 
   const InputRow = ({ label, value, onChange, width = 'w-full', type = 'text', placeholder = '', id = '' }: any) => (
-    <div className="flex items-center mb-1.5 hover:bg-slate-50/50 p-1 rounded-lg transition-colors group">
-      <div className="w-[130px] text-slate-700 font-bold text-[11px] text-right pr-3 leading-tight tracking-wide group-hover:text-indigo-700 transition-colors">
+    <div className="flex flex-col gap-1.5 mb-4 group">
+      <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider group-focus-within:text-indigo-600 transition-colors">
         {label}
-      </div>
-      <div className="flex-1">
-        <input 
-          id={id}
-          type={type} 
-          className={`bg-white border border-slate-200 px-2.5 py-1.5 text-xs font-bold text-slate-800 rounded-md shadow-sm focus:bg-indigo-50/30 focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all ${width}`}
-          value={value || ''}
-          onChange={e => onChange(e.target.value)}
-          placeholder={placeholder}
-        />
-      </div>
+      </label>
+      <input 
+        id={id}
+        type={type} 
+        className={`bg-slate-50/50 border border-slate-200 px-3.5 py-2.5 text-sm font-bold text-slate-800 rounded-xl shadow-[0_1px_2px_rgba(0,0,0,0.02)] focus:bg-white focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all placeholder:text-slate-400 ${width}`}
+        value={value || ''}
+        onChange={e => onChange(e.target.value)}
+        placeholder={placeholder}
+      />
     </div>
   );
 
@@ -154,7 +157,7 @@ export default function ItemMaster() {
                     
                     {/* Column 1: Core Information */}
                     <div className="flex-1 flex flex-col gap-1 border-r border-slate-100 pr-6 overflow-y-auto pb-4 custom-scrollbar">
-                      <SectionTitle>Core Information</SectionTitle>
+                      <SectionTitle icon={Box}>Core Information</SectionTitle>
                       <InputRow id="field-0" label="Item Name" value={formData.itemName} onChange={(v: string) => setFormData({...formData, itemName: v})} />
                       <InputRow label="Marathi Name" value={formData.marathiName} onChange={(v: string) => setFormData({...formData, marathiName: v})} />
                       <InputRow label="Brand Id" value={formData.brandId} onChange={(v: string) => setFormData({...formData, brandId: v})} />
@@ -162,14 +165,14 @@ export default function ItemMaster() {
 
                     {/* Column 2: Financials & Tax */}
                     <div className="flex-1 flex flex-col gap-1 border-r border-slate-100 pr-6 overflow-y-auto pb-4 custom-scrollbar">
-                      <SectionTitle>Financials & Tax</SectionTitle>
+                      <SectionTitle icon={Banknote}>Financials & Tax</SectionTitle>
                       <InputRow label="HSN/SAC Code" value={formData.hsnsacCode} onChange={(v: string) => setFormData({...formData, hsnsacCode: v})} />
                       <InputRow label="GST Percent (%)" type="number" value={formData.gstPercent} onChange={(v: string) => setFormData({...formData, gstPercent: v})} />
                     </div>
 
                     {/* Column 3: Configuration */}
                     <div className="flex-1 flex flex-col gap-1 overflow-y-auto pb-4 custom-scrollbar">
-                      <SectionTitle>Configuration</SectionTitle>
+                      <SectionTitle icon={Settings}>Configuration</SectionTitle>
                       <InputRow label="Default Unit Type" value={formData.defaultUnitType} onChange={(v: string) => setFormData({...formData, defaultUnitType: v})} />
                     </div>
 

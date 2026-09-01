@@ -2,71 +2,131 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 
+
+const SectionTitle = ({ children }: { children: React.ReactNode }) => (
+    <div className="font-bold text-[#1b5e58] text-[12px] border-b border-[#a3c3be] mb-2 mt-2 pb-1 uppercase tracking-wider bg-[#eef5ed] px-1">
+      {children}
+    </div>
+  );
+
+const InputRow = ({ id, label, value, onChange, width = 'flex-1', type = 'text', placeholder = '' }: any) => (
+    <div className="flex items-center mb-[2px]">
+      <div className="w-[110px] text-slate-800 font-bold text-[11px] text-right pr-2 leading-tight">
+        {label}
+      </div>
+      <input 
+        id={id}
+        type={type} 
+        className={`bg-white border border-slate-400 px-1 py-[2px] text-[12px] font-bold text-black focus:bg-[#ffffe0] focus:outline-none focus:border-slate-800 ${width}`}
+        value={value || ''}
+        onChange={e => onChange(e.target.value)}
+        placeholder={placeholder}
+      />
+    </div>
+  );
+
 export default function StyleMaster() {
   const navigate = useNavigate();
   const [mode, setMode] = useState('list'); // 'list' or 'create'
-  const [formData, setFormData] = useState({});
+  const [formData, setFormData] = useState<any>({});
+  
+  const [styles, setStyles] = useState<any[]>([]);
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [editId, setEditId] = useState<number | null>(null);
+
+  const fetchStyles = () => {
+    fetch('https://api.retailnode.in/api/masters/generic/styles', {
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    })
+    .then(res => res.json())
+    .then(data => setStyles(Array.isArray(data) ? data : []))
+    .catch(console.error);
+  };
+
+  useEffect(() => {
+    fetchStyles();
+  }, []);
+
+  useEffect(() => {
+    if (mode === 'create') {
+      setTimeout(() => {
+        document.getElementById('input-name')?.focus();
+      }, 50);
+    }
+  }, [mode]);
+
+  const handleSaveStyle = async () => {
+    if (!formData.name) {
+      alert('Style Name is required');
+      return;
+    }
+    try {
+      const method = editId ? 'PUT' : 'POST';
+      const url = editId ? `https://api.retailnode.in/api/masters/generic/styles/${editId}` : 'https://api.retailnode.in/api/masters/generic/styles';
+
+      const res = await fetch(url, {
+        method: method,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({ name: formData.name, description: formData.description, is_active: true })
+      });
+      if (res.ok) {
+        setFormData({});
+        setEditId(null);
+        setMode('list');
+        fetchStyles();
+      } else {
+        alert('Failed to save style');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Error saving style');
+    }
+  };
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.preventDefault();
         if (mode === 'create') {
+          setFormData({});
+          setEditId(null);
           setMode('list');
         } else {
-          navigate('/dashboard');
+          navigate(-1);
         }
       } else if (e.altKey && (e.key.toLowerCase() === 'c' || e.code === 'KeyC' || e.key === 'ç') && mode === 'list') {
         e.preventDefault();
         setMode('create');
-        setTimeout(() => {
-          document.getElementById('field-0')?.focus();
-        }, 50);
+      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a' && mode === 'create') {
+        e.preventDefault();
+        handleSaveStyle();
+      } else if (mode === 'list') {
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          setSelectedIndex(prev => Math.min(prev + 1, styles.length - 1));
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          setSelectedIndex(prev => Math.max(prev - 1, 0));
+        } else if (e.key === 'Enter') {
+          e.preventDefault();
+          if (styles[selectedIndex]) {
+            const row = styles[selectedIndex];
+            setFormData({
+              name: row.name,
+              description: row.description || ''
+            });
+            setEditId(row.id);
+            setMode('create');
+          }
+        }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [navigate, mode]);
-
-  const handleFieldKeyDown = (e: React.KeyboardEvent, nextFieldId: string) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      const nextField = document.getElementById(nextFieldId);
-      if (nextField) {
-        nextField.focus();
-      } else {
-        // End of form, simulate save
-        setMode('list');
-      }
-    }
-  };
-
-  const sampleData = [
-    { id: 1, col1: 'Sample 1', col2: 'Data A', col3: 'Active', col4: '100' },
-    { id: 2, col1: 'Sample 2', col2: 'Data B', col3: 'Inactive', col4: '50' },
-    { id: 3, col1: 'Sample 3', col2: 'Data C', col3: 'Active', col4: '200' },
-  ];
-
-  const SectionTitle = ({ children }: { children: React.ReactNode }) => (
-    <div className="font-bold text-[#1b5e58] text-[12px] border-b border-[#a3c3be] mb-2 mt-2 pb-1 uppercase tracking-wider bg-[#eef5ed] px-1">
-      {children}
-    </div>
-  );
-
-  const InputRow = ({ label, value, onChange, width = 'flex-1', type = 'text', placeholder = '' }: any) => (
-    <div className="flex items-center mb-[2px]">
-      <div className="w-[110px] text-slate-800 font-bold text-[11px] text-right pr-2 leading-tight">
-        {label}
-      </div>
-      <input 
-        type={type} 
-        className={`bg-white border border-slate-400 px-1 py-[2px] text-[12px] font-bold text-black focus:bg-[#ffffe0] focus:outline-none focus:border-slate-800 ${width}`}
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        placeholder={placeholder}
-      />
-    </div>
-  );
+  }, [navigate, mode, formData, styles, selectedIndex]);
 
   return (
     <>
@@ -98,15 +158,28 @@ export default function StyleMaster() {
                   <table className='w-full text-left border-collapse border border-slate-400'>
                     <thead className='bg-[#eef5ed]'>
                       <tr className='border-b-2 border-slate-400 text-slate-900 font-bold text-[12px]'>
-                        <th className="px-2 py-1 border-r border-slate-300">ID</th><th className="px-2 py-1 border-r border-slate-300">Style Code</th><th className="px-2 py-1 border-r border-slate-300">Description</th>
+                        <th className="px-2 py-1 border-r border-slate-300">ID</th><th className="px-2 py-1 border-r border-slate-300">Style Name</th><th className="px-2 py-1 border-r border-slate-300">Description</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {sampleData.map((row, idx) => {
-                        const renderCell = (i: number) => i === 0 ? row.id : (row as any)['col'+i] || '-';
+                      {styles.map((row, idx) => {
                         return (
-                          <tr key={row.id} className={'text-[12px] border-b border-slate-300 ' + (idx % 2 === 0 ? 'bg-white' : 'bg-[#fcfaf2]') + ' hover:bg-[#ffffe0] cursor-pointer'}>
-                            <td className="px-2 py-1 border-r border-slate-300 font-medium text-slate-700">{renderCell(0)}</td><td className="px-2 py-1 border-r border-slate-300 font-medium text-slate-700">{renderCell(1)}</td><td className="px-2 py-1 border-r border-slate-300 font-medium text-slate-700">{renderCell(2)}</td>
+                          <tr 
+                            key={row.id} 
+                            onClick={() => {
+                              setFormData({
+                                name: row.name,
+                                description: row.description || ''
+                              });
+                              setEditId(row.id);
+                              setMode('create');
+                              setSelectedIndex(idx);
+                            }}
+                            className={`text-[12px] border-b border-slate-300 ${idx === selectedIndex ? 'bg-[#ffe000]' : (idx % 2 === 0 ? 'bg-white' : 'bg-[#fcfaf2]')} hover:bg-[#ffffe0] cursor-pointer`}
+                          >
+                            <td className="px-2 py-1 border-r border-slate-300 font-medium text-slate-700">{row.id}</td>
+                            <td className="px-2 py-1 border-r border-slate-300 font-medium text-slate-700">{row.name}</td>
+                            <td className="px-2 py-1 border-r border-slate-300 font-medium text-slate-700">{row.description || '-'}</td>
                           </tr>
                         );
                       })}
@@ -120,7 +193,8 @@ export default function StyleMaster() {
                     {/* Column 1: Master Details */}
                     <div className="w-[40%] flex flex-col gap-1 border-r-2 border-slate-300 pr-4 overflow-y-auto pb-4 custom-scrollbar">
                       <SectionTitle>Master Information</SectionTitle>
-                    <InputRow label="Style Name" value={formData.styleName} onChange={(v: string) => setFormData({...formData, styleName: v})} />
+                      <InputRow id="input-name" label="Style Name" value={formData.name} onChange={(v: string) => setFormData({...formData, name: v})} />
+                      <InputRow label="Description" value={formData.description} onChange={(v: string) => setFormData({...formData, description: v})} />
                     </div>
 
                   </div>
@@ -128,16 +202,16 @@ export default function StyleMaster() {
                   {/* Action Buttons */}
                   <div className='flex justify-end gap-2 pt-2 border-t border-slate-300 mt-2 shrink-0'>
                     <button 
-                      onClick={() => setFormData({})}
+                      onClick={() => {
+                        setFormData({});
+                        setEditId(null);
+                      }}
                       className='bg-red-50 border border-red-300 px-6 py-1 text-red-700 font-bold hover:bg-red-100 shadow-[inset_1px_1px_0_rgba(255,255,255,0.8)] outline-none focus:bg-red-200'
                     >
                       Reset
                     </button>
                     <button 
-                      onClick={() => {
-                        alert('Saved Successfully!');
-                        setMode('list');
-                      }}
+                      onClick={handleSaveStyle}
                       className='bg-[#1b5e58] border border-[#1b5e58] px-6 py-1 text-white font-bold hover:bg-[#144743] shadow-[inset_1px_1px_0_rgba(255,255,255,0.2)] outline-none focus:bg-[#0f3632]'
                     >
                       Save (Ctrl+A)

@@ -1,16 +1,43 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Helmet } from 'react-helmet-async';
+import { Eye, EyeOff } from 'lucide-react';
 
 export default function Login() {
   const navigate = useNavigate();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (username && password) {
+    if (!username || !password) return;
+    
+    setError("");
+    setLoading(true);
+    
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: username, password })
+      });
+      const data = await res.json();
+      
+      if (!res.ok) {
+        throw new Error(data.error || "Login failed");
+      }
+      
+      // Success
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("user", JSON.stringify(data.user));
       navigate("/dashboard");
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -40,29 +67,46 @@ export default function Login() {
               <div className="p-6">
                 <form onSubmit={handleLogin} className="flex flex-col gap-4">
                   
+                  {error && (
+                    <div className="bg-red-100 border border-red-400 text-red-700 px-3 py-2 text-xs font-bold rounded">
+                      {error}
+                    </div>
+                  )}
+
                   <div className="flex justify-between items-center">
-                    <label className="font-bold text-black text-sm w-1/3">Name of User</label>
+                    <label className="font-bold text-black text-sm w-1/3">Email / User</label>
                     <input 
                       type="text" 
                       className="w-2/3 border border-slate-500 p-1 px-2 focus:bg-white focus:outline-none focus:border-black shadow-inner" 
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
                       autoFocus
+                      disabled={loading}
                     />
                   </div>
 
                   <div className="flex justify-between items-center">
                     <label className="font-bold text-black text-sm w-1/3">Password</label>
-                    <input 
-                      type="password" 
-                      className="w-2/3 border border-slate-500 p-1 px-2 focus:bg-white focus:outline-none focus:border-black shadow-inner tracking-widest" 
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                    />
+                    <div className="w-2/3 relative flex items-center">
+                      <input 
+                        type={showPassword ? "text" : "password"} 
+                        className="w-full border border-slate-500 p-1 px-2 pr-8 focus:bg-white focus:outline-none focus:border-black shadow-inner tracking-widest" 
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        disabled={loading}
+                      />
+                      <button 
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-2 text-slate-600 hover:text-black focus:outline-none"
+                      >
+                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
                   </div>
 
                   {/* Hidden submit button to allow Enter key to submit */}
-                  <button type="submit" className="hidden">Submit</button>
+                  <button type="submit" className="hidden" disabled={loading}>Submit</button>
 
                 </form>
               </div>
@@ -73,9 +117,13 @@ export default function Login() {
               </div>
             </div>
 
-            {/* Version / Info text at bottom of the white area */}
-            <div className="absolute bottom-4 right-4 text-xs font-bold text-slate-500">
-              RetailNode V2
+            {/* Copyright and Policy Links at bottom of the white area */}
+            <div className="absolute bottom-4 w-full flex flex-col items-center gap-1 text-xs font-bold text-slate-500">
+              <div className="flex gap-4">
+                <a href="/privacy-policy" className="hover:text-[#1b5e58] hover:underline">Privacy Policy</a>
+                <a href="/terms-of-service" className="hover:text-[#1b5e58] hover:underline">Terms of Service</a>
+              </div>
+              <div>© {new Date().getFullYear()} RetailNode. All rights reserved.</div>
             </div>
           </div>
 

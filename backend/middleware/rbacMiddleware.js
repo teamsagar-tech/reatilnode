@@ -10,8 +10,8 @@ const db = require('../config/db');
 const requirePermission = (moduleName, action) => {
   return async (req, res, next) => {
     try {
-      // Admins bypass module restrictions
-      if (req.user.role === 'admin') {
+      // Admins and Superadmins bypass module restrictions
+      if (req.user.role === 'admin' || req.user.role === 'superadmin') {
         return next();
       }
 
@@ -42,4 +42,4 @@ const requirePermission = (moduleName, action) => {
   };
 };
 
-module.exports = requirePermission;
+module.exports = { requirePermission };
