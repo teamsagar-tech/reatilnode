@@ -247,36 +247,40 @@ export default function FirmMaster() {
                 </table>
               </>
             ) : (
-              <div className="flex justify-center items-start pt-4 h-full">
-                <div className="w-[600px] bg-white border border-[#a3c3be] shadow-sm p-4">
-                  <SectionTitle>Basic Details</SectionTitle>
-                  <InputRow id="input-name" label="Firm Name" value={formData.name} onChange={(v: string) => setFormData({...formData, name: v})} />
-                  <InputRow id="input-email" label="Email" type="email" value={formData.email} onChange={(v: string) => setFormData({...formData, email: v})} />
-                  <InputRow id="input-mobile" label="Mobile" value={formData.mobile} onChange={(v: string) => setFormData({...formData, mobile: v})} />
+              <div className='flex flex-col h-full overflow-hidden'>
+                <div className='flex flex-1 gap-6 overflow-hidden'>
+                  
+                  {/* Column 1: Master Details */}
+                  <div className="w-[40%] flex flex-col gap-1 border-r-2 border-slate-300 pr-4 overflow-y-auto pb-4 custom-scrollbar">
+                    <SectionTitle>Basic Details</SectionTitle>
+                    <InputRow id="input-name" label="Firm Name" value={formData.name} onChange={(v: string) => setFormData({...formData, name: v})} />
+                    <InputRow id="input-email" label="Email" type="email" value={formData.email} onChange={(v: string) => setFormData({...formData, email: v})} />
+                    <InputRow id="input-mobile" label="Mobile" value={formData.mobile} onChange={(v: string) => setFormData({...formData, mobile: v})} />
 
-                  <SectionTitle>Address & Registration</SectionTitle>
-                  <InputRow id="input-address" label="Address" value={formData.settings?.address || ''} onChange={(v: string) => updateSetting('address', v)} />
-                  <InputRow id="input-state" label="State" value={formData.settings?.state || ''} onChange={(v: string) => updateSetting('state', v)} />
-                  <InputRow id="input-gstin" label="GSTIN" value={formData.settings?.gstin || ''} onChange={(v: string) => updateSetting('gstin', v)} />
-
-                  <div className='flex justify-end gap-2 pt-2 border-t border-slate-300 mt-6 shrink-0'>
-                    <button 
-                      onClick={() => {
-                        setFormData({ name: '', email: '', mobile: '', settings: { address: '', gstin: '', state: '' } });
-                        setEditId(null);
-                        setMode('list');
-                      }}
-                      className='bg-red-50 border border-red-300 px-6 py-1 text-red-700 font-bold hover:bg-red-100 shadow-[inset_1px_1px_0_rgba(255,255,255,0.8)] outline-none focus:bg-red-200 uppercase text-[11px]'
-                    >
-                      Cancel
-                    </button>
-                    <button 
-                      onClick={handleSaveFirm}
-                      className='bg-[#1b5e58] border border-[#0d2d2a] px-6 py-1 text-white font-bold shadow-[inset_1px_1px_0_rgba(255,255,255,0.3)] hover:bg-[#12423d] focus:bg-[#12423d] outline-none uppercase text-[11px]'
-                    >
-                      Save Profile
-                    </button>
+                    <SectionTitle>Address & Registration</SectionTitle>
+                    <InputRow id="input-address" label="Address" value={formData.settings?.address || ''} onChange={(v: string) => updateSetting('address', v)} />
+                    <InputRow id="input-state" label="State" value={formData.settings?.state || ''} onChange={(v: string) => updateSetting('state', v)} />
+                    <InputRow id="input-gstin" label="GSTIN" value={formData.settings?.gstin || ''} onChange={(v: string) => updateSetting('gstin', v)} />
                   </div>
+                </div>
+
+                <div className='flex justify-end gap-2 pt-2 border-t border-slate-300 mt-2 shrink-0'>
+                  <button 
+                    onClick={() => {
+                      setFormData({ name: '', email: '', mobile: '', settings: { address: '', gstin: '', state: '' } });
+                      setEditId(null);
+                      setMode('list');
+                    }}
+                    className='bg-red-50 border border-red-300 px-6 py-1 text-red-700 font-bold hover:bg-red-100 shadow-[inset_1px_1px_0_rgba(255,255,255,0.8)] outline-none focus:bg-red-200 uppercase text-[11px]'
+                  >
+                    Reset
+                  </button>
+                  <button 
+                    onClick={handleSaveFirm}
+                    className='bg-[#1b5e58] border border-[#1b5e58] px-6 py-1 text-white font-bold hover:bg-[#144743] shadow-[inset_1px_1px_0_rgba(255,255,255,0.2)] outline-none focus:bg-[#0f3632] uppercase text-[11px]'
+                  >
+                    Save (Ctrl+A)
+                  </button>
                 </div>
               </div>
             )}
