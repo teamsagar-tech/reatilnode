@@ -64,6 +64,6 @@ This document serves as a compulsory append-only log of all major implementation
 - **Current State**: The architecture maintains its strict `req.firm_id` checking, but users can now swap the `firm_id` inside their active JWT via the switcher.
 
 ## Firm Master Proper Screen & Switcher Fix
-- **Backend**: Added `GET /api/firms/me/all` and `PUT /api/firms/me/:id` to `firmController.js` and `firmRoutes.js` so regular users can manage the profiles of multiple firms they belong to from a master screen.
-- **Frontend (Firm Master)**: Rewrote `FirmMaster.tsx` to match the standard list-edit proper master UI layout (matching PartyMaster). Users can now view a list of all their accessible firms, create a new firm directly, and edit existing firm details.
+- **Backend**: Added `GET /api/firms/me/all` and `PUT /api/firms/me/:id` to `firmController.js` and `firmRoutes.js` so regular users can manage the profiles of multiple firms they belong to from a master screen. Also updated `getMyFirms` to return `max_firms` for quota display.
+- **Frontend (Firm Master)**: Rewrote `FirmMaster.tsx` to match the standard list-edit proper master UI layout (matching PartyMaster). Users can now view a list of all their accessible firms, create a new firm directly, and edit existing firm details. Also added the standard F-Keys right sidebar and the 'Allowed Firm Count' quota tracking to the list view UI.
 - **Frontend (Dashboard)**: Implemented an interactive Firm Switcher accessible via the `F10` hotkey, side menu, or by clicking the active firm name in the `Dashboard.tsx` Tally UI. Resolves the issue where Tally users had no way to switch contexts since `DashboardLayout` wasn't loaded.
