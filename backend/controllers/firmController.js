@@ -210,7 +210,7 @@ exports.createMyFirm = async (req, res) => {
 exports.getMyFirms = async (req, res) => {
   try {
     const [rows] = await db.execute(`
-      SELECT f.id, f.name, f.email, f.mobile, f.settings, uf.role
+      SELECT f.id, f.name, f.email, f.mobile, f.settings, f.max_firms, uf.role
       FROM Firms f
       JOIN UserFirms uf ON f.id = uf.firm_id
       WHERE uf.user_id = ? AND uf.is_active = 1

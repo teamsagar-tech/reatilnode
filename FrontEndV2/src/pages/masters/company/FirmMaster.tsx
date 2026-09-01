@@ -183,7 +183,14 @@ export default function FirmMaster() {
             {mode === 'list' ? (
               <>
                 <div className='flex justify-between items-center mb-2'>
-                  <div className='font-bold text-slate-800 text-[14px]'>Your Firms</div>
+                  <div className='font-bold text-slate-800 text-[14px] flex items-center gap-4'>
+                    <span>Your Firms</span>
+                    {myFirms.length > 0 && (
+                      <span className='bg-[#ffe000] text-black px-2 py-0.5 text-[11px] rounded-sm'>
+                        Allowed Firm Count: {myFirms.length} / {myFirms[0]?.max_firms || 1}
+                      </span>
+                    )}
+                  </div>
                   <button 
                     onClick={() => {
                       setFormData({ name: '', email: '', mobile: '', settings: { address: '', gstin: '', state: '' } });
@@ -275,6 +282,50 @@ export default function FirmMaster() {
             )}
           </div>
         </div>
+
+        {/* Right Sidebar */}
+        <div className='w-[120px] flex-col gap-[2px] overflow-y-auto hidden lg:flex bg-[#e0efeb]'>
+           {[
+             { key: 'F1', label: 'Help' },
+             { key: 'F2', label: 'Date' },
+             { key: 'F3', label: 'Company' },
+             { key: 'F4', label: 'Edit' },
+             { key: 'F5', label: 'Delete' },
+           ].map((f) => (
+             <button 
+               key={f.key} 
+               className='flex flex-row items-center px-2 py-1 bg-[#e0efeb] border border-[#a3c3be] hover:bg-[#c9e1dd] hover:border-[#81a09d] text-left transition-all shadow-[inset_1px_1px_0_rgba(255,255,255,0.8)]'
+             >
+               <span className='font-bold text-black text-[11px] w-[25px]'>{f.key}</span>
+               <span className='text-black text-[11px] font-medium border-l border-[#a3c3be] pl-1 ml-1'>{f.label}</span>
+             </button>
+           ))}
+           <div className='flex-1' />
+           <div className="flex flex-col items-center justify-center p-2 mb-2 border-t border-[#a3c3be] mx-2 pt-4">
+             <svg width="64" height="64" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+               <circle cx="100" cy="100" r="86" fill="transparent" stroke="#1b5e58" strokeWidth="14" />
+               <circle cx="14" cy="100" r="8" fill="transparent" stroke="#1b5e58" strokeWidth="5" />
+               <circle cx="186" cy="100" r="8" fill="transparent" stroke="#1b5e58" strokeWidth="5" />
+               <text x="100" y="100" fontFamily="system-ui, -apple-system, sans-serif" fontWeight="900" fontSize="72" textAnchor="middle" dominantBaseline="central">
+                 <tspan fill="#12423d">RN</tspan><tspan fill="#1b5e58">.</tspan>
+               </text>
+             </svg>
+             <span className="font-extrabold text-[13px] text-[#12423d] mt-2 uppercase tracking-widest text-center">RetailNode</span>
+           </div>
+
+           <button 
+             onClick={() => mode === 'create' ? setMode('list') : navigate('/dashboard')}
+             className='flex flex-row items-center px-2 py-1 bg-[#e0efeb] border border-[#a3c3be] hover:bg-[#c9e1dd] hover:border-[#81a09d] text-left transition-all shadow-[inset_1px_1px_0_rgba(255,255,255,0.8)]'
+           >
+               <span className='font-bold text-black text-[11px] w-[25px] underline'>Q</span>
+               <span className='text-black text-[11px] font-medium border-l border-[#a3c3be] pl-1 ml-1'>Quit</span>
+           </button>
+        </div>
+      </div>
+      
+      {/* Footer */}
+      <div className='bg-[#1b5e58] text-white text-[11px] px-4 py-1 flex justify-between items-center border-t-2 border-[#12423d]'>
+        <div className='font-medium tracking-wide'>Firm Master</div>
       </div>
     </div>
   );
