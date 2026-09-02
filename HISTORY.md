@@ -129,3 +129,10 @@ This document serves as a compulsory append-only log of all major implementation
 - **Frontend (`PurchaseInvoice.tsx`):** Patched the Summary Table's "Commission Amount" and "Discount Amount" input fields. Previously, these inputs only displayed a value if it was manually typed in, ignoring the calculated amounts from the imported percentages (e.g. `ADAT %` = 2). They now dynamically display `calcCommission.toFixed(2)` and `calcDiscount.toFixed(2)` and lock into a `readOnly` state if a percentage > 0 is provided.
 
 **Rationale:** The internal state for `afterCommission` and `afterDiscount` was calculating the subtotals perfectly because the CSV mapped `ADAT %` -> `commissionPercent`. However, the UI input fields for the raw Amounts failed to display these calculations to the user.
+
+## 2026-09-02: Purchase Invoice Save Button & Party Mapping Fix
+**Changes:** 
+- **Frontend (`PurchaseInvoice.tsx`):**
+  - Added a dedicated "Save" button to the bottom right of the UI, next to the Quit button, to allow users to save the invoice.
+  - Implemented the `Alt+S` keyboard shortcut for saving the invoice, providing a true Tally-like rapid data entry experience.
+  - Updated the CSV Import parsing logic to prioritize mapping the `SUPPLIER` column over the `PARTY` column. This fixes the issue where an internal party name was overriding the intended supplier name.
