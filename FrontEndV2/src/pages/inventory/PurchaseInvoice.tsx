@@ -1095,7 +1095,7 @@ export default function PurchaseInvoice() {
                       <input type="number" value={invoiceData.discountPercent || ''} onChange={e => handleInvoiceChange('discountPercent', parseFloat(e.target.value) || 0)} className="w-full bg-transparent focus:bg-[#ffffe0] focus:outline-none px-1 text-center" />
                     </div>
                     <div className="w-[35%] px-0 py-0">
-                      <input type="number" value={invoiceData.discountAmount || ''} onChange={e => handleInvoiceChange('discountAmount', parseFloat(e.target.value) || 0)} className="w-full bg-transparent focus:bg-[#ffffe0] focus:outline-none px-1 text-right" />
+                      <input type="number" value={invoiceData.discountPercent > 0 ? calcDiscount.toFixed(2) : (invoiceData.discountAmount || '')} onChange={e => handleInvoiceChange('discountAmount', parseFloat(e.target.value) || 0)} readOnly={invoiceData.discountPercent > 0} className="w-full bg-transparent focus:bg-[#ffffe0] focus:outline-none px-1 text-right" />
                     </div>
                   </div>
 
@@ -1113,7 +1113,7 @@ export default function PurchaseInvoice() {
                       <input type="number" value={invoiceData.commissionPercent || ''} onChange={e => handleInvoiceChange('commissionPercent', parseFloat(e.target.value) || 0)} className="w-full bg-transparent focus:bg-[#ffffe0] focus:outline-none px-1 text-center" />
                     </div>
                     <div className="w-[35%] px-0 py-0">
-                      <input type="number" value={invoiceData.commissionAmount || ''} onChange={e => handleInvoiceChange('commissionAmount', parseFloat(e.target.value) || 0)} className="w-full bg-transparent focus:bg-[#ffffe0] focus:outline-none px-1 text-right" />
+                      <input type="number" value={invoiceData.commissionPercent > 0 ? calcCommission.toFixed(2) : (invoiceData.commissionAmount || '')} onChange={e => handleInvoiceChange('commissionAmount', parseFloat(e.target.value) || 0)} readOnly={invoiceData.commissionPercent > 0} className="w-full bg-transparent focus:bg-[#ffffe0] focus:outline-none px-1 text-right" />
                     </div>
                   </div>
 

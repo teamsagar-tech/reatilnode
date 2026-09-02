@@ -114,3 +114,12 @@ This document serves as a compulsory append-only log of all major implementation
 **Rationale:** The previous React state mapping logic blindly attempted to `parseInt(roleId, 10)`. When the user tried to assign "admin" from the dropdown, `parseInt("admin")` returned `NaN`, which caused the local state update to fail silently and visually snap back to the previous role immediately (even though the backend API call was successful). 
 
 **Current State:** Assigning both string-based built-in roles and numeric custom roles updates the UI state instantly and reliably.
+
+## 2026-09-02: Purchase Invoice CSV Import Rate and Empty Row Fix
+**Changes:** 
+- **Frontend (`PurchaseInvoice.tsx`):** Modified the `handleKeyDown` and manual mouse click logic for the Item autocomplete dropdown to safely preserve the imported `rate` and `gst` values. Instead of unconditionally overwriting them with `selected.purchase_price` (which is often empty for newly generated items) or `0`, the logic now falls back to `newProducts[index].rate` and `newProducts[index].gst` if they are already populated.
+- **Frontend (`PurchaseInvoice.tsx`):** Strengthened the CSV row filter logic during import (`!p.item.trim()`) to rigorously strip out phantom rows caused by trailing whitespace or trailing blank lines in Excel/CSV files.
+
+**Rationale:** When users imported a CSV, the rate and GST correctly populated in the background. However, if they subsequently clicked on the row to trigger the autocomplete dropdown (or resolved missing items via the hub which then received focus), the `onChange` / `onSelect` logic would fire, immediately wiping the imported Rate and GST and setting them to empty/0 because the local master had no pre-defined values for those newly created items. Additionally, a blank CSV row was resulting in a visual artifact (an empty "# 1" row with 0.00 GST) at the top of the grid. 
+
+**Current State:** CSV Imports flawlessly retain their imported Rate and Tax percentages regardless of post-import interactions with the autocomplete dropdown, and the grid strictly filters out empty ghost rows.
