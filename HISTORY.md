@@ -79,3 +79,12 @@ This document serves as a compulsory append-only log of all major implementation
 **Rationale:** Vendors provide highly variable formats. Dropping unvalidated strings into the frontend leads to crashes at submission because the backend strictly demands Master IDs. The interactive hub ensures data integrity while drastically minimizing user friction for master creation.
 
 **Current State:** The Purchase Invoice page now natively supports resilient, zero-friction imports from arbitrary vendor files.
+
+## 2026-09-02: Tenant Users Role Management Bug Fixes
+**Changes:** 
+- **Backend:** Updated `getFirmUsers` in `backend/controllers/firmController.js` to `LEFT JOIN Roles` so that the API now correctly returns both the custom `role` name and `role_id` for users.
+- **Frontend (`TenantUsers.tsx`):** Fixed the role dropdown duplication bug by conditionally rendering the fallback `<option>` only when `user.role_id` is null. If a user is successfully assigned a custom role (like 'Purchase Manager'), the select dropdown elegantly binds to that `role_id` from the mapped list without generating duplicates.
+
+**Rationale:** The API was previously only pulling the hardcoded `role` ENUM from the `Users` table and omitting `role_id`, causing the UI to constantly revert to "admin" or "user" visually on refresh, and also causing the React mapping logic to spit out the fallback text "Purchase Manager" alongside the actual Role option.
+
+**Current State:** The Tenant Users management page correctly binds, displays, and persists custom roles assigned to firm users.

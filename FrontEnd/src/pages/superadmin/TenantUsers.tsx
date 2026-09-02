@@ -498,11 +498,14 @@ export default function TenantUsers() {
                           
                           <select 
                             className="text-xs font-bold uppercase tracking-wider bg-slate-100 text-slate-600 px-2 py-1 rounded-full outline-none cursor-pointer"
-                            value={user.role_id || ''}
+                            value={user.role_id || user.role || ''}
                             onChange={(e) => assignRole(user.id, e.target.value)}
                           >
-                            {!user.role_id && <option value="">{user.role}</option>}
-                            {roles.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+                            <option value="admin">Admin</option>
+                            <option value="user">User</option>
+                            <optgroup label="Custom Roles">
+                              {roles.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+                            </optgroup>
                           </select>
                         </td>
                         <td className="px-6 py-4">

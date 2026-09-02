@@ -500,13 +500,16 @@ export default function TenantUsers() {
                           
                           <td className="px-4 py-2 font-bold text-slate-800 border-r border-[#a3c3be] uppercase text-xs">
                             <select 
-                              className="bg-transparent border-b border-[#1b5e58] outline-none cursor-pointer"
-                              value={user.role_id || ''}
-                              onChange={(e) => assignRole(user.id, e.target.value)}
-                            >
-                              {!user.role_id && <option value="">{user.role}</option>}
+                            className="text-xs font-bold uppercase tracking-wider bg-slate-100 text-slate-600 px-2 py-1 rounded-full outline-none cursor-pointer"
+                            value={user.role_id || user.role || ''}
+                            onChange={(e) => assignRole(user.id, e.target.value)}
+                          >
+                            <option value="admin">Admin</option>
+                            <option value="user">User</option>
+                            <optgroup label="Custom Roles">
                               {roles.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
-                            </select>
+                            </optgroup>
+                          </select>
                           </td>
                           <td className="px-4 py-2 text-center text-xs font-bold text-[#1b5e58] flex justify-center gap-3">
                             <span onClick={() => handleEditUser(user)} className="underline cursor-pointer hover:text-[#12423d] flex items-center gap-1">
