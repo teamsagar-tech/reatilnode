@@ -83,7 +83,9 @@ export default function PurchaseInvoice() {
             'LRNO': 'lrNo',
             'TRANSPORT': 'transporter',
             'ADAT %': 'commissionPercent',
-            'SALESPERSON': 'purchaser'
+            'SALESPERSON': 'purchaser',
+            'SUPPLIER': 'supplier',
+            'PARTY': 'supplier'
           };
           
           for (const [key, value] of Object.entries(firstRow)) {
@@ -99,6 +101,17 @@ export default function PurchaseInvoice() {
                         (newInvoiceData as any)[headerMap[trimmedKey]] = matchedUser.name;
                     } else {
                         (newInvoiceData as any)[headerMap[trimmedKey]] = value;
+                    }
+                } else if (headerMap[trimmedKey] === 'supplier' && typeof value === 'string') {
+                    const matchedVendor = vendors.find((v: any) => 
+                        value.toLowerCase().includes((v.name || '').toLowerCase()) || 
+                        (v.name || '').toLowerCase().includes(value.toLowerCase())
+                    );
+                    if (matchedVendor) {
+                        (newInvoiceData as any)[headerMap[trimmedKey]] = matchedVendor.name;
+                    } else {
+                        alert("Vendor '" + value + "' from the imported file was not found in your database. Please select it manually or create a new vendor.");
+                        (newInvoiceData as any)[headerMap[trimmedKey]] = value; // Keep it so they can see what it was
                     }
                 } else if (headerMap[trimmedKey] === 'billDate' && typeof value === 'string') {
                     const parts = value.split(/[/-]/);
