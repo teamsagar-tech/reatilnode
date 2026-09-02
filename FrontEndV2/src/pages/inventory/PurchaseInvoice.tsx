@@ -57,6 +57,11 @@ export default function PurchaseInvoice() {
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
+  
+  const handleSaveInvoice = () => {
+    alert('Purchase Invoice Saved Successfully!');
+  };
+
   const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -1018,7 +1023,11 @@ export default function PurchaseInvoice() {
                                 e.stopPropagation();
                                 setInvoiceData(prev => ({ ...prev, designNo: true }));
                                 setActiveModalRow(index);
-                              } else if (e.altKey && e.code === 'KeyL') {
+                              } else if (e.altKey && e.code === 'KeyS') {
+        e.preventDefault();
+        e.stopPropagation();
+        handleSaveInvoice();
+      } else if (e.altKey && e.code === 'KeyL') {
                                 e.preventDefault();
                                 e.stopPropagation();
                                 setInvoiceData(prev => ({ ...prev, showLocation: true }));
@@ -1237,8 +1246,15 @@ export default function PurchaseInvoice() {
              </div>
 
              <button 
+               onClick={handleSaveInvoice}
+               className="flex flex-row items-center px-2 py-1 bg-[#ffe000] border border-[#d6bc00] hover:bg-[#e6c900] text-left transition-all shadow-[inset_1px_1px_0_rgba(255,255,255,0.8)] mb-2 w-full"
+             >
+                 <span className="font-bold text-black text-[11px] w-[25px] underline">S</span>
+                 <span className="text-black text-[11px] font-medium border-l border-[#d6bc00] pl-1 ml-1">Save</span>
+             </button>
+             <button 
                onClick={() => navigate('/dashboard')}
-               className="flex flex-row items-center px-2 py-1 bg-[#e0efeb] border border-[#a3c3be] hover:bg-[#c9e1dd] hover:border-[#81a09d] text-left transition-all shadow-[inset_1px_1px_0_rgba(255,255,255,0.8)]"
+               className="flex flex-row items-center px-2 py-1 bg-[#e0efeb] border border-[#a3c3be] hover:bg-[#c9e1dd] hover:border-[#81a09d] text-left transition-all shadow-[inset_1px_1px_0_rgba(255,255,255,0.8)] w-full"
              >
                  <span className="font-bold text-black text-[11px] w-[25px] underline">Q</span>
                  <span className="text-black text-[11px] font-medium border-l border-[#a3c3be] pl-1 ml-1">Quit</span>
@@ -1251,7 +1267,7 @@ export default function PurchaseInvoice() {
           <div className="font-medium tracking-wide flex gap-4">
             <span>Purchase Voucher</span>
             <span className="text-[#a4d4cc]">
-              Shortcuts: <strong>{modKey}+Z</strong> (Design) | <strong>{modKey}+C</strong> (Colour) | <strong>{modKey}+X</strong> (Size) | <strong>{modKey}+L</strong> (Location) | <strong>{modKey}+V</strong> (Discount) | <strong>{modKey}+M</strong> (Markdown)
+              Shortcuts: <strong>{modKey}+S</strong> (Save) | <strong>{modKey}+Z</strong> (Design) | <strong>{modKey}+C</strong> (Colour) | <strong>{modKey}+X</strong> (Size) | <strong>{modKey}+L</strong> (Location) | <strong>{modKey}+V</strong> (Discount) | <strong>{modKey}+M</strong> (Markdown)
             </span>
           </div>
           <div className="flex gap-6">

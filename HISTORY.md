@@ -123,3 +123,9 @@ This document serves as a compulsory append-only log of all major implementation
 **Rationale:** When users imported a CSV, the rate and GST correctly populated in the background. However, if they subsequently clicked on the row to trigger the autocomplete dropdown (or resolved missing items via the hub which then received focus), the `onChange` / `onSelect` logic would fire, immediately wiping the imported Rate and GST and setting them to empty/0 because the local master had no pre-defined values for those newly created items. Additionally, a blank CSV row was resulting in a visual artifact (an empty "# 1" row with 0.00 GST) at the top of the grid. 
 
 **Current State:** CSV Imports flawlessly retain their imported Rate and Tax percentages regardless of post-import interactions with the autocomplete dropdown, and the grid strictly filters out empty ghost rows.
+
+## 2026-09-02: Purchase Invoice Summary Table UI Bug Fixes
+**Changes:** 
+- **Frontend (`PurchaseInvoice.tsx`):** Patched the Summary Table's "Commission Amount" and "Discount Amount" input fields. Previously, these inputs only displayed a value if it was manually typed in, ignoring the calculated amounts from the imported percentages (e.g. `ADAT %` = 2). They now dynamically display `calcCommission.toFixed(2)` and `calcDiscount.toFixed(2)` and lock into a `readOnly` state if a percentage > 0 is provided.
+
+**Rationale:** The internal state for `afterCommission` and `afterDiscount` was calculating the subtotals perfectly because the CSV mapped `ADAT %` -> `commissionPercent`. However, the UI input fields for the raw Amounts failed to display these calculations to the user.
