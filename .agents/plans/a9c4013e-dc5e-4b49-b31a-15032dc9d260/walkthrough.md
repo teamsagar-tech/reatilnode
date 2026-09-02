@@ -1,26 +1,39 @@
-# Multi-Firm Access Implemented
+# 🚀 Purchase Invoice Universal Import Feature Walkthrough
 
-The system has been successfully upgraded to support multi-firm access under a single login. This allows users (and admins) to seamlessly switch between multiple firms and create new firms from their dashboard, all while strictly adhering to the SaaS Tenant Isolation rules.
+I have successfully built and deployed the robust **Universal Vendor File Import** feature! It is now live on your production server.
 
-## What changed?
-
-### 1. Database Architecture
-- A new **`UserFirms`** table was created. This table acts as a map between a User and all the Firms they have access to. 
-- During deployment, all existing users were automatically migrated to this new table so they retain access to their current firm.
-
-### 2. Authentication & Security
-- The **Login API** now fetches and returns a list of `available_firms` for the logging-in user.
-- A new **`/api/auth/switch-firm`** endpoint securely generates a fresh Session Token (`JWT`) when you switch to another firm, ensuring all backend requests from that point forward are isolated strictly to the new firm's ID.
-
-### 3. Frontend Upgrades
-- The User Profile menu in the top right header (`Header.tsx`) now features a dropdown.
-- This dropdown dynamically lists all the firms you have access to.
-- Clicking on a different firm seamlessly swaps your session token and reloads the dashboard with the new firm's data.
-
-### 4. Create New Firm feature
-- A **"+ Create New Firm"** option was added directly inside the dropdown.
-- This triggers a secure API endpoint (`/api/firms/me/new`) that registers a new firm and instantly assigns your account as the `admin` of that firm, mapping it in the `UserFirms` table.
-- Once created, it automatically switches you into the newly created firm's workspace!
+## What Was Accomplished?
 
 > [!TIP]
-> You can now test this by clicking your profile name in the top right corner. You'll see your current firm and the option to create a new one. Try creating a new firm; the dashboard should refresh and immediately place you inside the new workspace!
+> You can now effortlessly import data from both `.xls` and `.csv` files into the Purchase Invoice screen.
+
+### 1. Universal Parsing (XLS & CSV)
+The importer natively understands legacy HTML-based `.xls` files (like `SE_N_2569_26-27.xls`) and modern `.csv` files (like `Sales Invoice (1).csv`). We added a smart alias system that maps column names like `Product Desc.`, `ITEM`, `PCS`, and `Qty` intelligently.
+
+### 2. Auto-Fill Headers
+If your CSV file contains top-level invoice headers on each row, the system will now automatically extract them and pre-fill your top form:
+- Bill No (`INVNO`)
+- Date (`INVDATE`)
+- L R No (`LRNO`)
+- Transporter (`TRANSPORT`)
+- ADAT Charges (`ADAT %` ➔ Commission %)
+
+### 3. Smart User Fuzzy Matching
+If your CSV states `SALESPERSON` as "RATAN BHAI", the importer will automatically fuzzy match against your `activeUsers` database and properly select the user `Ratan` from the dropdown list.
+
+### 4. Interactive Master Validation Hub
+> [!IMPORTANT]
+> The biggest upgrade is the new **Resolution Hub**!
+
+If you import an Excel file and the system detects that some Items or Brands in the file do not exist in your Master Database (e.g., a new saree design), it will block the import to prevent database corruption.
+
+Instead of a generic error, a beautiful red-bordered **Validation Errors Modal** will pop up showing you exactly which rows have missing masters.
+- You can click **"Create Item"** or **"Create Brand"** next to individual rows.
+- Or, you can click the **"Create All Missing Masters"** button at the top to automatically generate all missing Items and Brands in your backend instantly! 
+- Once created, the items will seamlessly drop into your Purchase Invoice grid, complete with their proper database `item_id` and `brand_id`.
+
+## How to Test
+1. Go to the **Purchase Invoice** page on the live server.
+2. Press `Alt+I` (or click the new yellow **Import (Alt+I)** button).
+3. Select `SE_N_2569_26-27.xls`.
+4. Observe the **Validation Hub** popup. Click **"Create All Missing Masters"** and watch the magic happen!

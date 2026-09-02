@@ -98,7 +98,7 @@ exports.getFirmUsers = async (req, res) => {
   const { id } = req.params;
   try {
     const [rows] = await db.execute(
-      'SELECT id, name, email, mobile_no, role, is_totp_enabled, created_at FROM Users WHERE firm_id = ? ORDER BY created_at DESC',
+      'SELECT u.id, u.name, u.email, u.mobile_no, IFNULL(r.name, u.role) as role, u.role_id, u.is_totp_enabled, u.created_at FROM Users u LEFT JOIN Roles r ON u.role_id = r.id WHERE u.firm_id = ? ORDER BY u.created_at DESC',
       [id]
     );
     res.json(rows);

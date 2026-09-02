@@ -501,7 +501,7 @@ export default function TenantUsers() {
                             value={user.role_id || ''}
                             onChange={(e) => assignRole(user.id, e.target.value)}
                           >
-                            <option value="">{user.role}</option>
+                            {!user.role_id && <option value="">{user.role}</option>}
                             {roles.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
                           </select>
                         </td>

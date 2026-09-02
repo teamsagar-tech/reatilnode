@@ -67,3 +67,15 @@ This document serves as a compulsory append-only log of all major implementation
 - **Backend**: Added `GET /api/firms/me/all` and `PUT /api/firms/me/:id` to `firmController.js` and `firmRoutes.js` so regular users can manage the profiles of multiple firms they belong to from a master screen. Also updated `getMyFirms` to return `max_firms` for quota display.
 - **Frontend (Firm Master)**: Rewrote `FirmMaster.tsx` to match the standard list-edit proper master UI layout (matching PartyMaster). Users can now view a list of all their accessible firms, create a new firm directly, and edit existing firm details. Also added the standard F-Keys right sidebar and the 'Allowed Firm Count' quota tracking to the list view UI.
 - **Frontend (Dashboard)**: Implemented an interactive Firm Switcher accessible via the `F10` hotkey, side menu, or by clicking the active firm name in the `Dashboard.tsx` Tally UI. Resolves the issue where Tally users had no way to switch contexts since `DashboardLayout` wasn't loaded.
+
+## 2026-09-02: Universal Purchase Invoice Importer & Interactive Validation Hub
+**Changes:** 
+- Integrated `xlsx` into `FrontEndV2` to support client-side parsing of both legacy HTML-based `.xls` files and modern `.csv` files inside `PurchaseInvoice.tsx`.
+- Built a smart aliasing engine to map disparate vendor column structures (e.g. `Product Desc.` vs `ITEM`) uniformly.
+- Implemented auto-extraction of top-level headers (Bill No, Date, Transporter) and fuzzy matching for `SALESPERSON` to `Order By`.
+- Added a robust **Interactive Validation Hub Modal**. Rather than allowing raw text insertion which breaks backend Foreign Key constraints (`item_id`, `brand_id`), the importer cross-references imported data against `availableItems` and `availableBrands`. 
+- Added one-click "Create Missing Masters" functionality that auto-generates missing items/brands via `POST /api/items` and `POST /api/masters/brand`, auto-resolving validation errors seamlessly.
+
+**Rationale:** Vendors provide highly variable formats. Dropping unvalidated strings into the frontend leads to crashes at submission because the backend strictly demands Master IDs. The interactive hub ensures data integrity while drastically minimizing user friction for master creation.
+
+**Current State:** The Purchase Invoice page now natively supports resilient, zero-friction imports from arbitrary vendor files.
