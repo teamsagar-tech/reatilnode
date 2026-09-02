@@ -198,7 +198,7 @@ export default function PurchaseInvoice() {
               size,
               mrp
             };
-          }).filter(p => p.item || Number(p.qty) > 0);
+          }).filter(p => (p.item && p.item.trim()) || Number(p.qty) > 0);
 
           if (errors.length > 0) {
               setImportErrors(errors);
@@ -445,7 +445,7 @@ export default function PurchaseInvoice() {
         newProducts[index] = { 
           ...newProducts[index], 
           hsn: selected.name || '', 
-          gst: selected.tax_percent !== undefined ? selected.tax_percent : 0 
+          gst: selected.tax_percent !== undefined ? selected.tax_percent : (newProducts[index].gst || 0) 
         };
         setProducts(newProducts);
         setActiveHsnRow(null);
@@ -477,7 +477,7 @@ export default function PurchaseInvoice() {
         e.preventDefault();
         const selected = filtered[suggestionIndex];
         const newProducts = [...products];
-        newProducts[index] = { ...newProducts[index], item_id: selected.id, item: selected.name || selected.item_name, brand_id: selected.brand_id || null, brand: selected.brand || '', rate: selected.purchase_price || selected.rate || '' };
+        newProducts[index] = { ...newProducts[index], item_id: selected.id, item: selected.name || selected.item_name, brand_id: selected.brand_id || null, brand: selected.brand || '', rate: selected.purchase_price || selected.rate || newProducts[index].rate || '' };
         setProducts(newProducts);
         setActiveSuggestionRow(null);
         document.getElementById(`row-${index}-qty`)?.focus();
@@ -974,7 +974,7 @@ export default function PurchaseInvoice() {
                                   newProducts[index] = { 
                                     ...newProducts[index], 
                                     hsn: suggestion.name || '', 
-                                    gst: suggestion.tax_percent !== undefined ? suggestion.tax_percent : 0 
+                                    gst: suggestion.tax_percent !== undefined ? suggestion.tax_percent : (newProducts[index].gst || 0) 
                                   };
                                   setProducts(newProducts);
                                   setActiveHsnRow(null);

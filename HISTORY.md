@@ -106,3 +106,11 @@ This document serves as a compulsory append-only log of all major implementation
 **Rationale:** The autocomplete dropdown was displaying the entire global list of items rather than restricting it to items mapped to the specific Brand selected on that row. This is especially important for items newly generated from the "One-Click Import Validation Hub".
 
 **Current State:** The item dropdown strictly enforces Brand -> Item hierarchy on manual data entry in the Purchase Invoice grid.
+
+## 2026-09-02: Tenant Users Role Reversion State Robustness Fix
+**Changes:** 
+- **Frontend (`TenantUsers.tsx`):** Rewrote the local React state update logic inside the `assignRole` function. It now performs a robust type check and branch evaluation to correctly infer whether the newly assigned role is a built-in static string (`'admin'`, `'user'`, `'superadmin'`) or a dynamically fetched custom `role_id` (numeric).
+
+**Rationale:** The previous React state mapping logic blindly attempted to `parseInt(roleId, 10)`. When the user tried to assign "admin" from the dropdown, `parseInt("admin")` returned `NaN`, which caused the local state update to fail silently and visually snap back to the previous role immediately (even though the backend API call was successful). 
+
+**Current State:** Assigning both string-based built-in roles and numeric custom roles updates the UI state instantly and reliably.
