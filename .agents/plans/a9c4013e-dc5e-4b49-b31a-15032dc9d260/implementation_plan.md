@@ -1,50 +1,46 @@
-# Multi-Firm Access via Single Login
+# Universal Vendor File Import for Purchase Invoice
 
-This plan outlines the architectural changes required to allow a single user (email) to access multiple Firms within RetailNode, while strictly maintaining the SaaS Tenant Isolation (`req.firm_id`) rule.
+We will add a feature to easily import data from **multiple vendor formats** (both `.xls`/`.xlsx` and `.csv` files) directly into the Purchase Invoice creation screen.
+
+Since the two sample files (`SE_N_2569_26-27.xls` and `Sales Invoice (1).csv`) have completely different column names, we will use a **smart column-matching system** that looks for aliases.
 
 ## User Review Required
 
-> [!IMPORTANT]
-> **Data Migration & Existing Users**
-> Currently, the `Users` table has a hardcoded `firm_id` column. If we allow a user to access multiple firms, they may have different roles in each firm (e.g., "Admin" in Firm A, but "Cashier" in Firm B).
-> 
-> To support this cleanly, we need to introduce a new **`UserFirms`** mapping table. 
+Please review the updated proposed mapping and logic, which now includes your requested fields (ADAT, Salesperson, LR, Transport). Once you approve, I will finish implementing this in `PurchaseInvoice.tsx`.
 
 ## Proposed Changes
 
-### 1. Database Schema (Backend)
+### 1. FrontEndV2 Dependencies
+- Run `npm install xlsx` in `FrontEndV2` to parse both Excel and CSV files purely in the browser. 
+- **Note on HTML-based `.xls` files:** Many legacy systems export "Excel" files as HTML tables disguised with an `.xls` extension (like your `SE_N_2569_26-27.xls`). The `xlsx` library natively understands and perfectly parses HTML tables out-of-the-box, so you won't need to manually convert them!
 
-We will add a new migration script to `backend/server.js` that does the following:
-- Creates a `UserFirms` table: `(id, user_id, firm_id, role_id, role_name, is_active)`
-- Migrates existing users into this table (copies their current `firm_id` and `role_id` into `UserFirms`).
-- (Optional but recommended) Eventually drops `firm_id` from the `Users` table to prevent data duplication.
+### 2. Header Auto-fill (From CSV)
+If the file contains invoice-level details on every row (like the CSV does), we will extract them from the first row and automatically fill your top form:
+- `INVNO` ➔ **Bill No**
+- `INVDATE` ➔ **Bill Date**
+- `LRNO` ➔ **L R No**
+- `TRANSPORT` ➔ **Transporter**
+- `ADAT %` ➔ **Commission Percent** (`invoiceData.commissionPercent`)
+- `SALESPERSON` ➔ **Order By (Purchaser)**. We will use a **fuzzy matching algorithm** here. For example, if the file says "RATAN BHAI", but your user database has "Ratan", it will automatically detect the match and select the correct user from the dropdown.
 
-### 2. Auth Flow & JWT (Backend)
+### 3. Line Item Smart Mapping (For Both Files)
+We will map columns based on aliases so that it works seamlessly for either vendor:
+- **Item Name:** `Product Desc.` OR `ITEM` ➔ `item`
+- **Quantity:** `Qty` OR `PCS` (if QTY is empty) ➔ `qty`
+- **Rate:** `Rate` OR `RATE` ➔ `rate`
+- **GST %:** `GST %` OR `GSTPERC` ➔ `gst`
+- **HSN:** `HSN` ➔ `hsn`
+- **Brand:** `BRAND` ➔ `brand` (from CSV)
+- **Design:** `Design` ➔ `design` (from XLS)
+- **Colour:** `Color` ➔ `colour` (from XLS)
+- **Size:** `Size` ➔ `size` (from XLS)
+- **Discount %:** `Dis%` OR `DISC %` ➔ `disc`
+- **MRP:** `Mrp` ➔ `mrp` (from XLS)
 
-- **`POST /api/auth/login`**: When a user logs in, we will query the `UserFirms` table.
-  - The login response will now include a list of `available_firms` that the user has access to.
-  - The server will generate a JWT token for their "Primary" or first available firm by default.
-- **`POST /api/auth/switch-firm`** `[NEW]`:
-  - An endpoint that accepts a `target_firm_id`.
-  - The server validates that the user is mapped to this firm in `UserFirms`.
-  - It generates and returns a **NEW JWT Token** with the updated `firm_id` and `role_permissions` specific to that firm.
-
-### 3. Frontend Multi-Firm Switcher (React)
-
-- Add a dropdown menu in the Top Navigation Bar (`Header.tsx` or similar) that displays the user's `available_firms`.
-- When a user selects a different firm from the dropdown:
-  - Call `/api/auth/switch-firm`.
-  - Replace the JWT token in `localStorage`.
-  - Reload the dashboard or trigger a state refresh to re-fetch all data (which will now use the new `req.firm_id` token!).
-
-## Open Questions
-
-> [!WARNING]
-> 1. **Firm Creation**: Do you want users to be able to create new Firms themselves from the Dashboard (e.g., clicking "Add New Firm" and becoming the Admin of it), or will SuperAdmins still handle all new firm creations?
-> 2. **Roles**: Do you need the ability for a user to have different permissions per firm (e.g., Admin in one, Cashier in another)?
+### 4. UI Updates in `PurchaseInvoice.tsx`
+- Add an **"Import (Alt+I)"** button in the top action bar or F-keys panel.
+- Automatically enable the `designNo`, `colourNo`, `showSize`, and `showMarkdown` visual checkboxes if the imported file actually contains data for them.
 
 ## Verification Plan
-1. Apply the database migration.
-2. Login with an existing user and ensure the `UserFirms` mapping is read correctly.
-3. Call `/switch-firm` with another authorized `firm_id` and ensure the new JWT correctly isolates queries to the new firm.
-4. Verify the frontend dropdown seamlessly changes the active workspace.
+1. Press `Alt+I` and select `SE_N_2569_26-27.xls` ➔ Verify it populates the 20 items, sizes, and colors.
+2. Press `Alt+I` and select `Sales Invoice (1).csv` ➔ Verify it populates the 5 items, brands, and automatically fills the Bill No (`3375`), Date, Transporter (`J.D.LOGISTICS`), ADAT charges (`2`), and correctly selects `Ratan` for the Salesperson.

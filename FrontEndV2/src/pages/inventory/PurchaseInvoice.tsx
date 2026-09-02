@@ -5,6 +5,7 @@ import MultiAttributeModal from '../../components/inventory/MultiAttributeModal'
 import PartyModal from '../../components/inventory/PartyModal';
 import MasterCreationModal from '../../components/inventory/MasterCreationModal';
 import SearchableDropdown from '../../components/SearchableDropdown';
+import * as XLSX from 'xlsx';
 
 
 
@@ -52,6 +53,133 @@ export default function PurchaseInvoice() {
 
   const [activeSuggestionRow, setActiveSuggestionRow] = useState<number | null>(null);
   const [suggestionIndex, setSuggestionIndex] = useState<number>(0);
+
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const bstr = evt.target?.result;
+        const wb = XLSX.read(bstr, { type: 'binary' });
+        const wsname = wb.SheetNames[0];
+        const ws = wb.Sheets[wsname];
+        const data = XLSX.utils.sheet_to_json(ws, { defval: '' });
+
+        if (data.length > 0) {
+          // Extract header level fields from the first row
+          const firstRow: any = data[0];
+          
+          let newInvoiceData = { ...invoiceData };
+          
+          const headerMap: Record<string, keyof typeof invoiceData> = {
+            'INVNO': 'billNo',
+            'Doc No.': 'billNo',
+            'INVDATE': 'billDate',
+            'Date': 'billDate',
+            'LRNO': 'lrNo',
+            'TRANSPORT': 'transporter',
+            'ADAT %': 'commissionPercent',
+            'SALESPERSON': 'purchaser'
+          };
+          
+          for (const [key, value] of Object.entries(firstRow)) {
+            const trimmedKey = key.trim();
+            if (headerMap[trimmedKey] && value) {
+                // If it's a date, we might need to parse DD/MM/YYYY to YYYY-MM-DD
+                if (headerMap[trimmedKey] === 'purchaser' && typeof value === 'string') {
+                    const matchedUser = activeUsers.find((u: any) => 
+                        value.toLowerCase().includes((u.name || '').toLowerCase()) || 
+                        (u.name || '').toLowerCase().includes(value.toLowerCase())
+                    );
+                    if (matchedUser) {
+                        (newInvoiceData as any)[headerMap[trimmedKey]] = matchedUser.name;
+                    } else {
+                        (newInvoiceData as any)[headerMap[trimmedKey]] = value;
+                    }
+                } else if (headerMap[trimmedKey] === 'billDate' && typeof value === 'string') {
+                    const parts = value.split(/[/-]/);
+                    if (parts.length === 3) {
+                       const d = parts[0].length === 4 ? `${parts[0]}-${parts[1].padStart(2,'0')}-${parts[2].padStart(2,'0')}` : `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
+                       newInvoiceData.billDate = d;
+                       newInvoiceData.receiveDate = d;
+                    }
+                } else {
+                    (newInvoiceData as any)[headerMap[trimmedKey]] = value;
+                }
+            }
+          }
+
+          let hasDesign = false;
+          let hasColour = false;
+          let hasSize = false;
+          let hasMarkdown = false;
+          let hasDisc = false;
+
+          const importedProducts = data.map((row: any, idx) => {
+            const getVal = (keys: string[]) => {
+              for (const k of keys) {
+                if (row[k] !== undefined && row[k] !== '') return row[k];
+              }
+              return '';
+            };
+
+            const item = getVal(['Product Desc.', 'ITEM', 'Product Name']);
+            const qty = parseFloat(getVal(['Qty', 'QTY', 'PCS', 'Quantity'])) || 0;
+            const rate = parseFloat(getVal(['Rate', 'RATE', 'PRATE'])) || 0;
+            const hsn = getVal(['HSN', 'HSN/SAC']).toString();
+            const brand = getVal(['BRAND', 'Brand']);
+            const design = getVal(['Design', 'DESIGN']);
+            const colour = getVal(['Color', 'Colour', 'COLOR', 'COLOUR']);
+            const size = getVal(['Size', 'SIZE']).toString();
+            const mrp = parseFloat(getVal(['Mrp', 'MRP'])) || 0;
+            const gst = parseFloat(getVal(['GST %', 'GSTPERC', 'Tax %'])) || 0;
+            const disc = parseFloat(getVal(['Dis%', 'DISC %'])) || 0;
+            
+            if (design) hasDesign = true;
+            if (colour) hasColour = true;
+            if (size) hasSize = true;
+            if (mrp) hasMarkdown = true;
+            if (disc) hasDisc = true;
+
+            return {
+              id: Date.now() + idx,
+              item,
+              hsn,
+              brand,
+              qty: qty.toString(),
+              rate: rate.toString(),
+              disc,
+              gst,
+              design,
+              colour,
+              size,
+              mrp
+            };
+          }).filter(p => p.item || Number(p.qty) > 0);
+
+          if (hasDesign) newInvoiceData.designNo = true;
+          if (hasColour) newInvoiceData.colourNo = true;
+          if (hasSize) newInvoiceData.showSize = true;
+          if (hasMarkdown) newInvoiceData.showMarkdown = true;
+          if (hasDisc) newInvoiceData.showPurchaseDiscount = true;
+
+          setInvoiceData(newInvoiceData);
+          setProducts(importedProducts.length > 0 ? importedProducts : [{ id: Date.now(), item: '', hsn: '', brand: '', qty: '', rate: '', disc: 0, gst: 0, design: '', colour: '', size: '', mrp: 0 }]);
+        }
+      } catch (err) {
+        console.error('Error parsing file:', err);
+        alert('Failed to parse the file. Ensure it is a valid Excel or CSV.');
+      }
+      // Reset input
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    };
+    reader.readAsBinaryString(file);
+  };
+
 
   // Multi-Attribute Modal State
   const [activeModalRow, setActiveModalRow] = useState<number | null>(null);
@@ -166,6 +294,9 @@ export default function PurchaseInvoice() {
         } else if (e.code === 'KeyV') {
           e.preventDefault();
           setInvoiceData(prev => ({ ...prev, showPurchaseDiscount: !prev.showPurchaseDiscount }));
+        } else if (e.code === 'KeyI') {
+          e.preventDefault();
+          fileInputRef.current?.click();
         } else if (e.code === 'KeyM') {
           e.preventDefault();
           setInvoiceData(prev => ({ ...prev, showMarkdown: !prev.showMarkdown }));
@@ -403,6 +534,7 @@ export default function PurchaseInvoice() {
       
       {/* RetailNode Main Background */}
       <div className="flex flex-col h-screen font-sans text-[13px] selection:bg-transparent overflow-hidden bg-[#e0efeb] w-full">
+        <input type="file" ref={fileInputRef} onChange={handleImport} accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" className="hidden" />
         
         
 
@@ -415,7 +547,7 @@ export default function PurchaseInvoice() {
             {/* Voucher Header / Title */}
             <div className="bg-[#1b5e58] text-white font-bold px-2 py-1 flex justify-between shrink-0">
                <div>Accounting Voucher Creation</div>
-               <div className="text-yellow-300">Purchase</div>
+               <div className="flex gap-4 items-center"><button onClick={() => fileInputRef.current?.click()} className="bg-yellow-400 text-black px-2 py-0.5 rounded text-xs hover:bg-yellow-500 transition-colors">Import (Alt+I)</button><div className="text-yellow-300">Purchase</div></div>
             </div>
 
             <div className="flex flex-col flex-1 overflow-y-auto">

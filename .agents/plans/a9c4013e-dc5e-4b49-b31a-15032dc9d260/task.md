@@ -1,16 +1,9 @@
-# Multi-Firm Access Tasks
+# Excel Import Task List
 
-- [x] Database Schema Updates
-  - [x] Create `UserFirms` table migration in `server.js`
-  - [x] Migrate existing users from `Users` table into `UserFirms` (initial mapping)
-- [x] Backend API Updates
-  - [x] Update `/api/auth/login` to fetch available firms from `UserFirms`
-  - [x] Create `POST /api/auth/switch-firm` endpoint to issue new JWT tokens
-  - [x] Create `POST /api/firms/me/new` for admin users to create their own firm
-- [x] Frontend Updates
-  - [x] Implement Firm Switcher Dropdown in `Header.tsx`
-  - [x] Implement Create Firm logic in `Header.tsx`
-  - [x] Handle token replacement and page reload on firm switch
-- [/] Verification
-  - [ ] Test login response contains multiple firms
-  - [ ] Test switching firms updates the token and isolates data
+- `[/]` Install `xlsx` package in `FrontEndV2`.
+- `[ ]` Add "Import (Alt+I)" button and hidden `<input type="file">` to `PurchaseInvoice.tsx`.
+- `[ ]` Implement `handleImport` logic with `xlsx` parsing.
+  - Map generic column aliases (`Product Desc.`, `ITEM`, `Qty`, `PCS`, etc.).
+  - Map header info if available (`INVNO`, `INVDATE`, `LRNO`, `TRANSPORT`, `SUPPLIER`).
+- `[ ]` Test compilation.
+- `[ ]` Update `walkthrough.md`.
