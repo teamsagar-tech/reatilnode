@@ -97,3 +97,12 @@ This document serves as a compulsory append-only log of all major implementation
 **Rationale:** The previous dynamic option-hiding logic accidentally removed the ability to select the built-in base roles once a custom role (like "Purchase Manager") was assigned, essentially trapping the user in a custom role.
 
 **Current State:** Tenant Users management page perfectly handles assigning and reverting both built-in system roles and custom firm-specific roles.
+
+## 2026-09-02: Purchase Invoice Item Autocomplete Filter Fix
+**Changes:** 
+- **Frontend (`PurchaseInvoice.tsx`):** Updated the item autocomplete dropdown logic (both keyboard arrow navigation and mouse click rendering) to filter the `availableItems` list based on the brand currently selected in the row (`products[index].brand_id` or `products[index].brand`).
+- Fixed a silent bug where `brand_id` was not being correctly assigned to the row state when a user manually typed and selected a brand using the `Enter` key. 
+
+**Rationale:** The autocomplete dropdown was displaying the entire global list of items rather than restricting it to items mapped to the specific Brand selected on that row. This is especially important for items newly generated from the "One-Click Import Validation Hub".
+
+**Current State:** The item dropdown strictly enforces Brand -> Item hierarchy on manual data entry in the Purchase Invoice grid.

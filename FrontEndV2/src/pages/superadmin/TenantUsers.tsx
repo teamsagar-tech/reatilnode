@@ -359,7 +359,18 @@ export default function TenantUsers() {
       });
       if (!res.ok) throw new Error("Failed to update role");
       // Update local state to reflect change
-      setUsers(users.map(u => u.id === userId ? { ...u, role_id: parseInt(roleId, 10) || null, role: roles.find(r => r.id === parseInt(roleId, 10))?.name || u.role } : u));
+      setUsers(users.map(u => {
+        if (u.id !== userId) return u;
+        let newRoleId: number | null = null;
+        let newRoleName = u.role;
+        if (roleId === 'admin' || roleId === 'user' || roleId === 'superadmin') {
+          newRoleName = roleId;
+        } else {
+          newRoleId = parseInt(roleId, 10);
+          newRoleName = roles.find(r => r.id === newRoleId)?.name || u.role;
+        }
+        return { ...u, role_id: newRoleId, role: newRoleName };
+      }));
   
     } catch (err: any) {
       alert(err.message);
