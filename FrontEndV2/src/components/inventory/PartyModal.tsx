@@ -5,6 +5,7 @@ interface PartyModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (newParty: any) => void;
+  initialPartyName?: string;
 }
 
 // Reusable components matching PartyMaster.tsx style
@@ -27,10 +28,10 @@ const InputRow = ({ label, value, onChange, placeholder = "", width = "flex-1" }
   </div>
 );
 
-export default function PartyModal({ isOpen, onClose, onSave }: PartyModalProps) {
+export default function PartyModal({ isOpen, onClose, onSave, initialPartyName = '' }: PartyModalProps) {
   const [formData, setFormData] = useState({
     // Basic Party Info
-    partyName: '',
+    partyName: initialPartyName,
     shortName: '',
     type: 'Single Brand',
     openingBalance: 0,

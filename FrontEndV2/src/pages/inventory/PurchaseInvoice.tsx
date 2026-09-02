@@ -75,6 +75,7 @@ export default function PurchaseInvoice() {
         const ws = wb.Sheets[wsname];
         const data = XLSX.utils.sheet_to_json(ws, { defval: '' });
 
+        let errors: any[] = [];
         if (data.length > 0) {
           // Extract header level fields from the first row
           const firstRow: any = data[0];
@@ -109,15 +110,22 @@ export default function PurchaseInvoice() {
                         (newInvoiceData as any)[headerMap[trimmedKey]] = value;
                     }
                 } else if (headerMap[trimmedKey] === 'supplier' && typeof value === 'string') {
-                    const matchedVendor = vendors.find((v: any) => 
-                        value.toLowerCase().includes((v.name || '').toLowerCase()) || 
-                        (v.name || '').toLowerCase().includes(value.toLowerCase())
-                    );
-                    if (matchedVendor) {
-                        (newInvoiceData as any)[headerMap[trimmedKey]] = matchedVendor.name;
+                    // Prevent PARTY from overwriting an already established SUPPLIER
+                    if (trimmedKey === 'PARTY' && (newInvoiceData as any)['supplier']) {
+                        // Skip mapping PARTY because we already mapped SUPPLIER
                     } else {
-                        alert("Vendor '" + value + "' from the imported file was not found in your database. Please select it manually or create a new vendor.");
-                        (newInvoiceData as any)[headerMap[trimmedKey]] = value; // Keep it so they can see what it was
+                        const matchedVendor = vendors.find((v: any) => 
+                            value.toLowerCase().includes((v.name || '').toLowerCase()) || 
+                            (v.name || '').toLowerCase().includes(value.toLowerCase())
+                        );
+                        if (matchedVendor) {
+                            (newInvoiceData as any)[headerMap[trimmedKey]] = matchedVendor.name;
+                        } else {
+                            if (trimmedKey !== 'PARTY') {
+                                errors.push({ idx: 1, type: 'vendor', vendor: value });
+                            }
+                            (newInvoiceData as any)[headerMap[trimmedKey]] = value; // Keep it so they can see what it was
+                        }
                     }
                 } else if (headerMap[trimmedKey] === 'billDate' && typeof value === 'string') {
                     const parts = value.split(/[/-]/);
@@ -138,7 +146,6 @@ export default function PurchaseInvoice() {
           let hasMarkdown = false;
           let hasDisc = false;
 
-          let errors: any[] = [];
           const importedProducts = data.map((row: any, idx) => {
             const getVal = (keys: string[]) => {
               for (const k of keys) {
@@ -599,6 +606,8 @@ export default function PurchaseInvoice() {
         } else {
           alert('Failed to create item ' + err.item);
         }
+      } else if (err.type === 'vendor') {
+        setShowPartyModal(true);
       }
     } catch (error) {
       console.error(error);
@@ -700,7 +709,7 @@ export default function PurchaseInvoice() {
                     <tr key={i} className="border-b border-slate-200 hover:bg-slate-50">
                       <td className="p-2 text-slate-500">{err.idx}</td>
                       <td className="p-2 font-bold text-red-600 uppercase text-[10px]">{err.type}</td>
-                      <td className="p-2 font-bold">{err.type === 'item' ? err.item : err.brand}</td>
+                      <td className="p-2 font-bold">{err.type === 'item' ? err.item : (err.type === 'vendor' ? err.vendor : err.brand)}</td>
                       <td className="p-2 text-xs text-slate-600">
                         {err.type === 'item' ? `Brand: ${err.brand || '-'} | HSN: ${err.hsn}` : '-'}
                       </td>
@@ -1303,10 +1312,12 @@ export default function PurchaseInvoice() {
       <PartyModal 
         isOpen={showPartyModal}
         onClose={() => setShowPartyModal(false)}
+        initialPartyName={invoiceData.supplier}
         onSave={(newParty) => {
           setVendors(prev => [...prev, newParty]);
           handleInvoiceChange('supplier', newParty.name);
           setShowPartyModal(false);
+          setImportErrors(prev => prev.filter(e => !(e.type === 'vendor' && (e.vendor || '').toLowerCase() === (newParty.name || '').toLowerCase())));
           setTimeout(() => {
             document.getElementById('input-billNo')?.focus();
           }, 100);
