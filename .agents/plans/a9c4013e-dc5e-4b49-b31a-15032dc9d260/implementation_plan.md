@@ -1,46 +1,30 @@
-# Universal Vendor File Import for Purchase Invoice
+# One-Click Item & Brand Creation during Import
 
-We will add a feature to easily import data from **multiple vendor formats** (both `.xls`/`.xlsx` and `.csv` files) directly into the Purchase Invoice creation screen.
-
-Since the two sample files (`SE_N_2569_26-27.xls` and `Sales Invoice (1).csv`) have completely different column names, we will use a **smart column-matching system** that looks for aliases.
+Instead of just showing a static error message when an imported item or brand is missing from the database, we will transform the Validation Errors modal into an **Interactive Resolution Hub**.
 
 ## User Review Required
 
-Please review the updated proposed mapping and logic, which now includes your requested fields (ADAT, Salesperson, LR, Transport). Once you approve, I will finish implementing this in `PurchaseInvoice.tsx`.
+Please review the proposed UI flow for the "One-Click Create" functionality.
 
 ## Proposed Changes
 
-### 1. FrontEndV2 Dependencies
-- Run `npm install xlsx` in `FrontEndV2` to parse both Excel and CSV files purely in the browser. 
-- **Note on HTML-based `.xls` files:** Many legacy systems export "Excel" files as HTML tables disguised with an `.xls` extension (like your `SE_N_2569_26-27.xls`). The `xlsx` library natively understands and perfectly parses HTML tables out-of-the-box, so you won't need to manually convert them!
+### 1. Interactive Validation Modal (`PurchaseInvoice.tsx`)
+We will upgrade the current red validation popup into a table that lists all missing items and brands found in the Excel file.
+- **Unmapped Items Table:** Shows the `Item Name`, `Brand`, `HSN`, `Purchase Rate`, and `MRP` directly extracted from the Excel row.
+- **Action Buttons:** Next to each row, there will be a **"Create Item"** button.
 
-### 2. Header Auto-fill (From CSV)
-If the file contains invoice-level details on every row (like the CSV does), we will extract them from the first row and automatically fill your top form:
-- `INVNO` ➔ **Bill No**
-- `INVDATE` ➔ **Bill Date**
-- `LRNO` ➔ **L R No**
-- `TRANSPORT` ➔ **Transporter**
-- `ADAT %` ➔ **Commission Percent** (`invoiceData.commissionPercent`)
-- `SALESPERSON` ➔ **Order By (Purchaser)**. We will use a **fuzzy matching algorithm** here. For example, if the file says "RATAN BHAI", but your user database has "Ratan", it will automatically detect the match and select the correct user from the dropdown.
+### 2. Auto-Creation Logic
+When you click **"Create Item"**:
+1. The frontend will immediately send a request to your backend (`POST /api/items`) using the data from that Excel row (e.g. assigning the extracted HSN, Brand, and Rate to the new item).
+2. If the Brand is also missing, it will automatically create the Brand first (`POST /api/masters/brand`), then link it to the Item.
+3. Upon success, the item will disappear from the errors list.
+4. The system will auto-link the newly created `item_id` to the Purchase Invoice grid, so you can seamlessly continue!
 
-### 3. Line Item Smart Mapping (For Both Files)
-We will map columns based on aliases so that it works seamlessly for either vendor:
-- **Item Name:** `Product Desc.` OR `ITEM` ➔ `item`
-- **Quantity:** `Qty` OR `PCS` (if QTY is empty) ➔ `qty`
-- **Rate:** `Rate` OR `RATE` ➔ `rate`
-- **GST %:** `GST %` OR `GSTPERC` ➔ `gst`
-- **HSN:** `HSN` ➔ `hsn`
-- **Brand:** `BRAND` ➔ `brand` (from CSV)
-- **Design:** `Design` ➔ `design` (from XLS)
-- **Colour:** `Color` ➔ `colour` (from XLS)
-- **Size:** `Size` ➔ `size` (from XLS)
-- **Discount %:** `Dis%` OR `DISC %` ➔ `disc`
-- **MRP:** `Mrp` ➔ `mrp` (from XLS)
-
-### 4. UI Updates in `PurchaseInvoice.tsx`
-- Add an **"Import (Alt+I)"** button in the top action bar or F-keys panel.
-- Automatically enable the `designNo`, `colourNo`, `showSize`, and `showMarkdown` visual checkboxes if the imported file actually contains data for them.
+### 3. "Create All" Bulk Action
+We will also add a **"Create All Missing Items"** button at the top of the modal. With a single click, it will loop through all missing items and brands, create them in the backend, and clear the errors list.
 
 ## Verification Plan
-1. Press `Alt+I` and select `SE_N_2569_26-27.xls` ➔ Verify it populates the 20 items, sizes, and colors.
-2. Press `Alt+I` and select `Sales Invoice (1).csv` ➔ Verify it populates the 5 items, brands, and automatically fills the Bill No (`3375`), Date, Transporter (`J.D.LOGISTICS`), ADAT charges (`2`), and correctly selects `Ratan` for the Salesperson.
+1. Import `SE_N_2569_26-27.xls`.
+2. The modal will pop up showing the 20 missing items (like `MANGO KASHMIRI D`) and their corresponding details.
+3. Click "Create All Missing Items".
+4. Verify the modal closes, the items are created in your master database, and the Purchase Invoice grid is now fully validated and ready for submission.
