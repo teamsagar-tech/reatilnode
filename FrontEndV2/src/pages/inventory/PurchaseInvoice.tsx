@@ -418,7 +418,7 @@ export default function PurchaseInvoice() {
         e.preventDefault();
         const selected = filtered[brandSuggestionIndex];
         const newProducts = [...products];
-        newProducts[index] = { ...newProducts[index], brand: selected.name || '' };
+        newProducts[index] = { ...newProducts[index], brand_id: selected.id, brand: selected.name || '' };
         setProducts(newProducts);
         setActiveBrandRow(null);
         document.getElementById(`row-${index}-item`)?.focus();
@@ -456,7 +456,14 @@ export default function PurchaseInvoice() {
 
     if (field === 'item' && activeSuggestionRow === index) {
       const query = products[index].item.toLowerCase();
-      const filtered = availableItems.filter(s => (s.name || s.item_name || '').toLowerCase().includes(query)).slice(0, 8);
+      const rowBrandId = products[index].brand_id;
+      const rowBrandName = (products[index].brand || '').toLowerCase();
+      const filtered = availableItems.filter(s => {
+        const textMatch = (s.name || s.item_name || '').toLowerCase().includes(query);
+        if (rowBrandId) return textMatch && s.brand_id === rowBrandId;
+        if (rowBrandName) return textMatch && (s.brand || '').toLowerCase() === rowBrandName;
+        return textMatch;
+      }).slice(0, 8);
       
       if (e.key === 'ArrowDown') {
         e.preventDefault();
@@ -934,7 +941,15 @@ export default function PurchaseInvoice() {
                           <input id={`row-${index}-item`} type="text" value={item.item} onChange={e => { updateProduct(index, 'item', e.target.value); setSuggestionIndex(0); }} onFocus={(e) => handleItemFocus(e, index)} onBlur={handleItemBlur} onKeyDown={(e) => handleKeyDown(e, index, 'item')} className="w-full bg-transparent focus:bg-[#ffffe0] focus:outline-none px-1" autoComplete="off" />
                           {activeSuggestionRow === index && (
                             <div className="absolute top-full left-0 mt-0 bg-white border-2 border-black z-50 w-[300px] shadow-md max-h-[150px] overflow-y-auto">
-                              {availableItems.filter(s => (s.name || s.item_name || '').toLowerCase().includes((products[index].item || '').toLowerCase())).slice(0, 8).map((suggestion, sIdx) => (
+                              {availableItems.filter(s => {
+                              const q = (products[index].item || '').toLowerCase();
+                              const textMatch = (s.name || s.item_name || '').toLowerCase().includes(q);
+                              const bId = products[index].brand_id;
+                              const bName = (products[index].brand || '').toLowerCase();
+                              if (bId) return textMatch && s.brand_id === bId;
+                              if (bName) return textMatch && (s.brand || '').toLowerCase() === bName;
+                              return textMatch;
+                            }).slice(0, 8).map((suggestion, sIdx) => (
                                 <div key={suggestion.id} className={`px-2 py-1 flex justify-between cursor-pointer ${sIdx === suggestionIndex ? 'bg-[#ffe000] text-black font-bold' : 'hover:bg-slate-200'}`} onClick={() => {
                                   const newProducts = [...products];
                                   newProducts[index] = { ...newProducts[index], item: suggestion.name || suggestion.item_name, brand: suggestion.brand || '', rate: suggestion.purchase_price || suggestion.rate || '' };

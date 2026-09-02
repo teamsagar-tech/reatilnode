@@ -88,3 +88,12 @@ This document serves as a compulsory append-only log of all major implementation
 **Rationale:** The API was previously only pulling the hardcoded `role` ENUM from the `Users` table and omitting `role_id`, causing the UI to constantly revert to "admin" or "user" visually on refresh, and also causing the React mapping logic to spit out the fallback text "Purchase Manager" alongside the actual Role option.
 
 **Current State:** The Tenant Users management page correctly binds, displays, and persists custom roles assigned to firm users.
+
+## 2026-09-02: Tenant Users Role Reversion Bug Fix
+**Changes:** 
+- **Backend:** Updated `updateUserRole` in `backend/controllers/userController.js` to correctly handle assigning the base roles (`admin`, `user`). It now sets `role = 'admin'` (or 'user') and `role_id = NULL` when those strings are passed, allowing a clean reversion from a custom role.
+- **Frontend (`TenantUsers.tsx` & `FrontEndV2/...`):** Added explicit `<option value="admin">Admin</option>` and `<option value="user">User</option>` tags to the `select` dropdown, grouped alongside the custom roles. 
+
+**Rationale:** The previous dynamic option-hiding logic accidentally removed the ability to select the built-in base roles once a custom role (like "Purchase Manager") was assigned, essentially trapping the user in a custom role.
+
+**Current State:** Tenant Users management page perfectly handles assigning and reverting both built-in system roles and custom firm-specific roles.
