@@ -244,3 +244,23 @@ exports.updateMyFirmById = async (req, res) => {
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };
+
+
+exports.updateFirmUserRole = async (req, res) => {
+  const { id, userId } = req.params;
+  const { role, role_id } = req.body;
+
+  try {
+    if (role === 'admin' || role === 'user' || role === 'superadmin') {
+      await db.execute('UPDATE Users SET role = ?, role_id = NULL WHERE id = ?', [role, userId]);
+      await db.execute('UPDATE UserFirms SET role = ? WHERE user_id = ? AND firm_id = ?', [role, userId, id]);
+    } else {
+      await db.execute('UPDATE Users SET role = "user", role_id = ? WHERE id = ?', [role_id || null, userId]);
+      await db.execute('UPDATE UserFirms SET role = "user" WHERE user_id = ? AND firm_id = ?', [userId, id]);
+    }
+    res.json({ message: 'User role updated successfully' });
+  } catch (error) {
+    console.error('Error updating user role:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};

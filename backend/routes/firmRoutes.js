@@ -23,6 +23,7 @@ router.put('/:id', firmController.updateFirm);
 router.patch('/:id/status', firmController.toggleFirmStatus);
 router.get('/:id', firmController.getFirmById);
 router.get('/:id/users', firmController.getFirmUsers);
+router.put('/:id/users/:userId/role', firmController.updateFirmUserRole);
 router.put('/:id/modules', firmController.updateFirmModules);
 
 module.exports = router;
