@@ -84,57 +84,50 @@ export default function PurchaseInvoiceList() {
     );
   };
 
-  const [invoices] = useState([
-    { 
-      id: 1, grn: '135939', recvDt: '29-Jul-26', billNo: '82474', billDate: '24-Jul-26', 
-      partyName: 'MEENAKSHI SILK KENDRA-(TI', state: 'Karnataka', verified: '', valueDiff: '', 
-      totalAmt: '57,440.00', discount: '', addChgs: '', taxableAmt: '57,440.00', 
-      gstPercent: '5', cgstAmt: '2,872.00', sgstAmt: '', igstAmt: '', addLess: '', rOff: '', 
-      netAmount: '60,312.00', userName: 'SHWETA',
-      items: [
-        { name: 'Red Cotton Shirt', qty: '100 pcs', rate: '1000.00', amount: '100,000.00' },
-        { name: 'Blue Denim Jeans', qty: '50 pcs', rate: '1000.00', amount: '50,000.00' }
-      ],
-      ledgers: [
-        { name: 'Purchase A/c', amount: '127,118.64' },
-        { name: 'CGST @ 9%', amount: '11,440.68' },
-        { name: 'SGST @ 9%', amount: '11,440.68' }
-      ]
-    },
-    { 
-      id: 2, grn: '135940', recvDt: '29-Jul-26', billNo: '82475', billDate: '24-Jul-26', 
-      partyName: 'MEENAKSHI SILK KENDRA-(TI', state: 'Karnataka', verified: '', valueDiff: '', 
-      totalAmt: '57,440.00', discount: '', addChgs: '', taxableAmt: '57,440.00', 
-      gstPercent: '5', cgstAmt: '2,872.00', sgstAmt: '', igstAmt: '', addLess: '', rOff: '', 
-      netAmount: '60,312.00', userName: 'SHWETA',
-      items: [
-        { name: 'Silk Saree', qty: '10 pcs', rate: '4100.00', amount: '41,000.00' }
-      ],
-      ledgers: [
-        { name: 'Purchase A/c', amount: '41,000.00' },
-        { name: 'IGST @ 5%', amount: '2,050.00' },
-        { name: 'Freight Charges', amount: '2,150.00' }
-      ]
-    },
-    { 
-      id: 3, grn: '135777', recvDt: '24-Jul-26', billNo: '74', billDate: '24-Jul-26', 
-      partyName: 'MOHD.IKHALAS MUSSADDI-(', state: 'Madhya P', verified: '', valueDiff: '', 
-      totalAmt: '51,300.00', discount: '', addChgs: '', taxableAmt: '51,300.00', 
-      gstPercent: '5', cgstAmt: '2,565.00', sgstAmt: '', igstAmt: '', addLess: '', rOff: '', 
-      netAmount: '53,865.00', userName: 'SHWETA',
-      items: [
-        { name: 'Leather Jacket', qty: '20 pcs', rate: '3500.00', amount: '70,000.00' },
-        { name: 'Winter Gloves', qty: '50 pcs', rate: '150.00', amount: '7,500.00' }
-      ],
-      ledgers: [
-        { name: 'Purchase A/c', amount: '77,500.00' },
-        { name: 'CGST @ 6%', amount: '4,650.00' },
-        { name: 'SGST @ 6%', amount: '4,650.00' },
-        { name: 'Discount Received', amount: '-2,700.00' },
-        { name: 'Packaging Charges', amount: '5,400.00' }
-      ]
-    },
-  ]);
+    const [invoices, setInvoices] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('https://api.retailnode.in/api/purchase-invoices', {
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (Array.isArray(data)) {
+        const mappedData = data.map(inv => ({
+          id: inv.id,
+          grn: inv.grn_no || '',
+          recvDt: inv.receive_date ? new Date(inv.receive_date).toLocaleDateString('en-GB') : '',
+          billNo: inv.bill_no || '',
+          billDate: inv.bill_date ? new Date(inv.bill_date).toLocaleDateString('en-GB') : '',
+          partyName: inv.vendor_name || '',
+          state: '',
+          verified: '',
+          valueDiff: '',
+          totalAmt: (inv.total_amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 }),
+          discount: '',
+          addChgs: '',
+          taxableAmt: (inv.total_amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 }),
+          gstPercent: '',
+          cgstAmt: inv.gst_amount ? (inv.gst_amount / 2).toLocaleString('en-IN', { minimumFractionDigits: 2 }) : '',
+          sgstAmt: inv.gst_amount ? (inv.gst_amount / 2).toLocaleString('en-IN', { minimumFractionDigits: 2 }) : '',
+          igstAmt: '',
+          addLess: '',
+          rOff: '',
+          netAmount: (inv.net_amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 }),
+          userName: 'ADMIN',
+          items: [],
+          ledgers: []
+        }));
+        setInvoices(mappedData);
+      }
+      setLoading(false);
+    })
+    .catch(err => {
+      console.error(err);
+      setLoading(false);
+    });
+  }, []);
 
   const calcTotal = (field: keyof typeof invoices[0]) => {
     return invoices.reduce((sum, inv) => {

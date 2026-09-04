@@ -136,3 +136,15 @@ This document serves as a compulsory append-only log of all major implementation
   - Added a dedicated "Save" button to the bottom right of the UI, next to the Quit button, to allow users to save the invoice.
   - Implemented the `Alt+S` keyboard shortcut for saving the invoice, providing a true Tally-like rapid data entry experience.
   - Updated the CSV Import parsing logic to prioritize mapping the `SUPPLIER` column over the `PARTY` column. This fixes the issue where an internal party name was overriding the intended supplier name.
+
+### Sep 04, 2026: Purchase Invoice CSV Bulk Import Refinements & Fixes
+
+**Summary of Changes:**
+1. **Bulk Exists Check:** Implemented a new backend endpoint (`POST /api/purchase-invoices/check-bulk`) to pre-verify all parsed CSV rows against the database before adding them to the import queue. This automatically strips out duplicates based on \`vendor_id\` and \`bill_no\`.
+2. **Double Discounting Bug Fix:** Removed the duplicate mapping of the \`DISC %\` CSV column which was previously being applied both to individual item rows and the global invoice footer. It now only applies to individual rows.
+3. **Excel Serial Date Parsing:** Fixed a crash (500 Error: Incorrect date value) caused by \`xlsx\` parsing CSV dates as numeric Excel serials by adding conversion logic in the frontend before payload submission.
+4. **Auto-Round Off Reconciliation:** Introduced a \`useEffect\` hook in \`PurchaseInvoice.tsx\` that intelligently computes the difference between the user-targeted \`Bill Amount\` and the mathematically computed \`Final Amount\`. If the difference is a small fractional discrepancy (e.g. 1 paisa rounding error), it automatically plugs the difference into the \`Round Off\` field, guaranteeing exact matches.
+5. **Audit Logging (User & IP):** Altered the live MySQL \`PurchaseInvoices\` table schema to include \`created_by\` and \`ip_address\` tracking columns, and updated the backend controller to inject these values from the auth token and network requests.
+
+**Rationale:**
+These refinements transform the CSV import from a basic shell to a highly reliable, mathematically precise ERP workflow that guards against duplicate entries, prevents DB crashes from malformed dates, strictly enforces user attribution for audits, and intuitively resolves standard rounding errors for massive bulk imports.

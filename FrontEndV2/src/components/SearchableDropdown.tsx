@@ -14,11 +14,12 @@ export interface SearchableDropdownProps {
   renderOption?: (option: any, isSelected: boolean) => React.ReactNode;
   onSelect?: (option: any) => void;
   width?: string;
+  onNotFound?: (value: string) => void;
 }
 
 export default function SearchableDropdown({
   id, value, onChange, onKeyDown, options, placeholder, className, autoFocus,
-  displayKey = 'name', renderOption, onSelect, width = '350px'
+  displayKey = 'name', renderOption, onSelect, width = '350px', onNotFound
 }: SearchableDropdownProps) {
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -60,6 +61,15 @@ export default function SearchableDropdown({
            setTimeout(() => onKeyDown(e), 10);
         }
         return;
+      } else if (e.key === 'Enter' && filtered.length === 0) {
+        e.preventDefault();
+        setOpen(false);
+        if (onNotFound && value.trim() !== '') {
+          onNotFound(value);
+        } else if (onKeyDown) {
+          onKeyDown(e);
+        }
+        return;
       } else if (e.key === 'Escape') {
         e.preventDefault();
         setOpen(false);
@@ -89,6 +99,14 @@ export default function SearchableDropdown({
           e.target.select();
           setOpen(true);
           setActiveIndex(0);
+        }}
+        onBlur={e => {
+          // Small timeout to allow click events on dropdown options to fire first
+          setTimeout(() => {
+            if (open && filtered.length === 0 && value.trim() !== '' && onNotFound) {
+              onNotFound(value);
+            }
+          }, 150);
         }}
         autoFocus={autoFocus}
         placeholder={placeholder}

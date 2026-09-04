@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import MultiAttributeModal from '../../components/inventory/MultiAttributeModal';
@@ -58,16 +58,296 @@ export default function PurchaseInvoice() {
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   
-  const handleSaveInvoice = () => {
-    alert('Purchase Invoice Saved Successfully!');
+  const handleSaveInvoice = async () => {
+    if (!invoiceData.supplier) {
+      alert('Party is required');
+      return;
+    }
+    
+    const matchedVendor = vendors.find(v => (v.name || '').toLowerCase() === (invoiceData.supplier || '').toLowerCase());
+    if (!matchedVendor) {
+      alert('Invalid Party selected. Please ensure the Party exists.');
+      return;
+    }
+
+    const payload = {
+      vendor_id: matchedVendor.id,
+      bill_no: invoiceData.billNo,
+      bill_date: invoiceData.billDate || null,
+      receive_date: invoiceData.receiveDate || null,
+      total_amount: Number(invoiceData.billAmount) || 0,
+      gst_amount: 0,
+      net_amount: Number(invoiceData.billAmount) || 0,
+      narration: invoiceData.narration || '',
+      items: products.filter((p: any) => p.item_id).map((p: any) => ({
+        item_id: p.item_id,
+        category_id: null,
+        brand_id: p.brand_id || null,
+        purchase_rate: Number(p.rate) || 0,
+        mrp: Number(p.mrp) || 0,
+        total_qty: Number(p.qty) || 0,
+        gst_percent: Number(p.gst) || 0,
+        gst_amount: 0,
+        total_amount: (Number(p.rate) * Number(p.qty)) || 0,
+        attributes: p.attributes || []
+      }))
+    };
+
+    if (payload.items.length === 0) {
+      alert('At least one valid item is required to save.');
+      return;
+    }
+
+    try {
+      const res = await fetch('https://api.retailnode.in/api/purchase-invoices', {
+        method: 'POST',
+        headers: { 
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+      
+      const data = await res.json();
+      
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to save invoice');
+      }
+
+      alert(`Purchase Invoice Saved Successfully! GRN No: ${data.grn_no}`);
+      if (importQueue.length > 0) {
+        loadNextInQueue();
+      } else {
+        // Clear form if no queue
+        setInvoiceData({
+            supplier: '', billNo: '', billDate: '', receiveDate: new Date().toISOString().split('T')[0],
+            totalQuantity: '', billAmount: '', showLocation: false,
+            designNo: false, colourNo: false, showSize: false, showPurchaseDiscount: false, showMarkdown: false,
+            poNo: '', orderBy: '', transporter: '', lrNo: '', bale: '', narration: '',
+            discountPercent: 0, discountAmount: 0, commissionPercent: 0, 
+            cgstPercent: 'Auto', sgstPercent: 'Auto', otherCharges: 0, purchaser: ''
+        });
+        setProducts([{ id: Date.now(), item_id: null, item: '', hsn: '', brand_id: null, brand: '', qty: '', rate: '', disc: 0, gst: 0, design: '', colour: '', size: '', mrp: 0 }]);
+      }
+    } catch (err: any) {
+      console.error(err);
+      alert(err.message || 'An error occurred while saving the invoice.');
+    }
+  };
+
+  const processInvoiceGroup = (groupData: any[]) => {
+    let errors: any[] = [];
+    if (groupData.length > 0) {
+      // Extract header level fields from the first row
+      const firstRow: any = groupData[0];
+      
+      let newInvoiceData = { ...invoiceData };
+      
+      const headerMap: Record<string, keyof typeof invoiceData> = {
+        'INVNO': 'billNo',
+        'Doc No.': 'billNo',
+        'INVDATE': 'billDate',
+        'Date': 'billDate',
+        'LRNO': 'lrNo',
+        'TRANSPORT': 'transporter',
+        'ADAT %': 'commissionPercent',
+        'DISC AMT': 'discountAmount',
+        'SALESPERSON': 'purchaser',
+        'SUPPLIER': 'supplier',
+        'PARTY': 'supplier'
+      };
+      
+      for (const [key, value] of Object.entries(firstRow)) {
+        const trimmedKey = key.trim();
+        if (headerMap[trimmedKey] && value) {
+            // If it's a date, we might need to parse DD/MM/YYYY to YYYY-MM-DD
+            if (headerMap[trimmedKey] === 'purchaser' && typeof value === 'string') {
+                const matchedUser = activeUsers.find((u: any) => 
+                    value.toLowerCase().includes((u.name || '').toLowerCase()) || 
+                    (u.name || '').toLowerCase().includes(value.toLowerCase())
+                );
+                if (matchedUser) {
+                    (newInvoiceData as any)[headerMap[trimmedKey]] = matchedUser.name;
+                } else {
+                    (newInvoiceData as any)[headerMap[trimmedKey]] = value;
+                }
+            } else if (headerMap[trimmedKey] === 'supplier' && typeof value === 'string') {
+                // Prevent PARTY from overwriting an already established SUPPLIER
+                if (trimmedKey === 'PARTY' && (newInvoiceData as any)['supplier']) {
+                    // Skip mapping PARTY because we already mapped SUPPLIER
+                } else {
+                    const matchedVendor = vendors.find((v: any) => 
+                        value.toLowerCase().includes((v.name || '').toLowerCase()) || 
+                        (v.name || '').toLowerCase().includes(value.toLowerCase())
+                    );
+                    if (matchedVendor) {
+                        (newInvoiceData as any)[headerMap[trimmedKey]] = matchedVendor.name;
+                    } else {
+                        if (trimmedKey !== 'PARTY') {
+                            errors.push({ idx: 1, type: 'vendor', vendor: value });
+                        }
+                        (newInvoiceData as any)[headerMap[trimmedKey]] = value; // Keep it so they can see what it was
+                    }
+                }
+            } else if (headerMap[trimmedKey] === 'billDate') {
+                let dStr = '';
+                if (typeof value === 'number') {
+                    const date = new Date(Math.round((value - 25569) * 86400 * 1000));
+                    dStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+                } else if (typeof value === 'string') {
+                    const parts = value.split(/[/-]/);
+                    if (parts.length === 3) {
+                       dStr = parts[0].length === 4 ? `${parts[0]}-${parts[1].padStart(2,'0')}-${parts[2].padStart(2,'0')}` : `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
+                    }
+                }
+                if (dStr) {
+                   newInvoiceData.billDate = dStr;
+                   newInvoiceData.receiveDate = dStr;
+                }
+            } else {
+                (newInvoiceData as any)[headerMap[trimmedKey]] = value;
+            }
+        }
+      }
+
+      let hasDesign = false;
+      let hasColour = false;
+      let hasSize = false;
+      let hasMarkdown = false;
+      let hasDisc = false;
+
+      const importedProducts = groupData.map((row: any, idx) => {
+        const getVal = (keys: string[]) => {
+          for (const k of keys) {
+            if (row[k] !== undefined && row[k] !== '') return row[k];
+          }
+          return '';
+        };
+
+        const itemRaw = getVal(['Product Desc.', 'ITEM', 'Product Name']);
+        const item = itemRaw !== undefined && itemRaw !== null ? String(itemRaw) : '';
+        
+        let qty = parseFloat(getVal(['Qty', 'QTY', 'Quantity']) as string);
+        if (isNaN(qty) || qty === 0) {
+            qty = parseFloat(getVal(['PCS', 'Pcs']) as string) || 0;
+        }
+
+        const rate = parseFloat(getVal(['Rate', 'RATE', 'PRATE']) as string) || 0;
+        const hsn = getVal(['HSN', 'HSN/SAC']).toString();
+        
+        const brandRaw = getVal(['BRAND', 'Brand']);
+        const brand = brandRaw !== undefined && brandRaw !== null ? String(brandRaw) : '';
+        const design = getVal(['Design', 'DESIGN']) as string;
+        const colour = getVal(['Color', 'Colour', 'COLOR', 'COLOUR']) as string;
+        const size = getVal(['Size', 'SIZE']).toString();
+        const mrp = parseFloat(getVal(['Mrp', 'MRP']) as string) || 0;
+        const gst = parseFloat(getVal(['GST %', 'GSTPERC', 'Tax %']) as string) || 0;
+        const disc = parseFloat(getVal(['Dis%', 'DISC %']) as string) || 0;
+        
+        if (design) hasDesign = true;
+        if (colour) hasColour = true;
+        if (size) hasSize = true;
+        if (mrp) hasMarkdown = true;
+        if (disc) hasDisc = true;
+
+        let brand_id = null;
+        if (brand) {
+            const matchedBrand = availableBrands.find(b => (b.name || '').toLowerCase() === brand.toLowerCase());
+            if (matchedBrand) {
+                brand_id = matchedBrand.id;
+            } else {
+                if (!errors.find(e => e.type === 'brand' && e.brand === brand)) {
+                    errors.push({ idx: idx + 1, item, brand, hsn, rate, mrp, gst, type: 'brand' });
+                }
+            }
+        }
+
+        let item_id = null;
+        if (item) {
+            const matchedItem = availableItems.find(i => (i.name || i.item_name || '').toLowerCase() === item.toLowerCase());
+            if (matchedItem) {
+                item_id = matchedItem.id;
+            } else {
+                errors.push({ idx: idx + 1, item, brand, hsn, rate, mrp, gst, type: 'item' });
+            }
+        }
+
+        return {
+          id: Date.now() + idx,
+          item_id,
+          item,
+          hsn,
+          brand_id,
+          brand,
+          qty: qty.toString(),
+          rate: rate.toString(),
+          disc,
+          gst,
+          design,
+          colour,
+          size,
+          mrp
+        };
+      }).filter(p => {
+          const hasItem = p.item && String(p.item).trim() !== '';
+          const hasBrand = p.brand && String(p.brand).trim() !== '';
+          const hasQty = parseFloat(p.qty) > 0;
+          const hasRate = parseFloat(p.rate) > 0;
+          return hasItem || hasBrand || hasQty || hasRate;
+      });
+
+      if (errors.length > 0) {
+          setImportErrors(errors);
+      }
+
+      if (hasDesign) newInvoiceData.designNo = true;
+      if (hasColour) newInvoiceData.colourNo = true;
+      if (hasSize) newInvoiceData.showSize = true;
+      if (hasMarkdown) newInvoiceData.showMarkdown = true;
+      if (hasDisc) newInvoiceData.showPurchaseDiscount = true;
+
+      // Calculate Total Qty and Bill Amount from CSV rows
+      let sumQty = 0;
+      let sumAmt = 0;
+      for (const p of importedProducts) {
+          sumQty += parseFloat(p.qty) || 0;
+      }
+      for (const row of groupData) {
+          const getVal = (keys: string[]) => {
+            for (const k of keys) {
+              if (row[k] !== undefined && row[k] !== '') return row[k];
+            }
+            return '';
+          };
+          sumAmt += parseFloat(getVal(['NET AMT', 'Net Amount', 'Amount']) as string) || 0;
+      }
+      if (sumQty > 0) newInvoiceData.totalQuantity = sumQty.toString();
+      if (sumAmt > 0) newInvoiceData.billAmount = sumAmt.toFixed(2);
+
+      setInvoiceData(newInvoiceData);
+      
+      const finalProducts = importedProducts.length > 0 
+        ? importedProducts
+        : [{ id: Date.now(), item_id: null, item: '', hsn: '', brand_id: null, brand: '', qty: '', rate: '', disc: 0, gst: 0, design: '', colour: '', size: '', mrp: 0 }];
+        
+      setProducts(finalProducts);
+    }
+  };
+
+  const loadNextInQueue = () => {
+    if (importQueue.length > 0) {
+        processInvoiceGroup(importQueue[0]);
+        setImportQueue(prev => prev.slice(1));
+    }
   };
 
   const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    setSkippedCount(0);
 
     const reader = new FileReader();
-    reader.onload = (evt) => {
+    reader.onload = async (evt) => {
       try {
         const bstr = evt.target?.result;
         const wb = XLSX.read(bstr, { type: 'binary' });
@@ -75,155 +355,79 @@ export default function PurchaseInvoice() {
         const ws = wb.Sheets[wsname];
         const data = XLSX.utils.sheet_to_json(ws, { defval: '' });
 
-        let errors: any[] = [];
         if (data.length > 0) {
-          // Extract header level fields from the first row
-          const firstRow: any = data[0];
-          
-          let newInvoiceData = { ...invoiceData };
-          
-          const headerMap: Record<string, keyof typeof invoiceData> = {
-            'INVNO': 'billNo',
-            'Doc No.': 'billNo',
-            'INVDATE': 'billDate',
-            'Date': 'billDate',
-            'LRNO': 'lrNo',
-            'TRANSPORT': 'transporter',
-            'ADAT %': 'commissionPercent',
-            'SALESPERSON': 'purchaser',
-            'SUPPLIER': 'supplier',
-            'PARTY': 'supplier'
-          };
-          
-          for (const [key, value] of Object.entries(firstRow)) {
-            const trimmedKey = key.trim();
-            if (headerMap[trimmedKey] && value) {
-                // If it's a date, we might need to parse DD/MM/YYYY to YYYY-MM-DD
-                if (headerMap[trimmedKey] === 'purchaser' && typeof value === 'string') {
-                    const matchedUser = activeUsers.find((u: any) => 
-                        value.toLowerCase().includes((u.name || '').toLowerCase()) || 
-                        (u.name || '').toLowerCase().includes(value.toLowerCase())
-                    );
-                    if (matchedUser) {
-                        (newInvoiceData as any)[headerMap[trimmedKey]] = matchedUser.name;
-                    } else {
-                        (newInvoiceData as any)[headerMap[trimmedKey]] = value;
-                    }
-                } else if (headerMap[trimmedKey] === 'supplier' && typeof value === 'string') {
-                    // Prevent PARTY from overwriting an already established SUPPLIER
-                    if (trimmedKey === 'PARTY' && (newInvoiceData as any)['supplier']) {
-                        // Skip mapping PARTY because we already mapped SUPPLIER
-                    } else {
-                        const matchedVendor = vendors.find((v: any) => 
-                            value.toLowerCase().includes((v.name || '').toLowerCase()) || 
-                            (v.name || '').toLowerCase().includes(value.toLowerCase())
-                        );
-                        if (matchedVendor) {
-                            (newInvoiceData as any)[headerMap[trimmedKey]] = matchedVendor.name;
-                        } else {
-                            if (trimmedKey !== 'PARTY') {
-                                errors.push({ idx: 1, type: 'vendor', vendor: value });
+            const getValStr = (row: any, keys: string[]) => {
+                for (const k of keys) {
+                    if (row[k] !== undefined && row[k] !== '') return String(row[k]);
+                }
+                return '';
+            };
+            const grouped: Record<string, any[]> = {};
+            let unassignedCount = 0;
+            for (const row of (data as any[])) {
+                const invno = getValStr(row, ['INVNO', 'Doc No.']);
+                const key = invno || `UNASSIGNED_${++unassignedCount}`;
+                if (!grouped[key]) grouped[key] = [];
+                grouped[key].push(row);
+            }
+            let groups = Object.values(grouped);
+            
+            // Check which invoices already exist
+            const checkPayload = groups.map(g => {
+                const firstRow = g[0];
+                const bill_no = getValStr(firstRow, ['INVNO', 'Doc No.']);
+                const supplierName = getValStr(firstRow, ['SUPPLIER', 'PARTY']);
+                const matchedVendor = vendors.find(v => (v.name || '').toLowerCase() === supplierName.toLowerCase());
+                return {
+                    bill_no,
+                    vendor_id: matchedVendor ? matchedVendor.id : null
+                };
+            }).filter(p => p.bill_no && p.vendor_id);
+            
+            if (checkPayload.length > 0) {
+                try {
+                    const res = await fetch('https://api.retailnode.in/api/purchase-invoices/check-bulk', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ invoices: checkPayload })
+                    });
+                    if (res.ok) {
+                        const { existing } = await res.json();
+                        if (existing && existing.length > 0) {
+                            const existingKeys = new Set(existing.map((e: any) => `${e.vendor_id}_${e.bill_no}`));
+                            const originalLength = groups.length;
+                            groups = groups.filter(g => {
+                                const firstRow = g[0];
+                                const bill_no = getValStr(firstRow, ['INVNO', 'Doc No.']);
+                                const supplierName = getValStr(firstRow, ['SUPPLIER', 'PARTY']);
+                                const matchedVendor = vendors.find(v => (v.name || '').toLowerCase() === supplierName.toLowerCase());
+                                if (matchedVendor && bill_no) {
+                                    if (existingKeys.has(`${matchedVendor.id}_${bill_no}`)) return false;
+                                }
+                                return true;
+                            });
+                            const skipped = originalLength - groups.length;
+                            if (skipped > 0) {
+                                setSkippedCount(skipped);
                             }
-                            (newInvoiceData as any)[headerMap[trimmedKey]] = value; // Keep it so they can see what it was
                         }
                     }
-                } else if (headerMap[trimmedKey] === 'billDate' && typeof value === 'string') {
-                    const parts = value.split(/[/-]/);
-                    if (parts.length === 3) {
-                       const d = parts[0].length === 4 ? `${parts[0]}-${parts[1].padStart(2,'0')}-${parts[2].padStart(2,'0')}` : `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
-                       newInvoiceData.billDate = d;
-                       newInvoiceData.receiveDate = d;
-                    }
-                } else {
-                    (newInvoiceData as any)[headerMap[trimmedKey]] = value;
+                } catch(e) {
+                    console.error("Error checking bulk existing", e);
                 }
             }
-          }
-
-          let hasDesign = false;
-          let hasColour = false;
-          let hasSize = false;
-          let hasMarkdown = false;
-          let hasDisc = false;
-
-          const importedProducts = data.map((row: any, idx) => {
-            const getVal = (keys: string[]) => {
-              for (const k of keys) {
-                if (row[k] !== undefined && row[k] !== '') return row[k];
-              }
-              return '';
-            };
-
-            const item = getVal(['Product Desc.', 'ITEM', 'Product Name']);
-            const qty = parseFloat(getVal(['Qty', 'QTY', 'PCS', 'Quantity'])) || 0;
-            const rate = parseFloat(getVal(['Rate', 'RATE', 'PRATE'])) || 0;
-            const hsn = getVal(['HSN', 'HSN/SAC']).toString();
-            const brand = getVal(['BRAND', 'Brand']);
-            const design = getVal(['Design', 'DESIGN']);
-            const colour = getVal(['Color', 'Colour', 'COLOR', 'COLOUR']);
-            const size = getVal(['Size', 'SIZE']).toString();
-            const mrp = parseFloat(getVal(['Mrp', 'MRP'])) || 0;
-            const gst = parseFloat(getVal(['GST %', 'GSTPERC', 'Tax %'])) || 0;
-            const disc = parseFloat(getVal(['Dis%', 'DISC %'])) || 0;
             
-            if (design) hasDesign = true;
-            if (colour) hasColour = true;
-            if (size) hasSize = true;
-            if (mrp) hasMarkdown = true;
-            if (disc) hasDisc = true;
-
-            let brand_id = null;
-            if (brand) {
-                const matchedBrand = availableBrands.find(b => (b.name || '').toLowerCase() === brand.toLowerCase());
-                if (matchedBrand) {
-                    brand_id = matchedBrand.id;
-                } else {
-                    if (!errors.find(e => e.type === 'brand' && e.brand === brand)) {
-                        errors.push({ idx: idx + 1, item, brand, hsn, rate, mrp, gst, type: 'brand' });
-                    }
+            if (groups.length > 0) {
+                processInvoiceGroup(groups[0]);
+                if (groups.length > 1) {
+                    setImportQueue(groups.slice(1));
                 }
+            } else {
+                alert('No new invoices to import (all invoices in the CSV were already saved).');
             }
-
-            let item_id = null;
-            if (item) {
-                const matchedItem = availableItems.find(i => (i.name || i.item_name || '').toLowerCase() === item.toLowerCase());
-                if (matchedItem) {
-                    item_id = matchedItem.id;
-                } else {
-                    errors.push({ idx: idx + 1, item, brand, hsn, rate, mrp, gst, type: 'item' });
-                }
-            }
-
-            return {
-              id: Date.now() + idx,
-              item_id,
-              item,
-              hsn,
-              brand_id,
-              brand,
-              qty: qty.toString(),
-              rate: rate.toString(),
-              disc,
-              gst,
-              design,
-              colour,
-              size,
-              mrp
-            };
-          }).filter(p => (p.item !== undefined && p.item !== null && String(p.item).trim() !== '') || Number(p.qty) > 0);
-
-          if (errors.length > 0) {
-              setImportErrors(errors);
-          }
-
-          if (hasDesign) newInvoiceData.designNo = true;
-          if (hasColour) newInvoiceData.colourNo = true;
-          if (hasSize) newInvoiceData.showSize = true;
-          if (hasMarkdown) newInvoiceData.showMarkdown = true;
-          if (hasDisc) newInvoiceData.showPurchaseDiscount = true;
-
-          setInvoiceData(newInvoiceData);
-          setProducts(importedProducts.length > 0 ? importedProducts : [{ id: Date.now(), item_id: null, item: '', hsn: '', brand_id: null, brand: '', qty: '', rate: '', disc: 0, gst: 0, design: '', colour: '', size: '', mrp: 0 }]);
         }
       } catch (err) {
         console.error('Error parsing file:', err);
@@ -259,6 +463,8 @@ export default function PurchaseInvoice() {
   const [activeHsnRow, setActiveHsnRow] = useState<number | null>(null);
   
   const [locations, setLocations] = useState<any[]>([]);
+  const [importQueue, setImportQueue] = useState<any[][]>([]);
+  const [skippedCount, setSkippedCount] = useState(0);
   const [importErrors, setImportErrors] = useState<any[]>([]);
   const [isCreating, setIsCreating] = useState(false);
 
@@ -640,18 +846,20 @@ export default function PurchaseInvoice() {
     : invoiceData.discountAmount;
   const afterDiscount = taxableAmount - calcDiscount;
 
-  // Commission
+  // Commission (ADAT is usually added to the cost)
   const calcCommission = invoiceData.commissionPercent > 0
     ? (afterDiscount * invoiceData.commissionPercent / 100)
     : invoiceData.commissionAmount;
-  const afterCommission = afterDiscount - calcCommission;
+  const afterCommission = afterDiscount + calcCommission;
 
   // Tax
   let tax = 0;
   if (invoiceData.gstOn === 'items') {
+    const ratio = subtotal > 0 ? (afterCommission / subtotal) : 1;
     tax = products.reduce((acc, p) => {
       const lineAmount = (p.qty || 0) * (p.rate || 0) * (1 - (p.disc || 0) / 100);
-      return acc + (lineAmount * (p.gst || 0) / 100);
+      const lineTaxable = lineAmount * ratio;
+      return acc + (lineTaxable * (p.gst || 0) / 100);
     }, 0);
   } else {
     tax = afterCommission * (invoiceData.taxPercent || 0) / 100;
@@ -659,6 +867,33 @@ export default function PurchaseInvoice() {
 
   const priceAfterTax = afterCommission + tax;
   const finalAmount = priceAfterTax + (invoiceData.charges || 0) + (invoiceData.roundOff || 0);
+
+  // Auto-calculate Round Off to match Bill Amount (if small diff) or round to nearest integer
+  useEffect(() => {
+    const computedFinal = priceAfterTax + (invoiceData.charges || 0);
+    
+    if (invoiceData.billAmount) {
+      const target = parseFloat(invoiceData.billAmount);
+      const diff = target - computedFinal;
+      
+      // If difference is small (< 10), auto-adjust round off to match exactly
+      if (Math.abs(diff) > 0 && Math.abs(diff) < 10) {
+         if (Number((invoiceData.roundOff || 0).toFixed(2)) !== Number(diff.toFixed(2))) {
+            setInvoiceData(prev => ({ ...prev, roundOff: Number(diff.toFixed(2)) }));
+         }
+      }
+    } else {
+       // Auto-round to nearest whole number if no specific bill amount is targeted
+       const nearest = Math.round(computedFinal);
+       const diff = nearest - computedFinal;
+       if (Math.abs(diff) > 0 && Math.abs(diff) < 1) { // Normal round off is always < 1
+           if (Number((invoiceData.roundOff || 0).toFixed(2)) !== Number(diff.toFixed(2))) {
+               setInvoiceData(prev => ({ ...prev, roundOff: Number(diff.toFixed(2)) }));
+           }
+       }
+    }
+  }, [priceAfterTax, invoiceData.charges, invoiceData.billAmount, invoiceData.roundOff]);
+
 
   return (
     <>
@@ -670,7 +905,12 @@ export default function PurchaseInvoice() {
       <div className="flex flex-col h-screen font-sans text-[13px] selection:bg-transparent overflow-hidden bg-[#e0efeb] w-full">
         <input type="file" ref={fileInputRef} onChange={handleImport} accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" className="hidden" />
         
-        
+        {importQueue.length > 0 && (
+          <div className="bg-[#fff599] border-b-2 border-yellow-500 text-black px-4 py-2 font-bold flex justify-between items-center shadow-md z-40 shrink-0">
+            <span>Import Queue: {importQueue.length} more invoice(s) waiting to be loaded from the imported file. {skippedCount > 0 && <span className="text-red-700 ml-2">(Automatically skipped {skippedCount} already-saved invoice(s))</span>}</span>
+            <button onClick={loadNextInQueue} className="bg-black text-white px-3 py-1 text-xs uppercase tracking-widest hover:bg-slate-800 shadow-[2px_2px_0_rgba(255,255,255,1)]">Skip & Load Next</button>
+          </div>
+        )}
 
         
       {/* Import Validation Errors Modal */}
@@ -806,6 +1046,7 @@ export default function PurchaseInvoice() {
                           id="input-supplier"
                           value={invoiceData.supplier}
                           onChange={val => handleInvoiceChange('supplier', val)}
+                          onNotFound={() => setShowPartyModal(true)}
                           onKeyDown={e => {
                             if (e.altKey && (e.key.toLowerCase() === 'c' || e.code === 'KeyC')) {
                               e.preventDefault();
@@ -831,7 +1072,7 @@ export default function PurchaseInvoice() {
                     </div>
                     <div className="flex items-center w-[250px]">
                       <span className="w-[80px] text-slate-800 font-bold mr-2">Party GSTIN:</span>
-                      <input type="text" value="27AADCA1234F1Z9" readOnly className="border border-slate-300 bg-slate-100 px-1 flex-1 focus:outline-none font-mono text-slate-600" />
+                      <input type="text" value="" readOnly className="border border-slate-300 bg-slate-100 px-1 flex-1 focus:outline-none font-mono text-slate-600" />
                     </div>
                   </div>
 
@@ -930,7 +1171,7 @@ export default function PurchaseInvoice() {
                     </tr>
                   </thead>
                   <tbody>
-                    {products.map((item, index) => (
+                    {products.filter((item, index) => item.item || Number(item.qty) > 0 || index === products.length - 1).map((item, index) => (
                       <tr key={item.id} className="text-[13px] border-b border-slate-300">
                         <td className="border-r border-slate-300 px-1 py-[2px] text-center font-bold text-slate-500">{index + 1}</td>
                         <td className="border-r border-slate-300 px-1 py-[2px] relative">

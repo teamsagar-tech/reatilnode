@@ -78,6 +78,37 @@ export default function PartyModal({ isOpen, onClose, onSave, initialPartyName =
   const [gstStatusError, setGstStatusError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (isOpen) {
+      setFormData({
+        partyName: initialPartyName || '',
+        shortName: '',
+        type: 'Single Brand',
+        openingBalance: 0,
+        gstin: '',
+        panNumber: '',
+        state: '',
+        stateCode: '',
+        addressLine1: '',
+        addressLine2: '',
+        city: '',
+        taluka: '',
+        pincode: '',
+        mobileNumber: '',
+        email: '',
+        contactPerson: '',
+        designation: '',
+        bankName: '',
+        branch: '',
+        accountNumber: '',
+        ifscCode: '',
+        swiftCode: '',
+        gstRawData: null
+      });
+      setGstStatusError(null);
+    }
+  }, [isOpen, initialPartyName]);
+
+  useEffect(() => {
     if (formData.pincode && formData.pincode.length === 6) {
       fetch(`https://api.postalpincode.in/pincode/${formData.pincode}`)
         .then(res => res.json())

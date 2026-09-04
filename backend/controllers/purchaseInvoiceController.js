@@ -66,6 +66,33 @@ exports.getById = async (req, res) => {
   }
 };
 
+exports.checkBulk = async (req, res) => {
+  const { invoices } = req.body;
+  if (!invoices || !Array.isArray(invoices)) return res.json({ existing: [] });
+  
+  const conn = await db.getConnection();
+  try {
+    const existing = [];
+    for (const inv of invoices) {
+       if (inv.vendor_id && inv.bill_no) {
+           const [rows] = await conn.execute(
+               'SELECT id FROM PurchaseInvoices WHERE firm_id = ? AND vendor_id = ? AND bill_no = ?', 
+               [req.firm_id, inv.vendor_id, inv.bill_no]
+           );
+           if (rows.length > 0) {
+               existing.push({ vendor_id: inv.vendor_id, bill_no: inv.bill_no });
+           }
+       }
+    }
+    res.json({ existing });
+  } catch(e) {
+      console.error(e);
+      res.status(500).json({ error: 'Internal server error' });
+  } finally {
+      conn.release();
+  }
+};
+
 // Helper to generate GRN dynamically
 async function generateGRN(conn, firm_id) {
   // 1. Fetch Firm Settings
@@ -114,16 +141,30 @@ exports.create = async (req, res) => {
   try {
     await conn.beginTransaction();
 
+    if (bill_no) {
+      const [existing] = await conn.execute(
+        `SELECT id FROM PurchaseInvoices WHERE firm_id = ? AND vendor_id = ? AND bill_no = ?`,
+        [req.firm_id, vendor_id, bill_no]
+      );
+      if (existing.length > 0) {
+        await conn.rollback();
+        return res.status(409).json({ error: `An invoice with Bill No "${bill_no}" already exists for this party.` });
+      }
+    }
+
     // 1. Generate GRN dynamically
     const grn_no = await generateGRN(conn, req.firm_id);
+    const created_by = req.user?.id || null;
+    const ip_address = req.headers['x-forwarded-for'] || req.socket.remoteAddress || null;
+
     const lr_status = 'LR PENDING';
 
     // 2. Insert Header
     const [invoiceResult] = await conn.execute(
       `INSERT INTO PurchaseInvoices 
-       (firm_id, grn_no, vendor_id, bill_no, bill_date, receive_date, total_amount, gst_amount, net_amount, narration, lr_status) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [req.firm_id, grn_no, vendor_id, bill_no || null, bill_date || null, receive_date || null, total_amount || 0, gst_amount || 0, net_amount || 0, narration || null, lr_status]
+       (firm_id, grn_no, vendor_id, bill_no, bill_date, receive_date, total_amount, gst_amount, net_amount, narration, lr_status, created_by, ip_address) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [req.firm_id, grn_no, vendor_id, bill_no || null, bill_date || null, receive_date || null, total_amount || 0, gst_amount || 0, net_amount || 0, narration || null, lr_status, created_by, ip_address]
     );
     const invoiceId = invoiceResult.insertId;
 
@@ -154,7 +195,7 @@ exports.create = async (req, res) => {
     }
 
     await conn.commit();
-    res.status(201).json({ message: 'Purchase Invoice created successfully', id: invoiceId });
+    res.status(201).json({ message: 'Purchase Invoice created successfully', id: invoiceId, grn_no });
   } catch (error) {
     await conn.rollback();
     console.error('Error creating purchase invoice:', error);

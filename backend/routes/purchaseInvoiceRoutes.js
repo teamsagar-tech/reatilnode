@@ -13,6 +13,7 @@ router.use(authenticateToken);
 router.use(tenantMiddleware);
 
 router.get('/', requirePermission('purchaseInvoice', 'view'), purchaseInvoiceController.getAll);
+router.post('/check-bulk', requirePermission('purchaseInvoice', 'view'), purchaseInvoiceController.checkBulk);
 router.get('/:id', requirePermission('purchaseInvoice', 'view'), purchaseInvoiceController.getById);
 router.post('/', requirePermission('purchaseInvoice', 'create'), purchaseInvoiceController.create);
 router.delete('/:id', requirePermission('purchaseInvoice', 'delete'), purchaseInvoiceController.delete);
