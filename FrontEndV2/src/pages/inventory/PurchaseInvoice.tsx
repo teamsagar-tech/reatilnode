@@ -88,29 +88,48 @@ export default function PurchaseInvoice() {
              narration: data.narration || ''
            }));
            if (data.items && data.items.length > 0) {
-             const mappedProducts = data.items.map((item: any, idx: number) => ({
-               id: Date.now() + idx,
-               item_id: item.item_id,
-               item: item.item_name || '',
-               hsn: '',
-               brand_id: item.brand_id,
-               brand: '', 
-               qty: item.total_qty || '',
-               rate: item.purchase_rate || '',
-               disc: 0, 
-               gst: item.gst_percent || 0,
-               mrp: item.mrp || 0,
-               attributes: item.attributes ? item.attributes.map((a: any) => ({
-                 size: a.size_name || '',
-                 size_id: a.size_id || null,
-                 color: a.color_name || '',
-                 color_id: a.color_id || null,
-                 design: a.design_name || '',
-                 design_id: a.design_id || null,
-                 qty: a.qty || 0,
-                 barcode: a.barcode || ''
-               })) : []
-             }));
+             const mappedProducts = data.items.map((item: any, idx: number) => {
+               let sizeStr = '';
+               let colorStr = '';
+               let designStr = '';
+               
+               if (item.attributes && item.attributes.length === 1) {
+                 sizeStr = item.attributes[0].size_name || '';
+                 colorStr = item.attributes[0].color_name || '';
+                 designStr = item.attributes[0].design_name || '';
+               } else if (item.attributes && item.attributes.length > 1) {
+                 sizeStr = 'Multi';
+                 colorStr = 'Multi';
+                 designStr = 'Multi';
+               }
+
+               return {
+                 id: Date.now() + idx,
+                 item_id: item.item_id,
+                 item: item.item_name || '',
+                 hsn: item.hsn_code || '',
+                 brand_id: item.brand_id,
+                 brand: item.brand_name || '', 
+                 qty: item.total_qty || '',
+                 rate: item.purchase_rate || '',
+                 disc: 0, 
+                 gst: item.gst_percent || 0,
+                 mrp: item.mrp || 0,
+                 size: sizeStr,
+                 colour: colorStr,
+                 design: designStr,
+                 attributes: item.attributes ? item.attributes.map((a: any) => ({
+                   size: a.size_name || '',
+                   size_id: a.size_id || null,
+                   color: a.color_name || '',
+                   color_id: a.color_id || null,
+                   design: a.design_name || '',
+                   design_id: a.design_id || null,
+                   qty: a.qty || 0,
+                   barcode: a.barcode || ''
+                 })) : []
+               };
+             });
              setProducts(mappedProducts);
            }
          }
