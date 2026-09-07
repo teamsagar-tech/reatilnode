@@ -50,7 +50,7 @@ exports.getById = async (req, res) => {
         FROM PurchaseInvoiceItemAttributes pia
         LEFT JOIN Sizes s ON pia.size_id = s.id
         LEFT JOIN Colors c ON pia.color_id = c.id
-        LEFT JOIN Designs d ON pia.design_id = d.id
+        LEFT JOIN Styles d ON pia.design_id = d.id
         WHERE pia.invoice_item_id = ?
       `, [item.id]);
       item.attributes = attributes;
