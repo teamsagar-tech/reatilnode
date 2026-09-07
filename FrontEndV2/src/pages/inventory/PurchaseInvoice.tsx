@@ -15,7 +15,6 @@ export default function PurchaseInvoice() {
 
   const [isReadOnly, setIsReadOnly] = useState(false);
   const [editInvoiceId, setEditInvoiceId] = useState<number | null>(null);
-  const modKey = isMac ? 'Option' : 'Alt';
 
   const [invoiceData, setInvoiceData] = useState({
     invoiceDate: new Date().toISOString().split('T')[0],
