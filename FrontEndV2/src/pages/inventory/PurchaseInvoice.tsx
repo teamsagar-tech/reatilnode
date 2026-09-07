@@ -70,14 +70,42 @@ export default function PurchaseInvoice() {
       return;
     }
 
+    const subtotal = products.reduce((acc: any, p: any) => acc + ((p.qty || 0) * (p.rate || 0) * (1 - (p.disc || 0) / 100)), 0);
+    const taxableAmount = subtotal;
+    const calcDiscount = invoiceData.discountPercent > 0 
+      ? (taxableAmount * invoiceData.discountPercent / 100) 
+      : invoiceData.discountAmount;
+    const afterDiscount = taxableAmount - calcDiscount;
+    const calcCommission = invoiceData.commissionPercent > 0
+      ? (afterDiscount * invoiceData.commissionPercent / 100)
+      : invoiceData.commissionAmount;
+    const afterCommission = afterDiscount + calcCommission;
+    let tax = 0;
+    if (invoiceData.gstOn === 'items') {
+      const ratio = subtotal > 0 ? (afterCommission / subtotal) : 1;
+      tax = products.reduce((acc: any, p: any) => {
+        const lineAmount = (p.qty || 0) * (p.rate || 0) * (1 - (p.disc || 0) / 100);
+        const lineTaxable = lineAmount * ratio;
+        return acc + (lineTaxable * (p.gst || 0) / 100);
+      }, 0);
+    } else {
+      tax = afterCommission * (invoiceData.taxPercent || 0) / 100;
+    }
+    const otherCharges = (invoiceData.otherChargesType === '-' ? -1 : 1) * invoiceData.otherChargesAmount;
+    const grandTotal = Math.round(afterCommission + tax + otherCharges);
+
     const payload = {
       vendor_id: matchedVendor.id,
       bill_no: invoiceData.billNo,
       bill_date: invoiceData.billDate || null,
       receive_date: invoiceData.receiveDate || null,
-      total_amount: Number(invoiceData.billAmount) || 0,
-      gst_amount: 0,
-      net_amount: Number(invoiceData.billAmount) || 0,
+      total_amount: taxableAmount || 0,
+      discount_percent: invoiceData.discountPercent || 0,
+      discount_amount: calcDiscount || 0,
+      commission_percent: invoiceData.commissionPercent || 0,
+      commission_amount: calcCommission || 0,
+      gst_amount: tax || 0,
+      net_amount: grandTotal || 0,
       lr_no: invoiceData.lrNo || null,
       transporter: invoiceData.transporter || null,
       bales: Number(invoiceData.bale) || null,
