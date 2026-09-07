@@ -102,7 +102,7 @@ export default function PurchaseInvoice() {
     }
 
     try {
-      const res = await fetch('/api/purchase-invoices', {
+      const res = await fetch(`\${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/purchase-invoices`, {
         method: 'POST',
         headers: { 
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -389,7 +389,7 @@ export default function PurchaseInvoice() {
             
             if (checkPayload.length > 0) {
                 try {
-                    const res = await fetch('/api/purchase-invoices/check-bulk', {
+                    const res = await fetch(`\${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/purchase-invoices/check-bulk`, {
                         method: 'POST',
                         headers: {
                             'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -473,7 +473,7 @@ export default function PurchaseInvoice() {
 
   useEffect(() => {
     // Fetch Items
-    fetch('/api/items', {
+    fetch(`\${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/items`, {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     })
     .then(res => res.json())
@@ -481,7 +481,7 @@ export default function PurchaseInvoice() {
     .catch(console.error);
 
     // Fetch Brands
-    fetch('/api/masters/brand', {
+    fetch(`\${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/brand`, {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     })
     .then(res => res.json())
@@ -489,7 +489,7 @@ export default function PurchaseInvoice() {
     .catch(console.error);
 
     // Fetch Locations
-    fetch('/api/masters/generic/Locations', {
+    fetch(`\${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/generic/Locations`, {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     })
     .then(res => res.json())
@@ -497,7 +497,7 @@ export default function PurchaseInvoice() {
     .catch(console.error);
 
     // Fetch Vendors
-    fetch('/api/vendors', {
+    fetch(`\${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/vendors`, {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     })
     .then(res => res.json())
@@ -505,7 +505,7 @@ export default function PurchaseInvoice() {
     .catch(console.error);
 
     // Fetch Purchasers
-    fetch('/api/users/purchasers', {
+    fetch(`\${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/users/purchasers`, {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     })
     .then(res => res.json())
@@ -513,7 +513,7 @@ export default function PurchaseInvoice() {
     .catch(console.error);
 
     // Fetch HSNs
-    fetch('/api/masters/generic/hsnsacs', {
+    fetch(`\${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/generic/hsnsacs`, {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     })
     .then(res => res.json())
@@ -773,7 +773,7 @@ export default function PurchaseInvoice() {
     setIsCreating(true);
     try {
       if (err.type === 'brand') {
-        const res = await fetch('/api/masters/brand', {
+        const res = await fetch(`\${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/brand`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
           body: JSON.stringify({ name: err.brand, description: err.brand })
@@ -794,7 +794,7 @@ export default function PurchaseInvoice() {
            if (match) bId = match.id;
         }
 
-        const res = await fetch('/api/items', {
+        const res = await fetch(`\${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/items`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
           body: JSON.stringify({

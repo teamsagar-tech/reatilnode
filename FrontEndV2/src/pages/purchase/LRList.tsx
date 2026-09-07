@@ -22,7 +22,7 @@ export default function LRList() {
   const [initialData, setInitialData] = useState<any[]>([]);
 
   useEffect(() => {
-    fetch('/api/logistics/pending-lrs', {
+    fetch(`\${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/logistics/pending-lrs`, {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     })
     .then(res => res.json())
