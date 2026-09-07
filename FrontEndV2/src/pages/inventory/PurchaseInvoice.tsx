@@ -78,6 +78,9 @@ export default function PurchaseInvoice() {
       total_amount: Number(invoiceData.billAmount) || 0,
       gst_amount: 0,
       net_amount: Number(invoiceData.billAmount) || 0,
+      lr_no: invoiceData.lrNo || null,
+      transporter: invoiceData.transporter || null,
+      bales: Number(invoiceData.bale) || null,
       narration: invoiceData.narration || '',
       items: products.filter((p: any) => p.item_id).map((p: any) => ({
         item_id: p.item_id,
@@ -99,7 +102,7 @@ export default function PurchaseInvoice() {
     }
 
     try {
-      const res = await fetch('https://api.retailnode.in/api/purchase-invoices', {
+      const res = await fetch('/api/purchase-invoices', {
         method: 'POST',
         headers: { 
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -386,7 +389,7 @@ export default function PurchaseInvoice() {
             
             if (checkPayload.length > 0) {
                 try {
-                    const res = await fetch('https://api.retailnode.in/api/purchase-invoices/check-bulk', {
+                    const res = await fetch('/api/purchase-invoices/check-bulk', {
                         method: 'POST',
                         headers: {
                             'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -470,7 +473,7 @@ export default function PurchaseInvoice() {
 
   useEffect(() => {
     // Fetch Items
-    fetch('https://api.retailnode.in/api/items', {
+    fetch('/api/items', {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     })
     .then(res => res.json())
@@ -478,7 +481,7 @@ export default function PurchaseInvoice() {
     .catch(console.error);
 
     // Fetch Brands
-    fetch('https://api.retailnode.in/api/masters/brand', {
+    fetch('/api/masters/brand', {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     })
     .then(res => res.json())
@@ -486,7 +489,7 @@ export default function PurchaseInvoice() {
     .catch(console.error);
 
     // Fetch Locations
-    fetch('https://api.retailnode.in/api/masters/generic/Locations', {
+    fetch('/api/masters/generic/Locations', {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     })
     .then(res => res.json())
@@ -494,7 +497,7 @@ export default function PurchaseInvoice() {
     .catch(console.error);
 
     // Fetch Vendors
-    fetch('https://api.retailnode.in/api/vendors', {
+    fetch('/api/vendors', {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     })
     .then(res => res.json())
@@ -502,7 +505,7 @@ export default function PurchaseInvoice() {
     .catch(console.error);
 
     // Fetch Purchasers
-    fetch('https://api.retailnode.in/api/users/purchasers', {
+    fetch('/api/users/purchasers', {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     })
     .then(res => res.json())
@@ -510,7 +513,7 @@ export default function PurchaseInvoice() {
     .catch(console.error);
 
     // Fetch HSNs
-    fetch('https://api.retailnode.in/api/masters/generic/hsnsacs', {
+    fetch('/api/masters/generic/hsnsacs', {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     })
     .then(res => res.json())
@@ -632,7 +635,7 @@ export default function PurchaseInvoice() {
         e.preventDefault();
         setBrandSuggestionIndex(prev => Math.max(prev - 1, 0));
         return;
-      } else if (e.key === 'Enter' && filtered.length > 0) {
+      } else if ((e.key === 'Enter' || e.key === 'Tab' || e.key === 'ArrowRight') && filtered.length > 0) {
         e.preventDefault();
         const selected = filtered[brandSuggestionIndex];
         const newProducts = [...products];
@@ -656,7 +659,7 @@ export default function PurchaseInvoice() {
         e.preventDefault();
         setHsnSuggestionIndex(prev => Math.max(prev - 1, 0));
         return;
-      } else if (e.key === 'Enter' && filtered.length > 0) {
+      } else if ((e.key === 'Enter' || e.key === 'Tab' || e.key === 'ArrowRight') && filtered.length > 0) {
         e.preventDefault();
         const selected = filtered[hsnSuggestionIndex];
         const newProducts = [...products];
@@ -691,7 +694,7 @@ export default function PurchaseInvoice() {
         e.preventDefault();
         setSuggestionIndex(prev => Math.max(prev - 1, 0));
         return;
-      } else if (e.key === 'Enter' && filtered.length > 0) {
+      } else if ((e.key === 'Enter' || e.key === 'Tab' || e.key === 'ArrowRight') && filtered.length > 0) {
         e.preventDefault();
         const selected = filtered[suggestionIndex];
         const newProducts = [...products];
@@ -770,7 +773,7 @@ export default function PurchaseInvoice() {
     setIsCreating(true);
     try {
       if (err.type === 'brand') {
-        const res = await fetch('https://api.retailnode.in/api/masters/brand', {
+        const res = await fetch('/api/masters/brand', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
           body: JSON.stringify({ name: err.brand, description: err.brand })
@@ -791,7 +794,7 @@ export default function PurchaseInvoice() {
            if (match) bId = match.id;
         }
 
-        const res = await fetch('https://api.retailnode.in/api/items', {
+        const res = await fetch('/api/items', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
           body: JSON.stringify({

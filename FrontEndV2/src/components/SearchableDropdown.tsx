@@ -50,7 +50,7 @@ export default function SearchableDropdown({
         e.preventDefault();
         setActiveIndex(prev => Math.max(prev - 1, 0));
         return;
-      } else if (e.key === 'Enter' && filtered.length > 0) {
+      } else if ((e.key === 'Enter' || e.key === 'Tab' || e.key === 'ArrowRight') && filtered.length > 0) {
         e.preventDefault();
         const selected = filtered[activeIndex];
         const val = typeof selected === 'string' ? selected : selected[displayKey];

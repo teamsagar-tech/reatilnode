@@ -19,12 +19,16 @@ export default function LRList() {
   const [filterBillNo, setFilterBillNo] = useState('');
 
   const [formData, setFormData] = useState<any>({});
+  const [initialData, setInitialData] = useState<any[]>([]);
 
-  const initialData = React.useMemo(() => [
-    { id: 1, lrNo: 'LR-1001', grn: 'GRN-001', status: 'In Transit', partyName: 'Alpha Logistics', transporter: 'VRL Logistics', bales: '50', billNo: 'INV-26-101', billDate: '2026-08-20' },
-    { id: 2, lrNo: 'LR-1002', grn: 'GRN-002', status: 'Delivered', partyName: 'Beta Synthetics', transporter: 'Navata Transport', bales: '120', billNo: 'INV-26-102', billDate: '2026-08-21' },
-    { id: 3, lrNo: 'LR-1003', grn: 'GRN-003', status: 'By Hand', partyName: 'Gamma Cottons', transporter: 'Self', bales: '10', billNo: 'INV-26-103', billDate: '2026-08-19' },
-  ], []);
+  useEffect(() => {
+    fetch('/api/logistics/pending-lrs', {
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    })
+    .then(res => res.json())
+    .then(data => setInitialData(Array.isArray(data) ? data : []))
+    .catch(console.error);
+  }, []);
 
   const filteredData = React.useMemo(() => {
     return initialData.filter(item => {

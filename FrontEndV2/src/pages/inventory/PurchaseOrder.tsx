@@ -125,7 +125,7 @@ export default function PurchaseOrder() {
         e.preventDefault();
         setSupplierIndex(prev => Math.max(prev - 1, 0));
         return;
-      } else if (e.key === 'Enter' && filtered.length > 0) {
+      } else if ((e.key === 'Enter' || e.key === 'Tab' || e.key === 'ArrowRight') && filtered.length > 0) {
         e.preventDefault();
         const selected = filtered[supplierIndex];
         handleInvoiceChange('supplier', selected.name);
@@ -163,7 +163,7 @@ export default function PurchaseOrder() {
         e.preventDefault();
         setPurchaserIndex(prev => Math.max(prev - 1, 0));
         return;
-      } else if (e.key === 'Enter' && filtered.length > 0) {
+      } else if ((e.key === 'Enter' || e.key === 'Tab' || e.key === 'ArrowRight') && filtered.length > 0) {
         e.preventDefault();
         handleInvoiceChange('purchaser', filtered[purchaserIndex].name);
         setShowPurchaserDropdown(false);
@@ -195,7 +195,7 @@ export default function PurchaseOrder() {
         e.preventDefault();
         setSuggestionIndex(prev => Math.max(prev - 1, 0));
         return;
-      } else if (e.key === 'Enter' && filtered.length > 0) {
+      } else if ((e.key === 'Enter' || e.key === 'Tab' || e.key === 'ArrowRight') && filtered.length > 0) {
         e.preventDefault();
         const selected = filtered[suggestionIndex];
         const newProducts = [...products];

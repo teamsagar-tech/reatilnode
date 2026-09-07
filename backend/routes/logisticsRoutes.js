@@ -15,4 +15,7 @@ router.post('/hundekari', requirePermission('masters', 'Create'), logisticsContr
 router.get('/unlinked-lrs', requirePermission('inventory', 'Read'), logisticsController.getUnlinkedLRs);
 router.post('/unlinked-lrs', requirePermission('inventory', 'Create'), logisticsController.createUnlinkedLR);
 
+// Pending LRs from Purchase Invoices
+router.get('/pending-lrs', requirePermission('inventory', 'Read'), logisticsController.getPendingLRs);
+
 module.exports = router;

@@ -130,7 +130,7 @@ async function generateGRN(conn, firm_id) {
 }
 
 exports.create = async (req, res) => {
-  const { vendor_id, bill_no, bill_date, receive_date, total_amount, gst_amount, net_amount, narration, items } = req.body;
+  const { vendor_id, bill_no, bill_date, receive_date, total_amount, gst_amount, net_amount, narration, items, lr_no, transporter, bales } = req.body;
   
   if (!vendor_id) return res.status(400).json({ error: 'Vendor is required' });
   if (!items || !Array.isArray(items) || items.length === 0) {
@@ -162,9 +162,9 @@ exports.create = async (req, res) => {
     // 2. Insert Header
     const [invoiceResult] = await conn.execute(
       `INSERT INTO PurchaseInvoices 
-       (firm_id, grn_no, vendor_id, bill_no, bill_date, receive_date, total_amount, gst_amount, net_amount, narration, lr_status, purchase_order_id, created_by, ip_address) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [req.firm_id, grn_no, vendor_id, bill_no || null, bill_date || null, receive_date || null, total_amount || 0, gst_amount || 0, net_amount || 0, narration || null, lr_status, req.body.purchase_order_id || null, created_by, ip_address]
+       (firm_id, grn_no, vendor_id, bill_no, bill_date, receive_date, total_amount, gst_amount, net_amount, narration, lr_status, purchase_order_id, lr_no, transporter, bales, created_by, ip_address) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [req.firm_id, grn_no, vendor_id, bill_no || null, bill_date || null, receive_date || null, total_amount || 0, gst_amount || 0, net_amount || 0, narration || null, lr_status, req.body.purchase_order_id || null, lr_no || null, transporter || null, bales || null, created_by, ip_address]
     );
     const invoiceId = invoiceResult.insertId;
 
