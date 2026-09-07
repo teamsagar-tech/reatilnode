@@ -11,7 +11,6 @@ import PurchaseInvoice from "./pages/inventory/PurchaseInvoice"
 import PointOfSales from "./pages/sales/POSPage"
 
 // Purchase Orders
-import PurchaseOrder from "./pages/purchase/PurchaseOrder/PurchaseOrder";
 
 // Stock Transfer
 import StockTransferList from "./pages/inventory/StockTransfer/StockTransferList"
@@ -32,7 +31,7 @@ import SalesDrafts from "./pages/sales/Drafts/SalesDrafts";
 import SalesReturn from './pages/sales/Returns/SalesReturn';
 import AllSalesReturn from './pages/sales/Returns/AllSalesReturn';
 import QuickSellReturn from './pages/sales/Returns/QuickSellReturn';
-import PurchaseOrder from './pages/purchase/PurchaseOrder';
+import PurchaseOrder from "./pages/inventory/PurchaseOrder";
 import TransportPayment from './pages/purchase/TransportPayment';
 import HundekariPayment from './pages/purchase/HundekariPayment';
 import PriceApprovalQueue from "./pages/sales/Approvals/PriceApprovalQueue";

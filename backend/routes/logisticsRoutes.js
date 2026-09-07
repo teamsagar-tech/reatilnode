@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const logisticsController = require('../controllers/logisticsController');
-const { requirePermission } = require('../middleware/authMiddleware');
+const { requirePermission } = require('../middleware/rbacMiddleware');
 
 // Transporters
 router.get('/transporters', requirePermission('masters', 'Read'), logisticsController.getTransporters);

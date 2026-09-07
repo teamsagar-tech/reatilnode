@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const labelPrintController = require('../controllers/labelPrintController');
-const { requirePermission } = require('../middleware/authMiddleware');
+const { requirePermission } = require('../middleware/rbacMiddleware');
 
 const bulkLabelPrintController = require('../controllers/bulkLabelPrintController');
 

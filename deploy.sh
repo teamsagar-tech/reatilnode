@@ -38,17 +38,17 @@ cd ..
 echo "🚀 Deploying to $SERVER..."
 
 echo "-> Syncing Backend..."
-sshpass -p "$PASSWORD" rsync -avz --exclude 'node_modules' --exclude '.git' --exclude 'logs' --exclude '.env' backend $USER@$SERVER:$REMOTE_DIR/
+sshpass -p "$PASSWORD" rsync -e "ssh -o StrictHostKeyChecking=no -o PubkeyAuthentication=no" -avz --exclude 'node_modules' --exclude '.git' --exclude 'logs' --exclude '.env' backend $USER@$SERVER:$REMOTE_DIR/
 
 echo "-> Syncing FrontEnd (V1)..."
-sshpass -p "$PASSWORD" rsync -avz FrontEnd/dist/ $USER@$SERVER:$REMOTE_DIR/FrontEnd/
+sshpass -p "$PASSWORD" rsync -e "ssh -o StrictHostKeyChecking=no -o PubkeyAuthentication=no" -avz FrontEnd/dist/ $USER@$SERVER:$REMOTE_DIR/FrontEnd/
 
 echo "-> Syncing FrontEndV2..."
-sshpass -p "$PASSWORD" rsync -avz FrontEndV2/dist/ $USER@$SERVER:$REMOTE_DIR/FrontEndV2/
+sshpass -p "$PASSWORD" rsync -e "ssh -o StrictHostKeyChecking=no -o PubkeyAuthentication=no" -avz FrontEndV2/dist/ $USER@$SERVER:$REMOTE_DIR/FrontEndV2/
 
 # 4. Restart Backend on Server
 echo "🔄 Restarting Backend on Server..."
-sshpass -p "$PASSWORD" ssh -o StrictHostKeyChecking=no $USER@$SERVER "cd $REMOTE_DIR/backend && npm install && pm2 restart retailnode-api"
+sshpass -p "$PASSWORD" ssh -o StrictHostKeyChecking=no -o PubkeyAuthentication=no $USER@$SERVER "cd $REMOTE_DIR/backend && npm install && pm2 restart retailnode-api"
 
 echo "✅ Deployment Successful!"
 echo "=========================================="
