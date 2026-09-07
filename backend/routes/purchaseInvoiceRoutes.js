@@ -16,6 +16,7 @@ router.get('/', requirePermission('purchaseInvoice', 'view'), purchaseInvoiceCon
 router.post('/check-bulk', requirePermission('purchaseInvoice', 'view'), purchaseInvoiceController.checkBulk);
 router.get('/:id', requirePermission('purchaseInvoice', 'view'), purchaseInvoiceController.getById);
 router.post('/', requirePermission('purchaseInvoice', 'create'), purchaseInvoiceController.create);
+router.put('/:id', requirePermission('purchaseInvoice', 'edit'), purchaseInvoiceController.update);
 router.delete('/:id', requirePermission('purchaseInvoice', 'delete'), purchaseInvoiceController.delete);
 
 router.post('/preview-import', requirePermission('purchaseInvoice', 'create'), upload.single('file'), importController.importPreview);

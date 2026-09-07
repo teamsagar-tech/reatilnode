@@ -153,6 +153,11 @@ export default function PurchaseInvoiceList() {
       } else if (e.key === 'ArrowUp') {
         e.preventDefault();
         setSelectedIndex(prev => (prev > 0 ? prev - 1 : prev));
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (invoices.length > 0 && invoices[selectedIndex]) {
+          navigate('/purchase-invoice', { state: { invoiceId: invoices[selectedIndex].id, mode: 'view' } });
+        }
       } else if (e.key === 'Escape') {
         e.preventDefault();
         navigate(-1);
@@ -166,7 +171,7 @@ export default function PurchaseInvoiceList() {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [navigate, invoices.length]);
+  }, [navigate, invoices, selectedIndex]);
 
   return (
     <>

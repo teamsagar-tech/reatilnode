@@ -254,3 +254,109 @@ exports.delete = async (req, res) => {
     conn.release();
   }
 };
+
+exports.update = async (req, res) => {
+  const { id } = req.params;
+  const { vendor_id, bill_no, bill_date, receive_date, total_amount, gst_amount, net_amount, discount_percent, discount_amount, commission_percent, commission_amount, narration, items, lr_no, transporter, bales } = req.body;
+  
+  if (!vendor_id) return res.status(400).json({ error: 'Vendor is required' });
+  if (!items || !Array.isArray(items) || items.length === 0) {
+    return res.status(400).json({ error: 'At least one item is required' });
+  }
+
+  const conn = await db.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    // Fetch existing invoice
+    const [existingInvoiceRows] = await conn.execute(
+      'SELECT id, grn_no, net_amount, vendor_id FROM PurchaseInvoices WHERE id = ? AND firm_id = ?',
+      [id, req.firm_id]
+    );
+    if (existingInvoiceRows.length === 0) {
+      await conn.rollback();
+      return res.status(404).json({ error: 'Invoice not found' });
+    }
+    const oldInvoice = existingInvoiceRows[0];
+
+    if (bill_no) {
+      const [existingBill] = await conn.execute(
+        `SELECT id FROM PurchaseInvoices WHERE firm_id = ? AND vendor_id = ? AND bill_no = ? AND id != ?`,
+        [req.firm_id, vendor_id, bill_no, id]
+      );
+      if (existingBill.length > 0) {
+        await conn.rollback();
+        return res.status(409).json({ error: `An invoice with Bill No "${bill_no}" already exists for this party.` });
+      }
+    }
+
+    // Adjust Vendor Balance
+    if (oldInvoice.vendor_id === vendor_id) {
+      // Same vendor
+      const diff = Number(net_amount || 0) - Number(oldInvoice.net_amount || 0);
+      if (diff !== 0) {
+        await conn.execute('UPDATE Vendors SET current_balance = current_balance + ? WHERE id = ?', [diff, vendor_id]);
+        await conn.execute(
+          'UPDATE PartyLedgers SET credit_amount = ?, transaction_date = ? WHERE voucher_type = "Purchase Invoice" AND voucher_no = ? AND firm_id = ?',
+          [net_amount || 0, receive_date || new Date(), oldInvoice.grn_no, req.firm_id]
+        );
+      }
+    } else {
+      // Vendor changed, remove from old, add to new
+      await conn.execute('UPDATE Vendors SET current_balance = current_balance - ? WHERE id = ?', [oldInvoice.net_amount || 0, oldInvoice.vendor_id]);
+      await conn.execute('UPDATE Vendors SET current_balance = current_balance + ? WHERE id = ?', [net_amount || 0, vendor_id]);
+      await conn.execute(
+        'UPDATE PartyLedgers SET party_id = ?, credit_amount = ?, transaction_date = ? WHERE voucher_type = "Purchase Invoice" AND voucher_no = ? AND firm_id = ?',
+        [vendor_id, net_amount || 0, receive_date || new Date(), oldInvoice.grn_no, req.firm_id]
+      );
+    }
+
+    // Update Header
+    await conn.execute(
+      `UPDATE PurchaseInvoices 
+       SET vendor_id=?, bill_no=?, bill_date=?, receive_date=?, discount_percent=?, discount_amount=?, commission_percent=?, commission_amount=?, total_amount=?, gst_amount=?, net_amount=?, narration=?, purchase_order_id=?, lr_no=?, transporter=?, bales=?, ip_address=?
+       WHERE id=? AND firm_id=?`,
+      [vendor_id, bill_no || null, bill_date || null, receive_date || null, discount_percent || 0, discount_amount || 0, commission_percent || 0, commission_amount || 0, total_amount || 0, gst_amount || 0, net_amount || 0, narration || null, req.body.purchase_order_id || null, lr_no || null, transporter || null, bales || null, req.headers['x-forwarded-for'] || req.socket.remoteAddress || null, id, req.firm_id]
+    );
+
+    // Delete old items (attributes will cascade if set, otherwise we should manually delete attributes first)
+    // To be safe, delete attributes first
+    await conn.execute(
+      `DELETE FROM PurchaseInvoiceItemAttributes WHERE invoice_item_id IN (SELECT id FROM PurchaseInvoiceItems WHERE invoice_id = ?)`,
+      [id]
+    );
+    await conn.execute('DELETE FROM PurchaseInvoiceItems WHERE invoice_id = ?', [id]);
+
+    // Insert Items & Attributes
+    for (let item of items) {
+      const [itemResult] = await conn.execute(
+        `INSERT INTO PurchaseInvoiceItems 
+         (invoice_id, item_id, category_id, brand_id, purchase_rate, mrp, total_qty, gst_percent, gst_amount, total_amount) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [id, item.item_id, item.category_id || null, item.brand_id || null, item.purchase_rate || 0, item.mrp || 0, item.total_qty || 0, item.gst_percent || 0, item.gst_amount || 0, item.total_amount || 0]
+      );
+      const itemId = itemResult.insertId;
+
+      if (item.attributes && Array.isArray(item.attributes) && item.attributes.length > 0) {
+        for (let attr of item.attributes) {
+          let barcode = attr.barcode || `${id}-${itemId}-${Date.now() % 100000}`;
+          await conn.execute(
+            `INSERT INTO PurchaseInvoiceItemAttributes 
+             (invoice_item_id, size_id, color_id, design_id, qty, barcode) 
+             VALUES (?, ?, ?, ?, ?, ?)`,
+            [itemId, attr.size_id || null, attr.color_id || null, attr.design_id || null, attr.qty || 0, barcode]
+          );
+        }
+      }
+    }
+
+    await conn.commit();
+    res.json({ message: 'Purchase Invoice updated successfully', id, grn_no: oldInvoice.grn_no });
+  } catch (error) {
+    await conn.rollback();
+    console.error('Error updating purchase invoice:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  } finally {
+    conn.release();
+  }
+};

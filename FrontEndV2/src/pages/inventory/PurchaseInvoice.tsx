@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import MultiAttributeModal from '../../components/inventory/MultiAttributeModal';
 import PartyModal from '../../components/inventory/PartyModal';
@@ -7,11 +7,14 @@ import MasterCreationModal from '../../components/inventory/MasterCreationModal'
 import SearchableDropdown from '../../components/SearchableDropdown';
 import * as XLSX from 'xlsx';
 
-
-
 export default function PurchaseInvoice() {
   const navigate = useNavigate();
+  const location = useLocation();
   const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+  const modKey = isMac ? 'Option' : 'Alt';
+
+  const [isReadOnly, setIsReadOnly] = useState(false);
+  const [editInvoiceId, setEditInvoiceId] = useState<number | null>(null);
   const modKey = isMac ? 'Option' : 'Alt';
 
   const [invoiceData, setInvoiceData] = useState({
@@ -30,27 +33,92 @@ export default function PurchaseInvoice() {
     charges: 0,
     roundOff: 0,
     orderNo: '',
+    otherChargesType: '+' as '+' | '-',
+    otherChargesAmount: 0,
     transporter: '',
     lrNo: '',
     bale: '',
     billNo: '',
-    billDate: new Date().toISOString().split('T')[0],
-    receiveDate: new Date().toISOString().split('T')[0],
+    billDate: '',
+    receiveDate: '',
     totalQuantity: '',
     billAmount: '',
-    gstOn: 'items' as 'items' | 'total',
+    poNo: '',
+    narration: '',
+    paymentTerms: '',
+    gstOn: 'items' as 'items' | 'bill',
     designNo: false,
     colourNo: false,
-    showSize: false,
-    showLocation: false,
+    showSize: true,
+    showLocation: true,
     showPurchaseDiscount: false,
     showMarkdown: false
   });
 
   const [products, setProducts] = useState<any[]>([
-    { id: 1, item_id: null, item: '', brand_id: null, brand: '', qty: '', rate: '', disc: 0, gst: 0, design: '', colour: '', size: '', mrp: 0 },
-    { id: 1, item: '', brand: '', qty: '', rate: '', disc: 0, gst: 0, design: '', colour: '', size: '', mrp: 0 },
+    { id: 1, item_id: null, item: '', brand_id: null, brand: '', qty: '', rate: '', disc: 0, gst: 0, design: '', colour: '', size: '', mrp: 0, attributes: [] }
   ]);
+
+  useEffect(() => {
+    const id = location.state?.invoiceId;
+    if (id) {
+      setEditInvoiceId(id);
+      if (location.state?.mode === 'view') {
+        setIsReadOnly(true);
+      }
+      fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/purchase-invoices/${id}`, {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      })
+      .then(res => res.json())
+      .then(data => {
+         if (!data.error) {
+           setInvoiceData(prev => ({
+             ...prev,
+             billNo: data.bill_no || '',
+             billDate: data.bill_date ? data.bill_date.split('T')[0] : '',
+             receiveDate: data.receive_date ? data.receive_date.split('T')[0] : '',
+             supplier: data.vendor_name || '',
+             billAmount: data.total_amount || '',
+             discountPercent: Number(data.discount_percent) || 0,
+             discountAmount: Number(data.discount_amount) || 0,
+             commissionPercent: Number(data.commission_percent) || 0,
+             commissionAmount: Number(data.commission_amount) || 0,
+             lrNo: data.lr_no || '',
+             transporter: data.transporter || '',
+             bale: data.bales || '',
+             narration: data.narration || ''
+           }));
+           if (data.items && data.items.length > 0) {
+             const mappedProducts = data.items.map((item: any, idx: number) => ({
+               id: Date.now() + idx,
+               item_id: item.item_id,
+               item: item.item_name || '',
+               hsn: '',
+               brand_id: item.brand_id,
+               brand: '', 
+               qty: item.total_qty || '',
+               rate: item.purchase_rate || '',
+               disc: 0, 
+               gst: item.gst_percent || 0,
+               mrp: item.mrp || 0,
+               attributes: item.attributes ? item.attributes.map((a: any) => ({
+                 size: a.size_name || '',
+                 size_id: a.size_id || null,
+                 color: a.color_name || '',
+                 color_id: a.color_id || null,
+                 design: a.design_name || '',
+                 design_id: a.design_id || null,
+                 qty: a.qty || 0,
+                 barcode: a.barcode || ''
+               })) : []
+             }));
+             setProducts(mappedProducts);
+           }
+         }
+      })
+      .catch(console.error);
+    }
+  }, [location.state]);
 
   const [activeSuggestionRow, setActiveSuggestionRow] = useState<number | null>(null);
   const [suggestionIndex, setSuggestionIndex] = useState<number>(0);
@@ -130,8 +198,12 @@ export default function PurchaseInvoice() {
     }
 
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/purchase-invoices`, {
-        method: 'POST',
+      const url = editInvoiceId 
+        ? `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/purchase-invoices/${editInvoiceId}`
+        : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/purchase-invoices`;
+        
+      const res = await fetch(url, {
+        method: editInvoiceId ? 'PUT' : 'POST',
         headers: { 
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
           'Content-Type': 'application/json'
@@ -563,7 +635,7 @@ export default function PurchaseInvoice() {
         else if (showPurchaserDropdown) setShowPurchaserDropdown(false);
         else if (activeSuggestionRow !== null) setActiveSuggestionRow(null);
         else if (activeHsnRow !== null) setActiveHsnRow(null);
-        else navigate('/dashboard');
+        else navigate(-1);
       }
       
       if (e.altKey) {
@@ -933,7 +1005,7 @@ export default function PurchaseInvoice() {
       </Helmet>
       
       {/* RetailNode Main Background */}
-      <div className="flex flex-col h-screen font-sans text-[13px] selection:bg-transparent overflow-hidden bg-[#e0efeb] w-full">
+      <div className={`flex flex-col h-screen font-sans text-[13px] selection:bg-transparent overflow-hidden bg-[#e0efeb] w-full ${isReadOnly ? 'pointer-events-none opacity-85' : ''}`}>
         <input type="file" ref={fileInputRef} onChange={handleImport} accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" className="hidden" />
         
         {importQueue.length > 0 && (
@@ -1493,7 +1565,7 @@ export default function PurchaseInvoice() {
           </div>
 
           {/* Right Action Sidebar (F-keys) */}
-          <div className="w-[120px] flex-col gap-[2px] overflow-y-auto hidden lg:flex bg-[#e0efeb]">
+          <div className="w-[120px] pointer-events-auto flex-col gap-[2px] overflow-y-auto hidden lg:flex bg-[#e0efeb]">
              {[
                { key: "F1", label: "Help" },
                { key: "F2", label: "Date" },
@@ -1526,13 +1598,23 @@ export default function PurchaseInvoice() {
                <span className="font-extrabold text-[13px] text-[#12423d] mt-2 uppercase tracking-widest text-center">RetailNode</span>
              </div>
 
-             <button 
-               onClick={handleSaveInvoice}
-               className="flex flex-row items-center px-2 py-1 bg-[#ffe000] border border-[#d6bc00] hover:bg-[#e6c900] text-left transition-all shadow-[inset_1px_1px_0_rgba(255,255,255,0.8)] mb-2 w-full"
-             >
-                 <span className="font-bold text-black text-[11px] w-[25px] underline">S</span>
-                 <span className="text-black text-[11px] font-medium border-l border-[#d6bc00] pl-1 ml-1">Save</span>
-             </button>
+             {isReadOnly ? (
+               <button 
+                 onClick={() => setIsReadOnly(false)}
+                 className="flex flex-row items-center px-2 py-1 bg-blue-500 border border-blue-600 hover:bg-blue-600 text-left transition-all shadow-[inset_1px_1px_0_rgba(255,255,255,0.8)] mb-2 w-full text-white"
+               >
+                   <span className="font-bold text-[11px] w-[25px] underline">E</span>
+                   <span className="text-[11px] font-medium border-l border-blue-600 pl-1 ml-1">Edit</span>
+               </button>
+             ) : (
+               <button 
+                 onClick={handleSaveInvoice}
+                 className="flex flex-row items-center px-2 py-1 bg-[#ffe000] border border-[#d6bc00] hover:bg-[#e6c900] text-left transition-all shadow-[inset_1px_1px_0_rgba(255,255,255,0.8)] mb-2 w-full"
+               >
+                   <span className="font-bold text-black text-[11px] w-[25px] underline">S</span>
+                   <span className="text-black text-[11px] font-medium border-l border-[#d6bc00] pl-1 ml-1">Save</span>
+               </button>
+             )}
              <button 
                onClick={() => navigate('/dashboard')}
                className="flex flex-row items-center px-2 py-1 bg-[#e0efeb] border border-[#a3c3be] hover:bg-[#c9e1dd] hover:border-[#81a09d] text-left transition-all shadow-[inset_1px_1px_0_rgba(255,255,255,0.8)] w-full"
