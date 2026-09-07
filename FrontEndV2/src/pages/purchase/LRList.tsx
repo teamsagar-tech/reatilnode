@@ -39,6 +39,12 @@ export default function LRList() {
       const matchGRN = filterGRN ? item.grn === filterGRN : true;
       const matchBillNo = filterBillNo ? item.billNo === filterBillNo : true;
       return matchStatus && matchParty && matchTransporter && matchLR && matchGRN && matchBillNo;
+    }).sort((a, b) => {
+      const aPending = a.status === 'LR PENDING';
+      const bPending = b.status === 'LR PENDING';
+      if (aPending && !bPending) return -1;
+      if (!aPending && bPending) return 1;
+      return 0; // retain original order for others
     });
   }, [initialData, filterStatus, filterParty, filterTransporter, filterLR, filterGRN, filterBillNo]);
 
