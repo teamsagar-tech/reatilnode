@@ -189,3 +189,12 @@ These refinements transform the CSV import from a basic shell to a highly reliab
   - Altered `Customers` and `Vendors` tables to track `current_balance` for high-speed UI reads.
   - `purchaseInvoiceController.js` now automatically Credits the Vendor Ledger upon GRN generation.
   - `salesController.js` now automatically Debits the Customer Ledger upon Credit/Udhaar POS sales.
+
+### Phase 9.1: Logistics & UI Fixes
+*   **Keyboard Navigation Fix:** Fixed a critical bug in `PurchaseInvoice.tsx`, `PurchaseOrder.tsx`, and `SearchableDropdown.tsx` where navigating dropdowns with arrow keys and pressing Tab/ArrowRight would fail to auto-commit the selection. Tab and ArrowRight now behave identically to Enter for fast keyboarding.
+*   **API URLs:** Removed hardcoded production API URLs (e.g. \`https://api.retailnode.in\`) from frontend data-entry pages and replaced them with relative paths so they fetch from the local proxy/backend accurately, preventing ID mismatches.
+*   **LR Pending Module:** 
+    *   Added \`lr_no\`, \`transporter\`, and \`bales\` tracking to the \`PurchaseInvoices\` database table.
+    *   Updated the Purchase Invoice creation API to save these logistics fields and set the invoice status to "LR PENDING".
+    *   Added \`GET /api/logistics/pending-lrs\` endpoint to fetch all pending invoices.
+    *   Wired \`LRList.tsx\` to fetch live data instead of dummy data.

@@ -698,7 +698,7 @@ export default function PurchaseInvoice() {
         e.preventDefault();
         const selected = filtered[suggestionIndex];
         const newProducts = [...products];
-        newProducts[index] = { ...newProducts[index], item_id: selected.id, item: selected.name || selected.item_name, brand_id: selected.brand_id || null, brand: selected.brand || '', rate: selected.purchase_price || selected.rate || newProducts[index].rate || '' };
+        newProducts[index] = { ...newProducts[index], item_id: selected.id, item: selected.name || selected.item_name, brand_id: selected.brand_id || null, brand: selected.brand || newProducts[index].brand || '', rate: selected.purchase_price || selected.rate || newProducts[index].rate || '' };
         setProducts(newProducts);
         setActiveSuggestionRow(null);
         document.getElementById(`row-${index}-qty`)?.focus();
@@ -1210,7 +1210,7 @@ export default function PurchaseInvoice() {
                             }).slice(0, 8).map((suggestion, sIdx) => (
                                 <div key={suggestion.id} className={`px-2 py-1 flex justify-between cursor-pointer ${sIdx === suggestionIndex ? 'bg-[#ffe000] text-black font-bold' : 'hover:bg-slate-200'}`} onClick={() => {
                                   const newProducts = [...products];
-                                  newProducts[index] = { ...newProducts[index], item: suggestion.name || suggestion.item_name, brand: suggestion.brand || '', rate: suggestion.purchase_price || suggestion.rate || '' };
+                                  newProducts[index] = { ...newProducts[index], item: suggestion.name || suggestion.item_name, brand: suggestion.brand || newProducts[index].brand || '', rate: suggestion.purchase_price || suggestion.rate || '' };
                                   setProducts(newProducts);
                                   setActiveSuggestionRow(null);
                                   document.getElementById(`row-${index}-qty`)?.focus();

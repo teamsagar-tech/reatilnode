@@ -199,7 +199,7 @@ export default function PurchaseOrder() {
         e.preventDefault();
         const selected = filtered[suggestionIndex];
         const newProducts = [...products];
-        newProducts[index] = { ...newProducts[index], item: selected.name, brand: selected.brand, rate: selected.rate };
+        newProducts[index] = { ...newProducts[index], item: selected.name, brand: selected.brand || newProducts[index].brand || '', rate: selected.rate };
         setProducts(newProducts);
         setActiveSuggestionRow(null);
         document.getElementById(`row-${index}-qty`)?.focus(); // Jump to qty after selection
@@ -493,7 +493,7 @@ export default function PurchaseOrder() {
                                 className={`flex items-start px-2 py-1.5 text-xs cursor-pointer border-b border-slate-50 last:border-0 transition-colors ${isSelected ? 'bg-primary/10' : 'hover:bg-slate-50'}`}
                                 onClick={() => {
                                   const newProducts = [...products];
-                                  newProducts[index] = { ...newProducts[index], item: suggestion.name, brand: suggestion.brand, rate: suggestion.rate };
+                                  newProducts[index] = { ...newProducts[index], item: suggestion.name, brand: suggestion.brand || newProducts[index].brand || '', rate: suggestion.rate };
                                   setProducts(newProducts);
                                   document.getElementById(`row-${index}-qty`)?.focus();
                                 }}
