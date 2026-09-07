@@ -162,11 +162,36 @@ exports.create = async (req, res) => {
     // 2. Insert Header
     const [invoiceResult] = await conn.execute(
       `INSERT INTO PurchaseInvoices 
-       (firm_id, grn_no, vendor_id, bill_no, bill_date, receive_date, total_amount, gst_amount, net_amount, narration, lr_status, created_by, ip_address) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [req.firm_id, grn_no, vendor_id, bill_no || null, bill_date || null, receive_date || null, total_amount || 0, gst_amount || 0, net_amount || 0, narration || null, lr_status, created_by, ip_address]
+       (firm_id, grn_no, vendor_id, bill_no, bill_date, receive_date, total_amount, gst_amount, net_amount, narration, lr_status, purchase_order_id, created_by, ip_address) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [req.firm_id, grn_no, vendor_id, bill_no || null, bill_date || null, receive_date || null, total_amount || 0, gst_amount || 0, net_amount || 0, narration || null, lr_status, req.body.purchase_order_id || null, created_by, ip_address]
     );
     const invoiceId = invoiceResult.insertId;
+
+    // Post to Vendor Ledger (Credit Amount)
+    if (net_amount && net_amount > 0) {
+      // Get current balance
+      const [vendorRows] = await conn.execute('SELECT current_balance FROM Vendors WHERE id = ?', [vendor_id]);
+      const current_balance = vendorRows[0]?.current_balance || 0;
+      const new_balance = Number(current_balance) + Number(net_amount);
+
+      await conn.execute(
+        `INSERT INTO PartyLedgers 
+         (firm_id, party_type, party_id, transaction_date, voucher_type, voucher_no, credit_amount, running_balance, created_by_user_id) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [req.firm_id, 'Vendor', vendor_id, receive_date || new Date(), 'Purchase Invoice', grn_no, net_amount, new_balance, created_by]
+      );
+
+      await conn.execute('UPDATE Vendors SET current_balance = ? WHERE id = ?', [new_balance, vendor_id]);
+    }
+    
+    // Fulfill Purchase Order
+    if (req.body.purchase_order_id) {
+       await conn.execute(
+         'UPDATE PurchaseOrders SET status = "Fulfilled" WHERE id = ? AND firm_id = ?', 
+         [req.body.purchase_order_id, req.firm_id]
+       );
+    }
 
     // 2. Insert Items & Attributes
     for (let item of items) {

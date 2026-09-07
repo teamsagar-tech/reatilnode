@@ -148,3 +148,44 @@ This document serves as a compulsory append-only log of all major implementation
 
 **Rationale:**
 These refinements transform the CSV import from a basic shell to a highly reliable, mathematically precise ERP workflow that guards against duplicate entries, prevents DB crashes from malformed dates, strictly enforces user attribution for audits, and intuitively resolves standard rounding errors for massive bulk imports.
+
+## [2026-09-05] Phase 2: Logistics & LR Management Migration
+- **Backend**: Converted Transporter, Hundekari, and UnlinkedLR schemas from MongoDB to strictly typed relational MySQL tables in `009_logistics_schema.sql`.
+- **Controllers**: Ported Mongoose logic to `mysql2/promise` raw queries with strict `firm_id` tenant isolation in `logisticsController.js`.
+- **Frontend**: Created fully functional `TransporterMaster.tsx`, `HundekariMaster.tsx`, and `LRPendingList.tsx` components connected to the backend API with Bearer token authentication.
+
+## [2026-09-05] Phase 3: Inventory & Label Printing Migration
+- **Backend Database**: Converted massive Mongoose `Products` and `InvoiceProducts` schemas (including nested arrays) into strict relational MySQL tables in `010_inventory_schema.sql`.
+- **Backend API**: Built `labelPrintController.js` utilizing SQL JOINs to fetch product batches, replacing NoSQL `.populate()`. Registered endpoints under `/api/label-print`.
+- **Frontend**: Successfully ported the cross-domain, hidden-form POST logic into `LabelPrintPage.tsx` within `FrontEndV2`, retaining secure label generation while conforming to the Tally UI standards.
+
+## [2026-09-05] Phase 4: Sales & POS Migration Completed
+- **Backend Database**: Built `012_sales_schema.sql` to replace NoSQL SalesBill and SaleLineItem collections with secure, relational MySQL tables strictly enforcing `firm_id` tenant isolation.
+- **Backend API**: Engineered `salesController.js` utilizing SQL transactions for billing (to prevent race conditions) and fast `JOIN`s for barcode scanning. Secured via RBAC.
+- **Frontend**: Delivered the `POSPage.tsx` interface. Designed following the RetailNode Tally guidelines with robust keyboard navigation, dynamic cart calculation, and an auto-focus supermarket-style barcode scanner flow.
+
+## [2026-09-05] Phase 5: Manage Receivable Module
+- **Backend API**: Created `manageReceivableController.js` utilizing MySQL transactions for safely Splitting products (generating sequenced barcodes) and Bulk-Updating `vrp_rate`/`mrp` strictly scoped by `firm_id`.
+- **Frontend Interface**: Ported the `ManageReceivable` UI into the strict RetailNode Tally-style format. Replaced terminology 'VRP' with 'Sales Price' per administrative request. Wired up complex keyboard navigation including F2 (Batch Edit) and F3 (Split Piece).
+
+## [2026-09-05] Phase 6: Returns Management Completed
+- **Backend Database**: Designed `014_returns_schema.sql` tracking `SalesReturns` (Credit Notes) and `PurchaseReturns` (Debit Notes) completely isolated by `firm_id`.
+- **Backend API**: Engineered `returnsController.js` to execute MySQL transactions flipping product flags (`is_sold`, `is_returned`) upon refund to enforce flawless inventory count re-integration.
+- **Frontend Interface**: Overwrote placeholder pages for `SalesReturn.tsx` and `PurchaseReturn.tsx` with customized Tally-style grids, featuring color-coded headers (Red for Sales Refund, Brown for Purchase Return) and robust keyboard bindings.
+
+## [2026-09-05] Phase 7: Data Migration (Dry Run Ready)
+- **Database Schema Fixes**: Revisited Phase 6 Returns schema to add tracking for `total_commission_reversed`, `total_coupon_discount_reversed`, and `loyalty_points_debited` to ensure 1:1 legacy parity.
+- **Data Migration Pipeline**: Wrote and executed `backend/scripts/migrateData.js` connecting local MongoDB (`vrp_db`) to local MySQL (`retailnode_db`).
+- **Execution Results**: Scanned legacy `kalambproducts` collection. Filtered out duplicate barcodes using new rigid SQL `UNIQUE` constraints, resulting in 2,220 perfectly verified products successfully ported into the new architecture for immediate Dry Run testing.
+
+## [2026-09-05] Phase 8: Comprehensive Audit & Corrections
+- **Migration Rewrite**: Rewrote `migrateData.js` to capture the full breadth of legacy financial variables (GST, Commissions, Net Rates) rather than just the core identifiers, ensuring zero data loss from MongoDB to MySQL.
+- **Frontend POS Overhaul**: Discovered a gap between backend schema capabilities and UI inputs. Upgraded `POSPage.tsx` to natively support input capture for Credit Sales, Loyalty Points, Coupons, and real-time visualization of Item Commission, cementing 1:1 legacy feature parity.
+
+## [2026-09-05] Phase 9: Purchase Orders & Core Financial Ledgers
+- **Procurement Module Built**: Completely engineered the missing Purchase Order lifecycle. Created `015_purchase_orders_schema.sql`, `purchaseOrderController.js`, and the `PurchaseOrder.tsx` UI (Tally-style layout). Wired GRN (Purchase Invoices) to automatically fulfill POs.
+- **Party Ledgers Built**: Created `016_ledgers_schema.sql` (`PartyLedgers`) to track Accounts Payable/Receivable. 
+- **Ledger Integrations**: 
+  - Altered `Customers` and `Vendors` tables to track `current_balance` for high-speed UI reads.
+  - `purchaseInvoiceController.js` now automatically Credits the Vendor Ledger upon GRN generation.
+  - `salesController.js` now automatically Debits the Customer Ledger upon Credit/Udhaar POS sales.

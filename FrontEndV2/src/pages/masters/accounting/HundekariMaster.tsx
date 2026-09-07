@@ -2,71 +2,83 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 
+const SectionTitle = ({ children }: { children: React.ReactNode }) => (
+  <div className="font-bold text-[#1b5e58] text-[12px] border-b border-[#a3c3be] mb-2 mt-2 pb-1 uppercase tracking-wider bg-[#eef5ed] px-1">
+    {children}
+  </div>
+);
+
+const InputRow = ({ label, value, onChange, placeholder = '' }: any) => (
+  <div className="flex items-center text-[12px] mb-1">
+    <label className="w-[120px] font-semibold text-slate-700 shrink-0">{label}</label>
+    <span className="font-bold mr-1 text-slate-400">:</span>
+    <input
+      type="text"
+      className="flex-1 border border-slate-300 px-1 py-[2px] focus:outline-none focus:border-[#1b5e58] focus:bg-[#ffffe0] bg-white transition-colors"
+      value={value}
+      onChange={e => onChange(e.target.value)}
+      placeholder={placeholder}
+    />
+  </div>
+);
+
 export default function HundekariMaster() {
   const navigate = useNavigate();
-  const [mode, setMode] = useState('list'); // 'list' or 'create'
-  const [formData, setFormData] = useState({});
+  const [mode, setMode] = useState<'list' | 'create'>('list');
+  const [hundekaris, setHundekaris] = useState<any[]>([]);
+  const [formData, setFormData] = useState({ hundekari_name: '', mobile: '', email: '' });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        if (mode === 'create') {
-          setMode('list');
-        } else {
-          navigate('/dashboard');
-        }
-      } else if (e.altKey && (e.key.toLowerCase() === 'c' || e.code === 'KeyC' || e.key === 'ç') && mode === 'list') {
-        e.preventDefault();
-        setMode('create');
-        setTimeout(() => {
-          document.getElementById('field-0')?.focus();
-        }, 50);
+  const fetchHundekaris = async () => {
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/logistics/hundekari`, {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      });
+      const data = await res.json();
+      if (data.success) {
+        setHundekaris(data.data);
       }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [navigate, mode]);
-
-  const handleFieldKeyDown = (e: React.KeyboardEvent, nextFieldId: string) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      const nextField = document.getElementById(nextFieldId);
-      if (nextField) {
-        nextField.focus();
-      } else {
-        // End of form, simulate save
-        setMode('list');
-      }
+    } catch (err) {
+      console.error('Failed to fetch hundekaris', err);
     }
   };
 
-  const sampleData = [
-    { id: 1, col1: 'Sample 1', col2: 'Data A', col3: 'Active', col4: '100' },
-    { id: 2, col1: 'Sample 2', col2: 'Data B', col3: 'Inactive', col4: '50' },
-    { id: 3, col1: 'Sample 3', col2: 'Data C', col3: 'Active', col4: '200' },
-  ];
+  useEffect(() => {
+    if (mode === 'list') {
+      fetchHundekaris();
+    }
+  }, [mode]);
 
-  const SectionTitle = ({ children }: { children: React.ReactNode }) => (
-    <div className="font-bold text-[#1b5e58] text-[12px] border-b border-[#a3c3be] mb-2 mt-2 pb-1 uppercase tracking-wider bg-[#eef5ed] px-1">
-      {children}
-    </div>
-  );
-
-  const InputRow = ({ label, value, onChange, width = 'flex-1', type = 'text', placeholder = '' }: any) => (
-    <div className="flex items-center mb-[2px]">
-      <div className="w-[110px] text-slate-800 font-bold text-[11px] text-right pr-2 leading-tight">
-        {label}
-      </div>
-      <input 
-        type={type} 
-        className={`bg-white border border-slate-400 px-1 py-[2px] text-[12px] font-bold text-black focus:bg-[#ffffe0] focus:outline-none focus:border-slate-800 ${width}`}
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        placeholder={placeholder}
-      />
-    </div>
-  );
+  const handleSave = async () => {
+    if (!formData.hundekari_name) {
+      setError('Hundekari Name is required');
+      return;
+    }
+    setLoading(true);
+    setError('');
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/logistics/hundekari`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify(formData)
+      });
+      const data = await res.json();
+      if (data.success) {
+        setMode('list');
+        setFormData({ hundekari_name: '', mobile: '', email: '' });
+      } else {
+        setError(data.message || 'Failed to save');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Server error');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <>
@@ -75,8 +87,6 @@ export default function HundekariMaster() {
       </Helmet>
       
       <div className='flex flex-col h-screen font-sans text-[13px] selection:bg-transparent overflow-hidden bg-[#e0efeb] w-full'>
-        
-
         <div className='flex flex-1 p-1 gap-1 overflow-hidden h-full'>
           {/* Main Container */}
           <div className='flex-1 bg-[#fcfaf2] border-2 border-[#81a09d] flex flex-col overflow-hidden shadow-inner relative'>
@@ -91,61 +101,65 @@ export default function HundekariMaster() {
                   <div className='flex justify-between items-center mb-2'>
                     <div className='font-bold text-slate-800 text-[14px]'>List of Hundekaris</div>
                     <button 
-                      onClick={() => { setMode('create'); }} 
+                      onClick={() => setMode('create')} 
                       className='bg-[#eef5ed] border border-[#a3c3be] px-2 py-1 font-bold text-black shadow-[inset_1px_1px_0_rgba(255,255,255,0.8)] hover:bg-[#ffe000] focus:bg-[#ffe000] outline-none text-[12px]'
                     >Create New (Alt/Opt+C)</button>
                   </div>
                   <table className='w-full text-left border-collapse border border-slate-400'>
                     <thead className='bg-[#eef5ed]'>
                       <tr className='border-b-2 border-slate-400 text-slate-900 font-bold text-[12px]'>
-                        <th className="px-2 py-1 border-r border-slate-300">ID</th><th className="px-2 py-1 border-r border-slate-300">Hundekari Name</th><th className="px-2 py-1 border-r border-slate-300">Commission %</th><th className="px-2 py-1 border-r border-slate-300">Active</th>
+                        <th className="px-2 py-1 border-r border-slate-300">ID</th>
+                        <th className="px-2 py-1 border-r border-slate-300">Hundekari Name</th>
+                        <th className="px-2 py-1 border-r border-slate-300">Mobile</th>
+                        <th className="px-2 py-1 border-r border-slate-300">Email</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {sampleData.map((row, idx) => {
-                        const renderCell = (i: number) => i === 0 ? row.id : (row as any)['col'+i] || '-';
-                        return (
+                      {hundekaris.length === 0 ? (
+                        <tr><td colSpan={4} className="text-center p-4 text-slate-500">No hundekaris found</td></tr>
+                      ) : (
+                        hundekaris.map((row, idx) => (
                           <tr key={row.id} className={'text-[12px] border-b border-slate-300 ' + (idx % 2 === 0 ? 'bg-white' : 'bg-[#fcfaf2]') + ' hover:bg-[#ffffe0] cursor-pointer'}>
-                            <td className="px-2 py-1 border-r border-slate-300 font-medium text-slate-700">{renderCell(0)}</td><td className="px-2 py-1 border-r border-slate-300 font-medium text-slate-700">{renderCell(1)}</td><td className="px-2 py-1 border-r border-slate-300 font-medium text-slate-700">{renderCell(2)}</td><td className="px-2 py-1 border-r border-slate-300 font-medium text-slate-700">{renderCell(3)}</td>
+                            <td className="px-2 py-1 border-r border-slate-300 font-medium text-slate-700">{row.id}</td>
+                            <td className="px-2 py-1 border-r border-slate-300 font-medium text-slate-700">{row.hundekari_name}</td>
+                            <td className="px-2 py-1 border-r border-slate-300 font-medium text-slate-700">{row.mobile || '-'}</td>
+                            <td className="px-2 py-1 border-r border-slate-300 font-medium text-slate-700">{row.email || '-'}</td>
                           </tr>
-                        );
-                      })}
+                        ))
+                      )}
                     </tbody>
                   </table>
                 </>
               ) : (
                 <div className='flex flex-col h-full overflow-hidden'>
                   <div className='flex flex-1 gap-6 overflow-hidden'>
-                    
                     {/* Column 1: Master Details */}
                     <div className="w-[40%] flex flex-col gap-1 border-r-2 border-slate-300 pr-4 overflow-y-auto pb-4 custom-scrollbar">
                       <SectionTitle>Master Information</SectionTitle>
-                    <InputRow label="Hundekari Name" value={formData.hundekariName} onChange={(v: string) => setFormData({...formData, hundekariName: v})} />
-                    <InputRow label="Mobile" value={formData.mobile} onChange={(v: string) => setFormData({...formData, mobile: v})} />
-                    <InputRow label="Charges Per Bale" value={formData.chargesPerBale} onChange={(v: string) => setFormData({...formData, chargesPerBale: v})} />
-                    <InputRow label="Location" value={formData.location} onChange={(v: string) => setFormData({...formData, location: v})} />
+                      {error && <div className="text-red-600 font-bold mb-2">{error}</div>}
+                      <InputRow label="Hundekari Name" value={formData.hundekari_name} onChange={(v: string) => setFormData({...formData, hundekari_name: v})} />
+                      <InputRow label="Mobile" value={formData.mobile} onChange={(v: string) => setFormData({...formData, mobile: v})} />
+                      <InputRow label="Email" value={formData.email} onChange={(v: string) => setFormData({...formData, email: v})} />
                     </div>
-
                   </div>
                   
                   {/* Action Buttons */}
                   <div className='flex justify-end gap-2 pt-2 border-t border-slate-300 mt-2 shrink-0'>
                     <button 
-                      onClick={() => setFormData({})}
+                      onClick={() => setFormData({ hundekari_name: '', mobile: '', email: '' })}
                       className='bg-red-50 border border-red-300 px-6 py-1 text-red-700 font-bold hover:bg-red-100 shadow-[inset_1px_1px_0_rgba(255,255,255,0.8)] outline-none focus:bg-red-200'
                     >
                       Reset
                     </button>
                     <button 
-                      onClick={() => {
-                        alert('Saved Successfully!');
-                        setMode('list');
-                      }}
+                      onClick={handleSave}
+                      disabled={loading}
                       className='bg-[#1b5e58] border border-[#1b5e58] px-6 py-1 text-white font-bold hover:bg-[#144743] shadow-[inset_1px_1px_0_rgba(255,255,255,0.2)] outline-none focus:bg-[#0f3632]'
                     >
-                      Save (Ctrl+A)
+                      {loading ? 'Saving...' : 'Save (Ctrl+A)'}
                     </button>
-                  </div>                </div>
+                  </div>                
+                </div>
               )}
             </div>
           </div>
@@ -169,14 +183,6 @@ export default function HundekariMaster() {
              ))}
              <div className='flex-1' />
              <div className="flex flex-col items-center justify-center p-2 mb-2 border-t border-[#a3c3be] mx-2 pt-4">
-               <svg width="64" height="64" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-                 <circle cx="100" cy="100" r="86" fill="transparent" stroke="#1b5e58" strokeWidth="14" />
-                 <circle cx="14" cy="100" r="8" fill="transparent" stroke="#1b5e58" strokeWidth="5" />
-                 <circle cx="186" cy="100" r="8" fill="transparent" stroke="#1b5e58" strokeWidth="5" />
-                 <text x="100" y="100" fontFamily="system-ui, -apple-system, sans-serif" fontWeight="900" fontSize="72" textAnchor="middle" dominantBaseline="central">
-                   <tspan fill="#12423d">RN</tspan><tspan fill="#1b5e58">.</tspan>
-                 </text>
-               </svg>
                <span className="font-extrabold text-[13px] text-[#12423d] mt-2 uppercase tracking-widest text-center">RetailNode</span>
              </div>
 

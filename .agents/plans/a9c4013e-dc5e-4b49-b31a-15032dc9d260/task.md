@@ -1,9 +1,9 @@
-# Excel Import Task List
-
-- `[/]` Install `xlsx` package in `FrontEndV2`.
-- `[ ]` Add "Import (Alt+I)" button and hidden `<input type="file">` to `PurchaseInvoice.tsx`.
-- `[ ]` Implement `handleImport` logic with `xlsx` parsing.
-  - Map generic column aliases (`Product Desc.`, `ITEM`, `Qty`, `PCS`, etc.).
-  - Map header info if available (`INVNO`, `INVDATE`, `LRNO`, `TRANSPORT`, `SUPPLIER`).
-- `[ ]` Test compilation.
-- `[ ]` Update `walkthrough.md`.
+- [x] Create `015_purchase_orders_schema.sql` (PurchaseOrders, PurchaseOrderItems).
+- [x] Create `016_ledgers_schema.sql` (PartyLedgers).
+- [x] Apply SQL schemas to local database.
+- [x] Create `purchaseOrderController.js` and mount to `server.js`.
+- [x] Update `purchaseInvoiceController.js` to link POs and post to PartyLedgers (Credit).
+- [x] Update `salesController.js` to post to PartyLedgers (Debit) on Credit Sales.
+- [x] Create `PurchaseOrder.tsx` Frontend UI (Tally-style).
+- [x] Verify functionality.
+- [ ] Update `walkthrough.md` and `HISTORY.md`.

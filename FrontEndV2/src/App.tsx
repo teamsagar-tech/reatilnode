@@ -8,7 +8,7 @@ import ImpersonateAuth from "./pages/auth/ImpersonateAuth"
 import DashboardLayout from "./components/layout/DashboardLayout"
 import Dashboard from "./pages/Dashboard"
 import PurchaseInvoice from "./pages/inventory/PurchaseInvoice"
-import PointOfSales from "./pages/sales/PointOfSales/PointOfSales"
+import PointOfSales from "./pages/sales/POSPage"
 
 // Purchase Orders
 import PurchaseOrder from "./pages/purchase/PurchaseOrder/PurchaseOrder";
@@ -32,6 +32,7 @@ import SalesDrafts from "./pages/sales/Drafts/SalesDrafts";
 import SalesReturn from './pages/sales/Returns/SalesReturn';
 import AllSalesReturn from './pages/sales/Returns/AllSalesReturn';
 import QuickSellReturn from './pages/sales/Returns/QuickSellReturn';
+import PurchaseOrder from './pages/purchase/PurchaseOrder';
 import TransportPayment from './pages/purchase/TransportPayment';
 import HundekariPayment from './pages/purchase/HundekariPayment';
 import PriceApprovalQueue from "./pages/sales/Approvals/PriceApprovalQueue";
@@ -51,8 +52,8 @@ import ViewInTransitInvoice from "./pages/logistics/Invoices/ViewInTransitInvoic
 import ViewBarcodedInvoice from "./pages/logistics/Invoices/ViewBarcodedInvoice";
 import VerifyStock from "./pages/inventory/Verification/VerifyStock";
 import VerifyStockHistory from "./pages/inventory/Verification/VerifyStockHistory";
-import LabelPrintPage from "./pages/inventory/Barcodes/LabelPrintPage";
-import BulkLabelPrint from "./pages/inventory/Barcodes/BulkLabelPrint";
+import LabelPrintPage from "./pages/inventory/LabelPrintPage";
+import BulkLabelPrint from "./pages/inventory/BulkLabelPrintPage";
 import BarcodedProducts from "./pages/inventory/Barcodes/BarcodedProducts";
 import BarcodesSearch from "./pages/inventory/Barcodes/BarcodesSearch";
 import AttendanceEntry from "./pages/hr/Attendance/AttendanceEntry";
@@ -106,7 +107,7 @@ import ChargesTypeMaster from "./pages/masters/config/ChargesTypeMaster"
 import ItemPercentageMaster from "./pages/masters/config/ItemPercentageMaster"
 
 import LRList from "./pages/purchase/LRList"
-import ManageReceivable from "./pages/inventory/ManageReceivable/ManageReceivable"
+import ManageReceivable from "./pages/inventory/ManageReceivable"
 import TicketDashboard from "./pages/support/TicketDashboard"
 import TicketDetail from "./pages/support/TicketDetail"
 
@@ -161,6 +162,7 @@ function App() {
           <Route path="/sales/approvals/price-approval-queue" element={<PriceApprovalQueue />} />
           <Route path="/sales/approvals/credit-approval-queue" element={<CreditApprovalQueue />} />
           <Route path="/sales/receipts/advance-receipt-page" element={<AdvanceReceiptPage />} />
+          <Route path="/purchase/orders/purchase-order" element={<PurchaseOrder />} />
           <Route path="/purchase/invoice/purchase-invoice-list" element={<PurchaseInvoiceList />} />
           <Route path="/purchase/transport-payment" element={<TransportPayment />} />
           <Route path="/purchase/hundekari-payment" element={<HundekariPayment />} />

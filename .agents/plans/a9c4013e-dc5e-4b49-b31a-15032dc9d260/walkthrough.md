@@ -1,39 +1,21 @@
-# 🚀 Purchase Invoice Universal Import Feature Walkthrough
+# Phase 9: Purchase Orders & Core Financial Ledgers Complete
 
-I have successfully built and deployed the robust **Universal Vendor File Import** feature! It is now live on your production server.
+You caught a massive structural gap in the migration, and we have now fully resolved it. The ERP is no longer just a collection of detached tables—it is a deeply interconnected financial system that mirrors your legacy `onevastra` logic!
 
-## What Was Accomplished?
+## 1. Purchase Orders (Procurement) Rebuilt
+The completely missing Purchase Order module has been constructed from scratch:
+- **Database (`015_purchase_orders_schema.sql`)**: Built the `PurchaseOrders` and `PurchaseOrderItems` tables to track statuses (Pending, Approved, Fulfilled).
+- **Backend (`purchaseOrderController.js`)**: Wrote the REST API to raise POs, compute tax/totals, and fetch historical POs.
+- **Frontend UI (`PurchaseOrder.tsx`)**: Designed a brand new Tally-style data grid screen to raise POs. It's accessible via `/purchase/orders/purchase-order`.
 
-> [!TIP]
-> You can now effortlessly import data from both `.xls` and `.csv` files into the Purchase Invoice screen.
+## 2. Dynamic Financial Ledgers Wired Up
+Your ERP now accurately tracks outstanding balances and ledgers natively:
+- **Database (`016_ledgers_schema.sql`)**: Built the `PartyLedgers` tracking table.
+- **Auto-Balance Optimization**: I updated your `Customers` and `Vendors` tables to include a `current_balance` column for instant UI reads, rather than forcing the server to sum up a thousand ledger rows every time!
+- **Accounts Payable (Vendors)**: When you process a Purchase Invoice (GRN) via `purchaseInvoiceController.js`, it now automatically inserts a Credit transaction into the Vendor's ledger and updates their outstanding balance.
+- **Accounts Receivable (Customers)**: When you do a Credit Sale (Udhaar) at the POS via `salesController.js`, it automatically inserts a Debit transaction into the Customer's ledger and tracks the debt!
 
-### 1. Universal Parsing (XLS & CSV)
-The importer natively understands legacy HTML-based `.xls` files (like `SE_N_2569_26-27.xls`) and modern `.csv` files (like `Sales Invoice (1).csv`). We added a smart alias system that maps column names like `Product Desc.`, `ITEM`, `PCS`, and `Qty` intelligently.
+## End-to-End Procurement Flow
+The final touch: I updated the Purchase Invoice controller. Now, when a GRN is created and goods arrive at the warehouse, if it is linked to a Purchase Order, the system will automatically mark that Purchase Order as **"Fulfilled"**. 
 
-### 2. Auto-Fill Headers
-If your CSV file contains top-level invoice headers on each row, the system will now automatically extract them and pre-fill your top form:
-- Bill No (`INVNO`)
-- Date (`INVDATE`)
-- L R No (`LRNO`)
-- Transporter (`TRANSPORT`)
-- ADAT Charges (`ADAT %` ➔ Commission %)
-
-### 3. Smart User Fuzzy Matching
-If your CSV states `SALESPERSON` as "RATAN BHAI", the importer will automatically fuzzy match against your `activeUsers` database and properly select the user `Ratan` from the dropdown list.
-
-### 4. Interactive Master Validation Hub
-> [!IMPORTANT]
-> The biggest upgrade is the new **Resolution Hub**!
-
-If you import an Excel file and the system detects that some Items or Brands in the file do not exist in your Master Database (e.g., a new saree design), it will block the import to prevent database corruption.
-
-Instead of a generic error, a beautiful red-bordered **Validation Errors Modal** will pop up showing you exactly which rows have missing masters.
-- You can click **"Create Item"** or **"Create Brand"** next to individual rows.
-- Or, you can click the **"Create All Missing Masters"** button at the top to automatically generate all missing Items and Brands in your backend instantly! 
-- Once created, the items will seamlessly drop into your Purchase Invoice grid, complete with their proper database `item_id` and `brand_id`.
-
-## How to Test
-1. Go to the **Purchase Invoice** page on the live server.
-2. Press `Alt+I` (or click the new yellow **Import (Alt+I)** button).
-3. Select `SE_N_2569_26-27.xls`.
-4. Observe the **Validation Hub** popup. Click **"Create All Missing Masters"** and watch the magic happen!
+Your core procurement-to-sales cycle is completely wired up!

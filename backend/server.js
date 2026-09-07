@@ -17,7 +17,13 @@ const locationRoutes = require('./routes/locationRoutes');
 const userRoutes = require('./routes/userRoutes');
 const ticketRoutes = require('./routes/ticketRoutes');
 const purchaseInvoiceRoutes = require('./routes/purchaseInvoiceRoutes');
+const purchaseOrderRoutes = require('./routes/purchaseOrderRoutes');
 const gstRoutes = require('./routes/gstRoutes');
+const logisticsRoutes = require('./routes/logisticsRoutes');
+const labelPrintRoutes = require('./routes/labelPrintRoutes');
+const salesRoutes = require('./routes/salesRoutes');
+const manageReceivableRoutes = require('./routes/manageReceivableRoutes');
+const returnsRoutes = require('./routes/returnsRoutes');
 
 const app = express();
 
@@ -102,7 +108,13 @@ app.use('/api/roles', roleRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/tickets', ticketRoutes);
 app.use('/api/purchase-invoices', purchaseInvoiceRoutes);
+app.use('/api/purchase-orders', purchaseOrderRoutes);
 app.use('/api/gst', gstRoutes);
+app.use('/api/logistics', logisticsRoutes);
+app.use('/api/label-print', labelPrintRoutes);
+app.use('/api/sales', salesRoutes);
+app.use('/api/manage-receivable', manageReceivableRoutes);
+app.use('/api/returns', returnsRoutes);
 
 // Healthcheck endpoint
 app.get('/api/health', (req, res) => {

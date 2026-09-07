@@ -1,30 +1,31 @@
-# One-Click Item & Brand Creation during Import
+# Phase 9: Purchase Orders & Core Financial Ledgers
 
-Instead of just showing a static error message when an imported item or brand is missing from the database, we will transform the Validation Errors modal into an **Interactive Resolution Hub**.
+You are completely correct. While our new MySQL architecture has the foundation for Inventory and POS, we missed porting the **Procurement (Purchase Orders)** module and the deep **Financial Ledger Logic** from the legacy `onevastra` backend. Just copying the tables wasn't enough; we need to wire up the ERP logic.
+
+I have researched the legacy source code and identified exactly what we need to build for this phase to achieve true 1:1 ERP functionality.
+
+## 1. Purchase Orders (Procurement)
+In the legacy system, this was managed under `OrderInvoice.js`. 
+**Proposed Fix**:
+- **Schema**: Create `015_purchase_orders_schema.sql` (PurchaseOrders, PurchaseOrderItems) to track PO status (Pending, Approved, Fulfilled).
+- **Backend Logic**: Create `purchaseOrderController.js` to handle creation and approval of POs.
+- **Frontend UI**: Build `PurchaseOrder.tsx` in the frontend (matching the Tally-style grid) so you can raise POs to vendors.
+- **Integration**: Update `purchaseInvoiceController.js` (GRN) so that when goods arrive, it can link to a PO and mark it as "Fulfilled".
+
+## 2. Party Ledgers (Accounts Payable/Receivable)
+In the legacy system, `PartyPayment.js` tracked all the running balances. In our new system, if you do a Credit Sale (Udhaar) at the POS, the amount is saved to the `SalesBills` table, but there is no running ledger to track the customer's total outstanding balance!
+**Proposed Fix**:
+- **Schema**: Create `016_ledgers_schema.sql` (`PartyLedgers`) to track every Debit/Credit transaction (Invoices, Payments, Returns).
+- **Backend Logic**: Hook up the ledger logic!
+  - When `salesController.js` processes a POS bill with `credit_amount > 0`, it will automatically insert a **Debit** entry into the customer's ledger.
+  - When `purchaseInvoiceController.js` processes a GRN, it will automatically insert a **Credit** entry into the vendor's ledger.
+  - When `returnsController.js` processes a return, it will automatically reverse the ledger balances.
 
 ## User Review Required
+> [!IMPORTANT]
+> **Ledger Balances**: Should I add a real-time `current_balance` column to the `Parties` table that auto-updates on every ledger insert (faster for the UI to read), or should the UI calculate the balance dynamically by summing the `PartyLedgers` history? (I recommend auto-updating `current_balance` on the `Parties` table for performance).
 
-Please review the proposed UI flow for the "One-Click Create" functionality.
+> [!WARNING]
+> **Purchase Order Budgets**: The legacy app had a `PurchaseBudgetStatus` model. Do you want me to rebuild the Budget enforcement logic as well, or just stick to standard Purchase Orders for now?
 
-## Proposed Changes
-
-### 1. Interactive Validation Modal (`PurchaseInvoice.tsx`)
-We will upgrade the current red validation popup into a table that lists all missing items and brands found in the Excel file.
-- **Unmapped Items Table:** Shows the `Item Name`, `Brand`, `HSN`, `Purchase Rate`, and `MRP` directly extracted from the Excel row.
-- **Action Buttons:** Next to each row, there will be a **"Create Item"** button.
-
-### 2. Auto-Creation Logic
-When you click **"Create Item"**:
-1. The frontend will immediately send a request to your backend (`POST /api/items`) using the data from that Excel row (e.g. assigning the extracted HSN, Brand, and Rate to the new item).
-2. If the Brand is also missing, it will automatically create the Brand first (`POST /api/masters/brand`), then link it to the Item.
-3. Upon success, the item will disappear from the errors list.
-4. The system will auto-link the newly created `item_id` to the Purchase Invoice grid, so you can seamlessly continue!
-
-### 3. "Create All" Bulk Action
-We will also add a **"Create All Missing Items"** button at the top of the modal. With a single click, it will loop through all missing items and brands, create them in the backend, and clear the errors list.
-
-## Verification Plan
-1. Import `SE_N_2569_26-27.xls`.
-2. The modal will pop up showing the 20 missing items (like `MANGO KASHMIRI D`) and their corresponding details.
-3. Click "Create All Missing Items".
-4. Verify the modal closes, the items are created in your master database, and the Purchase Invoice grid is now fully validated and ready for submission.
+Please review and approve this plan so we can wire up the true core ERP logic!
