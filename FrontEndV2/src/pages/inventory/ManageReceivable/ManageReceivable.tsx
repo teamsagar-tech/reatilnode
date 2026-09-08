@@ -10,6 +10,18 @@ type ViewState = 'invoices' | 'batches' | 'products' | 'bulkUpdate';
 
 export default function ManageReceivable() {
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        navigate(-1);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [navigate]);
+
   const [viewState, setViewState] = useState<ViewState>('invoices');
 
   // Selection State

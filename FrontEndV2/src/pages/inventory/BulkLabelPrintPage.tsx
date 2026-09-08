@@ -25,6 +25,18 @@ const InputRow = ({ label, value, onChange, placeholder = '', type = 'text', onK
 
 export default function BulkLabelPrintPage() {
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        navigate(-1);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [navigate]);
+
   const [invoices, setInvoices] = useState<any[]>([]);
   const [focusedRow, setFocusedRow] = useState(0);
 

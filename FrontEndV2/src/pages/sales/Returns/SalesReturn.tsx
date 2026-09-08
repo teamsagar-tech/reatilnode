@@ -113,6 +113,9 @@ export default function SalesReturn() {
           if (next === -1) scannerRef.current?.focus();
           return next;
         });
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        navigate(-1);
       } else if (e.ctrlKey && e.key.toLowerCase() === 's') {
         e.preventDefault();
         handleSaveReturn();

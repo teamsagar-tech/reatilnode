@@ -26,6 +26,18 @@ const InputRow = ({ label, value, onChange, placeholder = '', type = 'text', onK
 
 export default function LabelPrintPage() {
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        navigate(-1);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [navigate]);
+
   const [batchId, setBatchId] = useState('');
   const [isVerticalLayout, setIsVerticalLayout] = useState(true);
   const printableWindowRef = useRef<Window | null>(null);

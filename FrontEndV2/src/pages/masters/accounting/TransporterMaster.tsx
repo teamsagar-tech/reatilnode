@@ -24,6 +24,18 @@ const InputRow = ({ label, value, onChange, placeholder = '' }: any) => (
 
 export default function TransporterMaster() {
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        navigate(-1);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [navigate]);
+
   const [mode, setMode] = useState<'list' | 'create'>('list');
   const [transporters, setTransporters] = useState<any[]>([]);
   const [formData, setFormData] = useState({ transporter_name: '', mobile: '', email: '' });
