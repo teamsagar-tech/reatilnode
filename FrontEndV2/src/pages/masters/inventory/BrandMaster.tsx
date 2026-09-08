@@ -232,7 +232,7 @@ export default function BrandMaster() {
                     >
                       Reset
                     </button>
-                    <button 
+                    <button id="btn-save" 
                       onClick={handleSaveBrand}
                       className='bg-[#1b5e58] border border-[#1b5e58] px-6 py-1 text-white font-bold hover:bg-[#144743] shadow-[inset_1px_1px_0_rgba(255,255,255,0.2)] outline-none focus:bg-[#0f3632]'
                     >
