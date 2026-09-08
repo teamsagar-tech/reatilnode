@@ -113,6 +113,12 @@ export default function ManageReceivable() {
 
   useEffect(() => {
     const handleGlobalKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (showEditModal) { setShowEditModal(false); return; }
+        if (showSplitModal) { setShowSplitModal(false); return; }
+        navigate(-1);
+        return;
+      }
       if (showEditModal || showSplitModal) return;
       if (e.key === 'ArrowDown') {
         e.preventDefault();
