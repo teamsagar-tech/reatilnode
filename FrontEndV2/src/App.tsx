@@ -8,7 +8,7 @@ import ImpersonateAuth from "./pages/auth/ImpersonateAuth"
 import DashboardLayout from "./components/layout/DashboardLayout"
 import Dashboard from "./pages/Dashboard"
 import PurchaseInvoice from "./pages/inventory/PurchaseInvoice"
-import PointOfSales from "./pages/sales/POSPage"
+import PointOfSales from "./pages/sales/PointOfSales/PointOfSales"
 
 // Purchase Orders
 
