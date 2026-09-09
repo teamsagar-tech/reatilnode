@@ -1,31 +1,38 @@
-# Phase 9: Purchase Orders & Core Financial Ledgers
+# Transaction Voucher UI Standardization Audit
 
-You are completely correct. While our new MySQL architecture has the foundation for Inventory and POS, we missed porting the **Procurement (Purchase Orders)** module and the deep **Financial Ledger Logic** from the legacy `onevastra` backend. Just copying the tables wasn't enough; we need to wire up the ERP logic.
+Based on the newly formalized `SKILL.md` rules for the "Transaction Voucher Standard Layout (Tally Style)", I have audited the remaining transaction pages. 
 
-I have researched the legacy source code and identified exactly what we need to build for this phase to achieve true 1:1 ERP functionality.
+## Audit Findings
+The following core transaction pages currently utilize the correct `w-[120px]` Right Sidebar, but they do **NOT** follow the strict `35/65` Split Header, the `60/40` Split Footer, or the standard Bottom Status Bar layout:
+1. `FrontEndV2/src/pages/sales/POSPage.tsx`
+2. `FrontEndV2/src/pages/sales/Returns/SalesReturn.tsx`
+3. `FrontEndV2/src/pages/purchase/Returns/PurchaseReturn.tsx`
 
-## 1. Purchase Orders (Procurement)
-In the legacy system, this was managed under `OrderInvoice.js`. 
-**Proposed Fix**:
-- **Schema**: Create `015_purchase_orders_schema.sql` (PurchaseOrders, PurchaseOrderItems) to track PO status (Pending, Approved, Fulfilled).
-- **Backend Logic**: Create `purchaseOrderController.js` to handle creation and approval of POs.
-- **Frontend UI**: Build `PurchaseOrder.tsx` in the frontend (matching the Tally-style grid) so you can raise POs to vendors.
-- **Integration**: Update `purchaseInvoiceController.js` (GRN) so that when goods arrive, it can link to a PO and mark it as "Fulfilled".
+*Note: `ManageReceivable.tsx` is considered a list/action page rather than a voucher entry page, so it will retain its current table-centric layout but can be updated to include the standard bottom status bar for consistency.*
 
-## 2. Party Ledgers (Accounts Payable/Receivable)
-In the legacy system, `PartyPayment.js` tracked all the running balances. In our new system, if you do a Credit Sale (Udhaar) at the POS, the amount is saved to the `SalesBills` table, but there is no running ledger to track the customer's total outstanding balance!
-**Proposed Fix**:
-- **Schema**: Create `016_ledgers_schema.sql` (`PartyLedgers`) to track every Debit/Credit transaction (Invoices, Payments, Returns).
-- **Backend Logic**: Hook up the ledger logic!
-  - When `salesController.js` processes a POS bill with `credit_amount > 0`, it will automatically insert a **Debit** entry into the customer's ledger.
-  - When `purchaseInvoiceController.js` processes a GRN, it will automatically insert a **Credit** entry into the vendor's ledger.
-  - When `returnsController.js` processes a return, it will automatically reverse the ledger balances.
+## Proposed Changes
 
-## User Review Required
+### Component 1: `POSPage.tsx`
+- **[MODIFY]** [POSPage.tsx](file:///Users/ratan/Downloads/RetailNodeV2/FrontEndV2/src/pages/sales/POSPage.tsx)
+  - Restructure the top header from `flex gap-12` to `flex flex-row` with `w-[35%]` (Payments, Coupons) and `w-[65%]` (Customer, Salesman, Barcode Scanner) sections.
+  - Restructure the footer from a single row to the Two-Part layout: `w-[60%]` left section (Narration/Notes) and `w-[40%]` right section (Detailed Totals).
+  - Update the absolute bottom status bar to display the standard `Version 2.0 | Firm | Location` and keyboard shortcuts.
+
+### Component 2: `SalesReturn.tsx`
+- **[MODIFY]** [SalesReturn.tsx](file:///Users/ratan/Downloads/RetailNodeV2/FrontEndV2/src/pages/sales/Returns/SalesReturn.tsx)
+  - Apply the `35/65` Split Top Form layout.
+  - Apply the `60/40` Split Footer layout.
+  - Update the bottom status bar to match the global standard while retaining the red "Sales Return" header theme.
+
+### Component 3: `PurchaseReturn.tsx`
+- **[MODIFY]** [PurchaseReturn.tsx](file:///Users/ratan/Downloads/RetailNodeV2/FrontEndV2/src/pages/purchase/Returns/PurchaseReturn.tsx)
+  - Apply the `35/65` Split Top Form layout.
+  - Apply the `60/40` Split Footer layout.
+  - Update the bottom status bar to match the global standard while retaining the brown "Purchase Return" header theme.
+
+## Open Questions
 > [!IMPORTANT]
-> **Ledger Balances**: Should I add a real-time `current_balance` column to the `Parties` table that auto-updates on every ledger insert (faster for the UI to read), or should the UI calculate the balance dynamically by summing the `PartyLedgers` history? (I recommend auto-updating `current_balance` on the `Parties` table for performance).
+> The original standard includes a "Narration" text area in the `60%` footer split. Since `SalesReturn` and `PurchaseReturn` currently capture their "Remark" in the top header, should I move the "Remark" field down to the footer Narration box to perfectly match `PurchaseInvoice.tsx`?
 
-> [!WARNING]
-> **Purchase Order Budgets**: The legacy app had a `PurchaseBudgetStatus` model. Do you want me to rebuild the Budget enforcement logic as well, or just stick to standard Purchase Orders for now?
-
-Please review and approve this plan so we can wire up the true core ERP logic!
+## Verification Plan
+After updating these files, I will verify the structural alignment and ensure that all React state bindings and `ref` auto-focus triggers for the Barcode Scanners still function correctly.

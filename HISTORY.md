@@ -198,3 +198,24 @@ These refinements transform the CSV import from a basic shell to a highly reliab
     *   Updated the Purchase Invoice creation API to save these logistics fields and set the invoice status to "LR PENDING".
     *   Added \`GET /api/logistics/pending-lrs\` endpoint to fetch all pending invoices.
     *   Wired \`LRList.tsx\` to fetch live data instead of dummy data.
+- **[2026-09-08] Master Flow & Purchase Order Rewrite**: Completely rewrote the PurchaseOrder.tsx frontend layout to strictly comply with the dense, Tally-style spreadsheet UI and keyboard workflow. Conducted a massive application-wide audit of all 60+ pages. Executed an automated Python script to patch the 'Enter' key focus chain across all 22 Master pages, ensuring focus flawlessly jumps from the final InputRow directly to the Save button. Verified Escape key handlers globally.
+
+## [2026-09-09] Transaction Voucher Layout Standardization
+- **Action**: Completely rewrote `PurchaseOrder.tsx` UI to structurally match the "Gold Standard" Tally layout defined in `PurchaseInvoice.tsx` (Split Header Panels, Split Footer Narration/Totals, right Sidebar for function keys, and absolute bottom Status bar).
+- **Rule Update**: Formalized this layout structure by updating `.agents/skills/page-creation/SKILL.md` (Section 4.1). Future AI generation of transaction/voucher pages MUST strictly adhere to this exact structural hierarchy.
+- **Compliance**: Copied implementation plan to `.agents/plans/purchase-order-ui-tally-standard-plan.md` to permanently archive this architectural layout decision.
+
+### Phase 2: Application-Wide Standardization
+- **Action**: Audited and completely refactored all remaining core transaction pages (`POSPage.tsx`, `SalesReturn.tsx`, and `PurchaseReturn.tsx`) to conform to the newly formalized `SKILL.md` Section 4.1 rules.
+- **Details**:
+  - Implemented the strict `35/65` Split Header layout.
+  - Implemented the `60/40` Split Footer layout (Narration & Totals). Relocated the "Remark" input from the header down to the footer Narration block in return vouchers for structural consistency.
+  - Normalized the bottom Status Bar to dynamically render `Version 2.0 | Firm | Location` and F-Key shortcuts across all pages.
+
+## [2026-09-09] Global API Endpoint Correction
+- **Bug Fix**: Discovered that numerous frontend pages (e.g., `PurchaseInvoiceList.tsx`, 17 Master pages, and modals) were failing to fetch live local data because their fetch requests were hardcoded to the production URL (`https://api.retailnode.in`).
+- **Resolution**: Ran a custom Node.js script to traverse the entire codebase and replace all instances of hardcoded `https://api.retailnode.in` URLs with dynamic environment variables (``${import.meta.env.VITE_API_URL || 'http://localhost:5000'}``), ensuring the frontend correctly targets the local development server and enabling live data population.
+
+## [2026-09-09] Logistics API Auth Fix
+- **Bug Fix**: The `/lrs` frontend route was failing to display pending LRs because the backend `logisticsRoutes.js` was missing `authenticateToken` and `tenantMiddleware`. This omission caused the `requirePermission` middleware to crash with a `500 Internal Server Error` when trying to read user roles.
+- **Resolution**: Injected the required authentication and tenant isolation middlewares into `backend/routes/logisticsRoutes.js`, ensuring secure and functional data fetching for pending LRs.

@@ -34,7 +34,7 @@ export default function BrandMaster() {
   const [editId, setEditId] = useState<number | null>(null);
 
   const fetchBrands = () => {
-    fetch('https://api.retailnode.in/api/masters/brand', {
+    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/brand`, {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     })
     .then(res => res.json())
@@ -53,7 +53,7 @@ export default function BrandMaster() {
     }
     try {
       const method = editId ? 'PUT' : 'POST';
-      const url = editId ? `https://api.retailnode.in/api/masters/brand/${editId}` : 'https://api.retailnode.in/api/masters/brand';
+      const url = editId ? `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/brand/${editId}` : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/brand`;
 
       const res = await fetch(url, {
         method: method,

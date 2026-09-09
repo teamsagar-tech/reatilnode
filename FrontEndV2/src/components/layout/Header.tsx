@@ -18,7 +18,7 @@ export default function Header() {
   const handleSwitchFirm = async (targetFirmId: number) => {
     if (targetFirmId === user.firm_id) return;
     try {
-      const res = await fetch('https://api.retailnode.in/api/auth/switch-firm', {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/auth/switch-firm`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -44,7 +44,7 @@ export default function Header() {
     const firmName = prompt("Enter new firm name:");
     if (!firmName) return;
     try {
-      const res = await fetch('https://api.retailnode.in/api/firms/me/new', {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/firms/me/new`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

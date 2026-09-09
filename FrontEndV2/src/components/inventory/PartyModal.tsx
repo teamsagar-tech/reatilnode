@@ -159,7 +159,7 @@ export default function PartyModal({ isOpen, onClose, onSave, initialPartyName =
   const fetchGSTCaptcha = async () => {
     setFetchingGST(true);
     try {
-      const res = await fetch('https://api.retailnode.in/api/gst/captcha');
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/gst/captcha`);
       const data = await res.json();
       if (data.sessionId && data.image) {
         setCaptchaData(data);
@@ -286,7 +286,7 @@ export default function PartyModal({ isOpen, onClose, onSave, initialPartyName =
 
   useEffect(() => {
     if (formData.gstin.length === 15 && !formData.gstRawData) {
-      fetch(`https://api.retailnode.in/api/gst/cache/${formData.gstin}`)
+      fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/gst/cache/${formData.gstin}`)
         .then(res => {
           if (res.ok) return res.json();
           throw new Error("Not in cache");
@@ -306,7 +306,7 @@ export default function PartyModal({ isOpen, onClose, onSave, initialPartyName =
     if (!captchaData || !captchaInput || formData.gstin.length < 15) return;
     setFetchingGST(true);
     try {
-      const res = await fetch('https://api.retailnode.in/api/gst/details', {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/gst/details`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -386,7 +386,7 @@ export default function PartyModal({ isOpen, onClose, onSave, initialPartyName =
         gst_raw_data: formData.gstRawData
       };
 
-      const res = await fetch('https://api.retailnode.in/api/vendors', {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/vendors`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

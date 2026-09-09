@@ -51,8 +51,8 @@ export default function HSNSACMaster() {
   const fetchData = useCallback(async (search = '') => {
     try {
       const url = search 
-        ? `https://api.retailnode.in/api/masters/generic/hsnsacs?search=${encodeURIComponent(search)}`
-        : `https://api.retailnode.in/api/masters/generic/hsnsacs`;
+        ? `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/generic/hsnsacs?search=${encodeURIComponent(search)}`
+        : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/generic/hsnsacs`;
         
       const res = await fetch(url, {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
@@ -100,7 +100,7 @@ export default function HSNSACMaster() {
   const handleSave = async () => {
     if (!formData.name) return alert('HSN/SAC Code is required');
     try {
-      const url = editId ? `https://api.retailnode.in/api/masters/generic/hsnsacs/${editId}` : 'https://api.retailnode.in/api/masters/generic/hsnsacs';
+      const url = editId ? `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/generic/hsnsacs/${editId}` : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/generic/hsnsacs`;
       const res = await fetch(url, {
         method: editId ? 'PUT' : 'POST',
         headers: {
@@ -152,7 +152,7 @@ export default function HSNSACMaster() {
     if (val.length >= 2) {
       autofillTimeoutRef.current = setTimeout(async () => {
         try {
-          const res = await fetch(`https://api.retailnode.in/api/gst/search-hsn-catalog?query=${encodeURIComponent(val)}`, {
+          const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/gst/search-hsn-catalog?query=${encodeURIComponent(val)}`, {
             headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
           });
           if (res.ok) {

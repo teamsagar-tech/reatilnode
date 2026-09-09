@@ -34,9 +34,20 @@ Creating a route is not enough. The user MUST be able to navigate to it.
 - If a Hub Page does not exist for that module yet, you must propose creating one (e.g. `LogisticsHub.tsx`).
 
 ## 4. Layout & Styling Standards
-- Always wrap the main content of the page in a responsive Tailwind container (e.g., `max-w-7xl mx-auto py-6 px-4`).
+- Always wrap the main content of generic pages in a responsive Tailwind container (e.g., `max-w-7xl mx-auto py-6 px-4`).
 - Use `react-helmet-async` to set the page title dynamically: `<Helmet><title>Page Name - RetailNode</title></Helmet>`.
-- Forms and masters should utilize a flex-column layout or the standard 3-column UI (`flex-1 gap-6`) as described in the global `AGENTS.md` rules.
+- Master forms should utilize a flex-column layout or the standard 3-column UI (`flex-1 gap-6`) as described in the global `AGENTS.md` rules.
+
+### 4.1 Transaction Voucher Standard Layout (Tally Style)
+All data entry transaction pages (e.g. Invoices, Orders, Receipts) MUST strictly follow this exact visual structure and Tailwind hierarchy. Refer to `PurchaseInvoice.tsx` as the gold standard template.
+- **Main Wrapper**: `<div className="flex flex-col h-screen font-sans text-[13px] overflow-hidden bg-[#e0efeb] w-full">`
+- **Inner Flex container**: `<div className="flex flex-1 p-1 gap-1 overflow-hidden h-full">`
+- **Right Sidebar**: You MUST include a right sidebar (`w-[120px] bg-[#e0efeb]`) containing function keys (F1-F9), the RN branding logo, and Save(S)/Quit(Q) shortcuts at the bottom.
+- **Voucher Header**: `<div className="bg-[#1b5e58] text-white font-bold px-2 py-1 flex justify-between shrink-0">`
+- **Split Top Form**: The top meta-data area must be split `w-[35%]` left and `w-[65%]` right.
+- **Grid Layout**: The items table `thead` must use `bg-[#eef5ed]` and dark borders, and rows hover on `bg-yellow-50`.
+- **Two-Part Footer**: The bottom section of the voucher container must be split into `w-[60%]` (Narration input) and `w-[40%]` (Detailed Totals and summary calculations).
+- **Bottom Status Bar**: The absolute bottom of the screen (outside the flex-1 layout) must have a `bg-[#1b5e58]` status bar showing Version, Firm, Location, and active Keyboard Shortcuts.
 
 ## 5. RBAC & Auth Configuration (Mandatory SaaS Rule)
 For the SaaS authorization system to work, every new page must be tracked in the permissions tree.

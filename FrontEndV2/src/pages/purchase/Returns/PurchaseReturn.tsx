@@ -145,20 +145,26 @@ export default function PurchaseReturn() {
                <div className='text-yellow-300'>Debit Note (Purchase Return)</div>
             </div>
             
-            <div className='p-2 shrink-0 border-b-2 border-slate-300 bg-white flex gap-12'>
-              <div className="w-[300px]">
-                 <InputRow label="Vendor/Party" value={party} onChange={setParty} placeholder="Vendor Name..." />
-                 <InputRow label="Remark" value={remark} onChange={setRemark} placeholder="Defect reason..." />
+            <div className='flex p-1 gap-1 shrink-0 bg-[#e0efeb]'>
+              {/* Left Panel (35%) */}
+              <div className='w-[35%] bg-[#fcfaf2] border-2 border-[#81a09d] p-2'>
+                 <div className="w-[300px]">
+                   <InputRow label="Vendor/Party" value={party} onChange={setParty} placeholder="Vendor Name..." />
+                 </div>
               </div>
-              <div className="w-[300px]">
-                 <InputRow 
-                    refProp={scannerRef}
-                    label="Scan Barcode" 
-                    value={barcode} 
-                    onChange={setBarcode} 
-                    onKeyDown={(e: any) => { if (e.key === 'Enter') handleScan(); }}
-                    placeholder="Scan product to return..." 
-                 />
+
+              {/* Right Panel (65%) */}
+              <div className='w-[65%] bg-[#fcfaf2] border-2 border-[#81a09d] p-2'>
+                 <div className="w-[300px]">
+                   <InputRow 
+                      refProp={scannerRef}
+                      label="Scan Barcode" 
+                      value={barcode} 
+                      onChange={setBarcode} 
+                      onKeyDown={(e: any) => { if (e.key === 'Enter') handleScan(); }}
+                      placeholder="Scan product to return..." 
+                   />
+                 </div>
               </div>
             </div>
 
@@ -195,13 +201,24 @@ export default function PurchaseReturn() {
                 </table>
             </div>
             
-            <div className='bg-[#fcf5eb] border-t-2 border-[#d2a88b] p-2 flex justify-between items-center shrink-0 font-bold text-[14px]'>
-                <div className='flex gap-8 text-[#905f30]'>
-                    <div>Return Items: <span className='text-black'>{items.length}</span></div>
-                </div>
-                <div className='flex items-center gap-4 text-[#905f30] text-[18px]'>
-                    Total Debit Note: <span className='text-black'>₹ {totalAmount.toFixed(2)}</span>
-                </div>
+            <div className='flex p-1 gap-1 shrink-0 bg-[#e0efeb]'>
+              {/* Narration (60%) */}
+              <div className='w-[60%] bg-[#fcfaf2] border-2 border-[#81a09d] p-2 flex items-center'>
+                 <div className="w-full">
+                    <InputRow label="Narration" value={remark} onChange={setRemark} placeholder="Defect reason..." />
+                 </div>
+              </div>
+              {/* Totals (40%) */}
+              <div className='w-[40%] bg-[#fcfaf2] border-2 border-[#81a09d] p-2 flex flex-col justify-center'>
+                 <div className='flex justify-between font-bold text-[13px] text-slate-700 mb-1'>
+                    <span>Return Items:</span>
+                    <span>{items.length}</span>
+                 </div>
+                 <div className='flex justify-between font-bold text-[18px] text-[#905f30] border-t border-[#81a09d] pt-1 mt-1'>
+                    <span>Total Debit Note:</span>
+                    <span>₹ {totalAmount.toFixed(2)}</span>
+                 </div>
+              </div>
             </div>
 
           </div>
@@ -220,8 +237,17 @@ export default function PurchaseReturn() {
           
         </div>
         
-        <div className='bg-[#905f30] text-white text-[11px] px-4 py-1 flex justify-between items-center border-t-2 border-[#543b1a]'>
-          <div className='font-medium tracking-wide'>Purchase Return Mode</div>
+        <div className='bg-[#905f30] text-white flex justify-between items-center p-1 px-2 text-[10px] shrink-0 border-t-2 border-[#543b1a]'>
+          <div className='flex gap-4'>
+            <span className='font-medium'>F1 : Detailed</span>
+            <span className='font-medium'>F2 : Date</span>
+            <span className='font-medium'>F3 : Company</span>
+            <span className='font-medium'>^S : Save Return</span>
+            <span className='font-medium'>Q : Quit</span>
+          </div>
+          <div className='font-medium tracking-wide'>
+            Version 2.0 | {localStorage.getItem('firm_name') || 'Firm'} | {localStorage.getItem('location_name') || 'Location'}
+          </div>
         </div>
       </div>
     </>

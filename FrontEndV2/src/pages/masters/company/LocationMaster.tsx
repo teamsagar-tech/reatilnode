@@ -34,7 +34,7 @@ export default function LocationMaster() {
   const [editId, setEditId] = useState<number | null>(null);
 
   const fetchLocations = () => {
-    fetch('https://api.retailnode.in/api/masters/location', {
+    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/location`, {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     })
     .then(res => res.json())
@@ -53,7 +53,7 @@ export default function LocationMaster() {
     }
     try {
       const method = editId ? 'PUT' : 'POST';
-      const url = editId ? `https://api.retailnode.in/api/masters/location/${editId}` : 'https://api.retailnode.in/api/masters/location';
+      const url = editId ? `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/location/${editId}` : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/location`;
 
       const res = await fetch(url, {
         method: method,

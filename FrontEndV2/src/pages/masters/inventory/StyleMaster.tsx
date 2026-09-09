@@ -35,7 +35,7 @@ export default function StyleMaster() {
   const [editId, setEditId] = useState<number | null>(null);
 
   const fetchStyles = () => {
-    fetch('https://api.retailnode.in/api/masters/generic/styles', {
+    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/generic/styles`, {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     })
     .then(res => res.json())
@@ -62,7 +62,7 @@ export default function StyleMaster() {
     }
     try {
       const method = editId ? 'PUT' : 'POST';
-      const url = editId ? `https://api.retailnode.in/api/masters/generic/styles/${editId}` : 'https://api.retailnode.in/api/masters/generic/styles';
+      const url = editId ? `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/generic/styles/${editId}` : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/generic/styles`;
 
       const res = await fetch(url, {
         method: method,

@@ -151,32 +151,37 @@ export default function POSPage() {
             </div>
             
             {/* Header Form */}
-            <div className='p-2 shrink-0 border-b-2 border-slate-300 bg-white flex gap-12'>
-              <div className="w-[300px]">
+            <div className='flex p-1 gap-1 shrink-0 bg-[#e0efeb]'>
+              {/* Left Panel (35%) - Payments & Coupons */}
+              <div className='w-[35%] bg-[#fcfaf2] border-2 border-[#81a09d] p-2'>
                  <div className="flex gap-2 mb-2">
-                    <InputRow label="Cash" type="number" value={payments.cash || ''} onChange={v => setPayments({...payments, cash: Number(v)})} />
-                    <InputRow label="UPI" type="number" value={payments.upi || ''} onChange={v => setPayments({...payments, upi: Number(v)})} />
+                    <InputRow label="Cash" type="number" value={payments.cash || ''} onChange={(v: any) => setPayments({...payments, cash: Number(v)})} />
+                    <InputRow label="UPI" type="number" value={payments.upi || ''} onChange={(v: any) => setPayments({...payments, upi: Number(v)})} />
                  </div>
                  <div className="flex gap-2 mb-2">
-                    <InputRow label="Card" type="number" value={payments.card || ''} onChange={v => setPayments({...payments, card: Number(v)})} />
-                    <InputRow label="Credit (Udhaar)" type="number" value={payments.credit || ''} onChange={v => setPayments({...payments, credit: Number(v)})} />
+                    <InputRow label="Card" type="number" value={payments.card || ''} onChange={(v: any) => setPayments({...payments, card: Number(v)})} />
+                    <InputRow label="Credit" type="number" value={payments.credit || ''} onChange={(v: any) => setPayments({...payments, credit: Number(v)})} />
                  </div>
                  <div className="flex gap-2">
                     <InputRow label="Coupon" value={couponCode} onChange={setCouponCode} placeholder="CODE..." />
-                    <InputRow label="Loyalty Used" type="number" value={loyaltyPoints || ''} onChange={setLoyaltyPoints} />
+                    <InputRow label="Loyalty" type="number" value={loyaltyPoints || ''} onChange={setLoyaltyPoints} />
                  </div>
               </div>
-              <div className="w-[300px]">
-                 <InputRow label="Customer" value={customer} onChange={setCustomer} placeholder="Name or Mobile..." />
-                 <InputRow label="Salesman" value={salesman} onChange={setSalesman} placeholder="Salesman ID..." />
-                 <InputRow 
-                    refProp={scannerRef}
-                    label="Scan Barcode" 
-                    value={barcode} 
-                    onChange={setBarcode} 
-                    onKeyDown={(e: any) => { if (e.key === 'Enter') handleScan(); }}
-                    placeholder="Scan product barcode..." 
-                 />
+
+              {/* Right Panel (65%) - Customer & Barcode */}
+              <div className='w-[65%] bg-[#fcfaf2] border-2 border-[#81a09d] p-2'>
+                 <div className="w-[300px]">
+                   <InputRow label="Customer" value={customer} onChange={setCustomer} placeholder="Name or Mobile..." />
+                   <InputRow label="Salesman" value={salesman} onChange={setSalesman} placeholder="Salesman ID..." />
+                   <InputRow 
+                      refProp={scannerRef}
+                      label="Scan Barcode" 
+                      value={barcode} 
+                      onChange={setBarcode} 
+                      onKeyDown={(e: any) => { if (e.key === 'Enter') handleScan(); }}
+                      placeholder="Scan product barcode..." 
+                   />
+                 </div>
               </div>
             </div>
 
@@ -219,14 +224,28 @@ export default function POSPage() {
             </div>
             
             {/* Footer Summary */}
-            <div className='bg-[#eef5ed] border-t-2 border-[#81a09d] p-2 flex justify-between items-center shrink-0 font-bold text-[14px]'>
-                <div className='flex gap-8 text-[#1b5e58]'>
-                    <div>Total Qty: <span className='text-black'>{totalQty}</span></div>
-                    <div>Item Count: <span className='text-black'>{items.length}</span></div>
-                </div>
-                <div className='flex items-center gap-4 text-[#1b5e58] text-[18px]'>
-                    Net Amount: <span className='text-black'>₹ {totalAmount.toFixed(2)}</span>
-                </div>
+            <div className='flex p-1 gap-1 shrink-0 bg-[#e0efeb]'>
+              {/* Narration (60%) */}
+              <div className='w-[60%] bg-[#fcfaf2] border-2 border-[#81a09d] p-2 flex items-center'>
+                 <div className="w-full">
+                    <InputRow label="Narration" value="" onChange={() => {}} placeholder="POS notes..." />
+                 </div>
+              </div>
+              {/* Totals (40%) */}
+              <div className='w-[40%] bg-[#fcfaf2] border-2 border-[#81a09d] p-2 flex flex-col justify-center'>
+                 <div className='flex justify-between font-bold text-[13px] text-slate-700 mb-1'>
+                    <span>Total Qty:</span>
+                    <span>{totalQty}</span>
+                 </div>
+                 <div className='flex justify-between font-bold text-[13px] text-slate-700 mb-1'>
+                    <span>Item Count:</span>
+                    <span>{items.length}</span>
+                 </div>
+                 <div className='flex justify-between font-bold text-[18px] text-[#1b5e58] border-t border-[#81a09d] pt-1 mt-1'>
+                    <span>Net Amount:</span>
+                    <span>₹ {totalAmount.toFixed(2)}</span>
+                 </div>
+              </div>
             </div>
 
           </div>
@@ -253,8 +272,17 @@ export default function POSPage() {
           
         </div>
         
-        <div className='bg-[#1b5e58] text-white text-[11px] px-4 py-1 flex justify-between items-center border-t-2 border-[#12423d]'>
-          <div className='font-medium tracking-wide'>POS Active</div>
+        <div className='bg-[#1b5e58] text-white flex justify-between items-center p-1 px-2 text-[10px] shrink-0 border-t-2 border-[#0f3d39]'>
+          <div className='flex gap-4'>
+            <span className='font-medium'>F1 : Detailed</span>
+            <span className='font-medium'>F2 : Date</span>
+            <span className='font-medium'>F3 : Company</span>
+            <span className='font-medium'>^S : Save</span>
+            <span className='font-medium'>Q : Quit</span>
+          </div>
+          <div className='font-medium tracking-wide'>
+            Version 2.0 | {localStorage.getItem('firm_name') || 'Firm'} | {localStorage.getItem('location_name') || 'Location'}
+          </div>
         </div>
       </div>
     </>

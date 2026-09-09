@@ -55,7 +55,7 @@ export default function CategoryMaster() {
   const [editId, setEditId] = useState<number | null>(null);
 
   const fetchCategories = () => {
-    fetch('https://api.retailnode.in/api/masters/category', {
+    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/category`, {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     })
     .then(res => res.json())
@@ -82,7 +82,7 @@ export default function CategoryMaster() {
     }
     try {
       const method = editId ? 'PUT' : 'POST';
-      const url = editId ? `https://api.retailnode.in/api/masters/category/${editId}` : 'https://api.retailnode.in/api/masters/category';
+      const url = editId ? `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/category/${editId}` : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/category`;
 
       const res = await fetch(url, {
         method: method,

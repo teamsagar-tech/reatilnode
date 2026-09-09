@@ -88,7 +88,7 @@ export default function PurchaseInvoiceList() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('https://api.retailnode.in/api/purchase-invoices', {
+    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/purchase-invoices`, {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     })
     .then(res => res.json())

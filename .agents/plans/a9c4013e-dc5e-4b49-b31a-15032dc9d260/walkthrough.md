@@ -1,21 +1,32 @@
-# Phase 9: Purchase Orders & Core Financial Ledgers Complete
+# Phase 2: Transaction Voucher Standardization
 
-You caught a massive structural gap in the migration, and we have now fully resolved it. The ERP is no longer just a collection of detached tables—it is a deeply interconnected financial system that mirrors your legacy `onevastra` logic!
+I have completed the comprehensive audit and standardized the remaining transaction/voucher pages across the application to perfectly align with the `SKILL.md` rules.
 
-## 1. Purchase Orders (Procurement) Rebuilt
-The completely missing Purchase Order module has been constructed from scratch:
-- **Database (`015_purchase_orders_schema.sql`)**: Built the `PurchaseOrders` and `PurchaseOrderItems` tables to track statuses (Pending, Approved, Fulfilled).
-- **Backend (`purchaseOrderController.js`)**: Wrote the REST API to raise POs, compute tax/totals, and fetch historical POs.
-- **Frontend UI (`PurchaseOrder.tsx`)**: Designed a brand new Tally-style data grid screen to raise POs. It's accessible via `/purchase/orders/purchase-order`.
+## Standardized Components
+I refactored the following components:
+1. `FrontEndV2/src/pages/sales/POSPage.tsx`
+2. `FrontEndV2/src/pages/sales/Returns/SalesReturn.tsx`
+3. `FrontEndV2/src/pages/purchase/Returns/PurchaseReturn.tsx`
 
-## 2. Dynamic Financial Ledgers Wired Up
-Your ERP now accurately tracks outstanding balances and ledgers natively:
-- **Database (`016_ledgers_schema.sql`)**: Built the `PartyLedgers` tracking table.
-- **Auto-Balance Optimization**: I updated your `Customers` and `Vendors` tables to include a `current_balance` column for instant UI reads, rather than forcing the server to sum up a thousand ledger rows every time!
-- **Accounts Payable (Vendors)**: When you process a Purchase Invoice (GRN) via `purchaseInvoiceController.js`, it now automatically inserts a Credit transaction into the Vendor's ledger and updates their outstanding balance.
-- **Accounts Receivable (Customers)**: When you do a Credit Sale (Udhaar) at the POS via `salesController.js`, it automatically inserts a Debit transaction into the Customer's ledger and tracks the debt!
+## Applied Structural Changes
+For each of the components listed above, I strictly applied the Tally-style voucher architecture:
 
-## End-to-End Procurement Flow
-The final touch: I updated the Purchase Invoice controller. Now, when a GRN is created and goods arrive at the warehouse, if it is linked to a Purchase Order, the system will automatically mark that Purchase Order as **"Fulfilled"**. 
+### 1. The `35/65` Split Header
+I converted the old single-row header (`flex gap-12`) into two distinct panels:
+- **Left Panel (35% width):** Houses the secondary/meta inputs (e.g. Payments, Coupons, Customer).
+- **Right Panel (65% width):** Houses the primary operational inputs (e.g. The Barcode Scanner).
 
-Your core procurement-to-sales cycle is completely wired up!
+### 2. The `60/40` Split Footer
+I replaced the single-bar summary footer with the Two-Part layout:
+- **Left Panel (60% width):** Now houses a dedicated "Narration" text area. *Note: As agreed, I moved the "Remark" input from the top header down into this Narration box for both Sales and Purchase Returns.*
+- **Right Panel (40% width):** Houses the stacked, detailed Totals and Summary calculations.
+
+### 3. Absolute Bottom Status Bar
+I updated the absolute bottom `div` outside of the main layout container to perfectly match the global standard. It now dynamically displays:
+- Active keyboard shortcuts (e.g. `^S : Save`, `Q : Quit`).
+- The current Version (`Version 2.0`).
+- The dynamically injected Tenant Firm (`localStorage.getItem('firm_name')`).
+- The dynamically injected Location (`localStorage.getItem('location_name')`).
+
+> [!TIP]
+> The entire application's transaction layer is now completely unified. You can jump between Purchase Invoices, Purchase Orders, POS, and Returns, and experience the exact same visual hierarchy and structural logic!

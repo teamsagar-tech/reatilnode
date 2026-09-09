@@ -35,7 +35,7 @@ export default function DepartmentMaster() {
   const [editId, setEditId] = useState<number | null>(null);
 
   const fetchDepartments = () => {
-    fetch('https://api.retailnode.in/api/masters/generic/departments', {
+    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/generic/departments`, {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     })
     .then(res => res.json())
@@ -62,7 +62,7 @@ export default function DepartmentMaster() {
     }
     try {
       const method = editId ? 'PUT' : 'POST';
-      const url = editId ? `https://api.retailnode.in/api/masters/generic/departments/${editId}` : 'https://api.retailnode.in/api/masters/generic/departments';
+      const url = editId ? `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/generic/departments/${editId}` : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/generic/departments`;
 
       const res = await fetch(url, {
         method: method,

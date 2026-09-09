@@ -43,7 +43,7 @@ export default function FirmMaster() {
   });
 
   const fetchFirms = () => {
-    fetch('https://api.retailnode.in/api/firms/me/all', {
+    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/firms/me/all`, {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     })
     .then(res => res.json())
@@ -66,8 +66,8 @@ export default function FirmMaster() {
     }
     try {
       const url = editId 
-        ? `https://api.retailnode.in/api/firms/me/${editId}` 
-        : `https://api.retailnode.in/api/firms/me/new`;
+        ? `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/firms/me/${editId}` 
+        : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/firms/me/new`;
       
       const res = await fetch(url, {
         method: editId ? 'PUT' : 'POST',

@@ -81,7 +81,7 @@ export default function MasterCreationModal({ isOpen, onClose, onSave, masterTyp
     if (val.length >= 2) {
       autofillTimeoutRef.current = setTimeout(async () => {
         try {
-          const res = await fetch(`https://api.retailnode.in/api/gst/search-hsn-catalog?query=${encodeURIComponent(val)}`, {
+          const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/gst/search-hsn-catalog?query=${encodeURIComponent(val)}`, {
             headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
           });
           if (res.ok) {
@@ -153,14 +153,14 @@ export default function MasterCreationModal({ isOpen, onClose, onSave, masterTyp
     
     if (masterType === 'item') {
       data = { name, brand: extra1, hsn: extra2 };
-      endpoint = 'https://api.retailnode.in/api/items';
+      endpoint = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/items`;
     } else if (masterType === 'hsn') {
       data = { name, description: extra1 };
-      endpoint = 'https://api.retailnode.in/api/masters/generic/hsnsacs';
+      endpoint = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/generic/hsnsacs`;
     } else if (masterType === 'brand') {
-      endpoint = 'https://api.retailnode.in/api/masters/brand';
+      endpoint = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/brand`;
     } else if (masterType === 'size') {
-      endpoint = 'https://api.retailnode.in/api/masters/generic/sizes';
+      endpoint = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/generic/sizes`;
     }
 
     try {

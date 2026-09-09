@@ -34,9 +34,10 @@ exports.getById = async (req, res) => {
 
     // 2. Get Items
     const [items] = await conn.execute(`
-      SELECT pi.*, i.name as item_name
+      SELECT pi.*, i.name as item_name, i.hsn_code, b.name as brand_name
       FROM PurchaseInvoiceItems pi
       LEFT JOIN Items i ON pi.item_id = i.id
+      LEFT JOIN Brands b ON pi.brand_id = b.id
       WHERE pi.invoice_id = ?
     `, [invoice.id]);
 

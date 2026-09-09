@@ -34,7 +34,7 @@ export default function ColorMaster() {
   const [editId, setEditId] = useState<number | null>(null);
 
   const fetchColors = () => {
-    fetch('https://api.retailnode.in/api/masters/generic/colors', {
+    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/generic/colors`, {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     })
     .then(res => res.json())
@@ -61,7 +61,7 @@ export default function ColorMaster() {
     }
     try {
       const method = editId ? 'PUT' : 'POST';
-      const url = editId ? `https://api.retailnode.in/api/masters/generic/colors/${editId}` : 'https://api.retailnode.in/api/masters/generic/colors';
+      const url = editId ? `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/generic/colors/${editId}` : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/generic/colors`;
 
       const res = await fetch(url, {
         method: method,

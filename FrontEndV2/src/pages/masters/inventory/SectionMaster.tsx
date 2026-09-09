@@ -35,7 +35,7 @@ export default function SectionMaster() {
   const [editId, setEditId] = useState<number | null>(null);
 
   const fetchSections = () => {
-    fetch('https://api.retailnode.in/api/masters/generic/sections', {
+    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/generic/sections`, {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     })
     .then(res => res.json())
@@ -62,7 +62,7 @@ export default function SectionMaster() {
     }
     try {
       const method = editId ? 'PUT' : 'POST';
-      const url = editId ? `https://api.retailnode.in/api/masters/generic/sections/${editId}` : 'https://api.retailnode.in/api/masters/generic/sections';
+      const url = editId ? `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/generic/sections/${editId}` : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/generic/sections`;
 
       const res = await fetch(url, {
         method: method,

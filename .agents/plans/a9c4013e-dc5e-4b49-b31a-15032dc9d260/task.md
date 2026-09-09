@@ -1,9 +1,17 @@
-- [x] Create `015_purchase_orders_schema.sql` (PurchaseOrders, PurchaseOrderItems).
-- [x] Create `016_ledgers_schema.sql` (PartyLedgers).
-- [x] Apply SQL schemas to local database.
-- [x] Create `purchaseOrderController.js` and mount to `server.js`.
-- [x] Update `purchaseInvoiceController.js` to link POs and post to PartyLedgers (Credit).
-- [x] Update `salesController.js` to post to PartyLedgers (Debit) on Credit Sales.
-- [x] Create `PurchaseOrder.tsx` Frontend UI (Tally-style).
-- [x] Verify functionality.
-- [ ] Update `walkthrough.md` and `HISTORY.md`.
+# Transaction Voucher Standardization Tasks
+
+- `[x]` Update `POSPage.tsx`
+    - `[x]` Split top header into 35/65 sections
+    - `[x]` Split footer into 60/40 sections
+    - `[x]` Update bottom status bar
+- `[x]` Update `SalesReturn.tsx`
+    - `[x]` Move 'Remark' to footer (Narration)
+    - `[x]` Split top header into 35/65 sections
+    - `[x]` Split footer into 60/40 sections
+    - `[x]` Update bottom status bar
+- `[x]` Update `PurchaseReturn.tsx`
+    - `[x]` Move 'Remark' to footer (Narration)
+    - `[x]` Split top header into 35/65 sections
+    - `[x]` Split footer into 60/40 sections
+    - `[x]` Update bottom status bar
+- `[x]` Verify UI alignment in browser

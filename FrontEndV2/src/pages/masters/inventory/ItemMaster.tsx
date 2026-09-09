@@ -47,7 +47,7 @@ export default function ItemMaster() {
   const [selectedIndex, setSelectedIndex] = useState(0);
 
   const fetchItems = () => {
-    fetch('https://api.retailnode.in/api/items', {
+    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/items`, {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     })
     .then(res => res.json())
@@ -56,7 +56,7 @@ export default function ItemMaster() {
   };
 
   useEffect(() => {
-    fetch('https://api.retailnode.in/api/masters/brand', {
+    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/brand`, {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     })
     .then(res => res.json())
@@ -140,7 +140,7 @@ export default function ItemMaster() {
     }
 
     try {
-      const url = editId ? `https://api.retailnode.in/api/items/${editId}` : 'https://api.retailnode.in/api/items';
+      const url = editId ? `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/items/${editId}` : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/items`;
       const method = editId ? 'PUT' : 'POST';
 
       const response = await fetch(url, {
@@ -451,7 +451,7 @@ export default function ItemMaster() {
         initialValue={masterModal?.initialValue || ''}
         onSave={(type, data) => {
           if (type === 'brand') {
-            fetch('https://api.retailnode.in/api/masters/brand', {
+            fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/brand`, {
               headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
             })
             .then(res => res.json())

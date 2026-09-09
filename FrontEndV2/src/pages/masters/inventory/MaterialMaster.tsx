@@ -34,7 +34,7 @@ export default function MaterialMaster() {
   const [editId, setEditId] = useState<number | null>(null);
 
   const fetchMaterials = () => {
-    fetch('https://api.retailnode.in/api/masters/generic/materials', {
+    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/generic/materials`, {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     })
     .then(res => res.json())
@@ -61,7 +61,7 @@ export default function MaterialMaster() {
     }
     try {
       const method = editId ? 'PUT' : 'POST';
-      const url = editId ? `https://api.retailnode.in/api/masters/generic/materials/${editId}` : 'https://api.retailnode.in/api/masters/generic/materials';
+      const url = editId ? `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/generic/materials/${editId}` : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/generic/materials`;
 
       const res = await fetch(url, {
         method: method,

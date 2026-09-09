@@ -2,6 +2,11 @@ const express = require('express');
 const router = express.Router();
 const logisticsController = require('../controllers/logisticsController');
 const { requirePermission } = require('../middleware/rbacMiddleware');
+const { authenticateToken } = require('../middleware/authMiddleware');
+const { tenantMiddleware } = require('../middleware/tenantMiddleware');
+
+router.use(authenticateToken);
+router.use(tenantMiddleware);
 
 // Transporters
 router.get('/transporters', requirePermission('masters', 'Read'), logisticsController.getTransporters);
