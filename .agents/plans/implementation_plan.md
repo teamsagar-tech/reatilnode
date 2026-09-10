@@ -1,43 +1,55 @@
-# Sync `FrontEndV2` Structure to Modern `FrontEnd`
+# Global Keyboard Navigation & Shortcut System (Tally ERP Style)
 
-The goal of this phase is to migrate the complex data structures, routing, and navigation menus from the utilitarian `FrontEndV2` (Tally-style) over to the modern `FrontEnd`. While the underlying data (the forms and routes) will be the same, the **visual presentation** in `FrontEnd` will be completely overhauled to meet modern web standards (glassmorphism, smooth animations, responsive grids, and vibrant typography).
+This plan outlines the architecture for a robust, global keyboard shortcut system in the React application, mimicking the high-speed data entry and navigation of Tally ERP while using a web-safe "Alt" (Windows) / "Option" (Mac) paradigm.
+
+## Goal
+Implement a centralized keyboard event manager that handles global shortcuts (Alt+S, Alt+C, etc.), core navigation (Enter/Esc), and prevents browser default behaviors that conflict with the web ERP experience.
 
 ## Open Questions
+> [!IMPORTANT]
+> 1. **State Management**: The project currently uses Zustand (`store` directory). I plan to use Zustand for the `useKeyboardStore`. Is this acceptable, or would you prefer React Context?
+> 2. **Existing Logic**: There is an existing global `Enter-to-Tab` listener in `App.tsx`. Should I refactor this into the new global keyboard manager, or leave it as-is and just add the new `Alt` shortcuts alongside it?
+> 3. **Navigation (Esc key)**: Tally uses Esc to retreat/cancel. For backing out of routes, should the global listener use `react-router-dom`'s `useNavigate(-1)` when Esc is pressed outside of an input/modal, or should each component handle Esc individually?
 
-> [!WARNING]
-> `FrontEndV2` has over 80+ distinct routes and forms (from payroll to complex inventory). Porting and redesigning all of them into a modern UI will take significant time. 
-> 
-> **Question 1:** Which **2-3 specific forms** (e.g., `PurchaseInvoice`, `ItemMaster`, `POS`) would you like me to fully design and implement *first* as the foundational template for the modern `FrontEnd`?
->
-> **Question 2:** `FrontEndV2` includes a `store/` directory for global state management. Do you want me to port that state management (e.g., Zustand/Redux) over to `FrontEnd` as well, or keep it strictly React-state based for now?
+## Proposed Architecture
+
+1.  **Centralized State (`useKeyboardStore`)**:
+    A store to track the currently active context (e.g., "global", "sales_invoice", "item_master") and a registry of active shortcut callbacks.
+
+2.  **Global Event Hook (`useGlobalKeyboard`)**:
+    A single hook placed high in the DOM tree (e.g., in `App.tsx` or a root layout). It will listen to `keydown` events, check for `e.altKey`, call `e.preventDefault()` to block browser menus, and execute the registered callback for the active context.
+
+3.  **Consumer Hook (`useShortcut`)**:
+    A hook for components to easily register and unregister shortcuts when they mount/unmount or gain/lose focus.
 
 ## Proposed Changes
 
-### 1. Navigation & Routing Structure
+### Global State & Hooks
 
-I will sync the high-level architecture so both apps have the same skeleton.
+#### [NEW] `src/store/useKeyboardStore.ts`
+- Create a Zustand store to manage active contexts and a registry of callbacks mapped by key combination.
 
-#### [MODIFY] [`FrontEnd/src/components/layout/Sidebar.tsx`](file:///Users/ratan/Downloads/RetailNodeV2/FrontEnd/src/components/layout/Sidebar.tsx)
-- Replicate the menu structure from V2: Dashboard, Inventory, Sales, Customers, Settings.
-- **Redesign:** Apply a highly aesthetic, modern sidebar design (e.g., floating or glassmorphic sidebar, micro-animations on hover, modern icons).
+#### [NEW] `src/hooks/useShortcut.ts`
+- Create a React hook that components can use: `useShortcut('Alt+S', handleSave, { preventDefault: true })`. This will register the callback with the `useKeyboardStore`.
 
-#### [MODIFY] [`FrontEnd/src/App.tsx`](file:///Users/ratan/Downloads/RetailNodeV2/FrontEnd/src/App.tsx)
-- Import and map the core routing structure from `FrontEndV2`. 
-- Set up clean, animated page transitions for the routes.
+#### [NEW] `src/hooks/useGlobalKeyboard.ts`
+- Create the core listener hook. It will:
+  - Attach to `window.addEventListener('keydown')`.
+  - Block `e.altKey` defaults (browser menus).
+  - Intercept `Alt+S`, `Alt+C`, `Alt+X`, `Alt+P`, etc.
+  - Route the keypress to the appropriate callback registered in `useKeyboardStore`.
+  - Handle `Esc` and specific `Enter` behaviors if needed.
 
-### 2. Core Forms Implementation (Templates)
+### Application Root
 
-Once you answer **Question 1** above, I will create those specific forms in `FrontEnd`.
-- **Form Data Sync:** I will extract the exact data models and input requirements from the V2 forms.
-- **Modern Redesign:** Instead of a dense 3-column Tally layout, I will use modern UI patterns like stepped-wizards, floating labels, card-based groupings, and responsive grid systems to make it look premium.
+#### [MODIFY] `src/App.tsx`
+- Integrate `useGlobalKeyboard()` into the root to ensure it catches events across the entire application.
+- Migrate the existing `Enter-to-Tab` logic into the new centralized hook for cleaner architecture.
 
 ## Verification Plan
 
-### Automated Tests
-- Run `npm run build` inside `FrontEnd` to ensure TypeScript compilation passes.
-- Ensure ESLint/Oxlint rules pass.
-
 ### Manual Verification
-- We will start the `FrontEnd` dev server (`npm run dev`).
-- You will manually verify that the new Sidebar looks premium and modern.
-- You will verify that the initial modernized forms capture the exact same data as V2, but look vastly superior.
+1.  **Browser Menu Suppression**: Pressing `Alt`, `Alt+F`, `Alt+E` on Windows should NOT open the browser's top menu.
+2.  **Global Save (`Alt+S`)**: Implement a test shortcut in a form (e.g., `BrandMaster.tsx`) and verify that pressing `Alt+S` from any input triggers the save function.
+3.  **Conflict Resolution**: Verify that `Alt+Arrow` keys do not trigger browser history navigation if we decide to handle them, or that they are explicitly ignored if not meant for grid navigation.
+4.  **Enter/Esc**: Ensure the existing Enter-to-advance logic still works seamlessly and that Esc behaves as expected (e.g., closing modals or retreating).

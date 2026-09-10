@@ -10,8 +10,10 @@ const db = require('../config/db');
 const requirePermission = (moduleName, action) => {
   return async (req, res, next) => {
     try {
+      console.log(`[RBAC] Checking permission for user role: ${req.user.role}, role_id: ${req.user.role_id}, module: ${moduleName}, action: ${action}`);
       // Admins and Superadmins bypass module restrictions
-      if (req.user.role === 'admin' || req.user.role === 'superadmin') {
+      const userRole = String(req.user.role || '').toLowerCase();
+      if (userRole === 'admin' || userRole === 'superadmin') {
         return next();
       }
 

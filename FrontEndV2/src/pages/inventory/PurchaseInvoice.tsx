@@ -2,7 +2,9 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import MultiAttributeModal from '../../components/inventory/MultiAttributeModal';
+import SizeAllocationModal from '../../components/inventory/SizeAllocationModal';
 import PartyModal from '../../components/inventory/PartyModal';
+import TransporterModal from '../../components/inventory/TransporterModal';
 import MasterCreationModal from '../../components/inventory/MasterCreationModal';
 import SearchableDropdown from '../../components/SearchableDropdown';
 import * as XLSX from 'xlsx';
@@ -211,7 +213,7 @@ export default function PurchaseInvoice() {
     };
 
     if (payload.items.length === 0) {
-      alert('At least one valid item is required to save.');
+      alert('At least one valid item is required to save. Debug payload: ' + JSON.stringify(products.map(p => ({ item: p.item, item_id: p.item_id, brand: p.brand, brand_id: p.brand_id }))));
       return;
     }
 
@@ -563,8 +565,14 @@ export default function PurchaseInvoice() {
 
   // Multi-Attribute Modal State
   const [activeModalRow, setActiveModalRow] = useState<number | null>(null);
+  const [activeSizeMatrixRow, setActiveSizeMatrixRow] = useState<number | null>(null);
+  const [showItemModal, setShowItemModal] = useState(false);
   const [showPartyModal, setShowPartyModal] = useState(false);
-  const [masterModal, setMasterModal] = useState<{ type: 'brand' | 'size' | 'item' | 'hsn', initialValue: string, rowIndex: number } | null>(null);
+  const [showTransporterModal, setShowTransporterModal] = useState(false);
+  const [masterModal, setMasterModal] = useState<{ type: 'brand' | 'size' | 'item' | 'hsn', initialValue: string, rowIndex: number, initialBrand?: string } | null>(null);
+  const [masterCreationState, setMasterCreationState] = useState<{isOpen: boolean; type: string; initialValue: string; category?: string; subcategory?: string}>({
+      isOpen: false, type: '', initialValue: ''
+  });
 
   const [showPurchaserDropdown, setShowPurchaserDropdown] = useState(false);
   const [purchaserIndex, setPurchaserIndex] = useState(0);
@@ -573,6 +581,8 @@ export default function PurchaseInvoice() {
   const [supplierIndex, setSupplierIndex] = useState(0);
 
   const [activeUsers, setActiveUsers] = useState<any[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
+  const [transporters, setTransporters] = useState<any[]>([]);
   const [vendors, setVendors] = useState<any[]>([]);
   const [availableItems, setAvailableItems] = useState<any[]>([]);
   const [availableBrands, setAvailableBrands] = useState<any[]>([]);
@@ -614,13 +624,27 @@ export default function PurchaseInvoice() {
     .then(data => setLocations(Array.isArray(data) ? data : []))
     .catch(console.error);
 
-    // Fetch Vendors
-    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/vendors`, {
-      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    // Fetch Vendors (from Parties)
+    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/party`, {
+      headers: { 'Authorization': `Bearer ${sessionStorage.getItem('token') || localStorage.getItem('token')}` }
     })
-    .then(res => res.json())
-    .then(data => setVendors(Array.isArray(data) ? data : []))
-    .catch(console.error);
+      .then(res => res.json())
+      .then(data => {
+        const parties = Array.isArray(data) ? data : (data.data || []);
+        const mappedVendors = parties.map((p: any) => ({
+          ...p,
+          name: p.party_name
+        }));
+        setVendors(mappedVendors);
+      })
+      .catch(err => console.error("Error fetching parties as vendors:", err));
+
+    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/logistics/transporters`, {
+      headers: { 'Authorization': `Bearer ${sessionStorage.getItem('token') || localStorage.getItem('token')}` }
+    })
+      .then(res => res.json())
+      .then(data => setTransporters(Array.isArray(data) ? data : (data.data || [])))
+      .catch(err => console.error("Error fetching transporters:", err));
 
     // Fetch Purchasers
     fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/users/purchasers`, {
@@ -649,6 +673,8 @@ export default function PurchaseInvoice() {
       if (e.key === 'Escape') {
         e.preventDefault();
         if (showPartyModal) setShowPartyModal(false);
+        else if (showTransporterModal) setShowTransporterModal(false);
+        else if (masterCreationState.isOpen) setMasterCreationState({ ...masterCreationState, isOpen: false });
         else if (showSupplierDropdown) setShowSupplierDropdown(false);
         else if (showPurchaserDropdown) setShowPurchaserDropdown(false);
         else if (activeSuggestionRow !== null) setActiveSuggestionRow(null);
@@ -689,7 +715,7 @@ export default function PurchaseInvoice() {
     };
     window.addEventListener('keydown', handleGlobalKeyDown);
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-  }, [showSupplierDropdown, showPurchaserDropdown, activeSuggestionRow, showPartyModal, navigate]);
+  }, [showSupplierDropdown, showPurchaserDropdown, activeSuggestionRow, showPartyModal, showTransporterModal, navigate]);
 
 
   const handleInvoiceChange = (field: string, value: any) => {
@@ -716,7 +742,26 @@ export default function PurchaseInvoice() {
     }
   };
 
-
+  const handleLRNoBlur = async () => {
+    if (invoiceData.transporter && invoiceData.lrNo) {
+      const matchedTransporter = transporters.find(t => (t.name || '').toLowerCase() === invoiceData.transporter.toLowerCase());
+      if (matchedTransporter && matchedTransporter.id) {
+        try {
+          const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/purchase-invoices/check-lr?transporter_id=${matchedTransporter.id}&lr_no=${encodeURIComponent(invoiceData.lrNo)}`, {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.exists) {
+              alert(`Warning: LR No ${invoiceData.lrNo} already exists for this transporter in invoice ${data.invoice_number}!`);
+            }
+          }
+        } catch (err) {
+          console.error('Error checking LR No:', err);
+        }
+      }
+    }
+  };
 
   const handleHeaderKeyDown = (e: React.KeyboardEvent<HTMLInputElement | HTMLSelectElement>, nextFieldId: string) => {
     if (e.key === 'Enter') {
@@ -725,6 +770,32 @@ export default function PurchaseInvoice() {
     }
   };
 
+  
+  const getVendorBrandConfig = () => {
+    const matchedVendor = vendors.find(v => (v.name || '').toLowerCase() === (invoiceData.supplier || '').toLowerCase());
+    if (!matchedVendor) return { isSingle: false, allowedBrands: null };
+    
+    let vendorBrands = [];
+    try {
+      vendorBrands = typeof matchedVendor.brands === 'string' ? JSON.parse(matchedVendor.brands) : (matchedVendor.brands || []);
+    } catch(e) {}
+    
+    // Map to objects if they are strings, but the schema seems to save an array of strings? Or array of objects {name}? 
+    // In partyController it saves the JSON. Let's extract names.
+    const allowedBrandNames = vendorBrands.map(b => typeof b === 'string' ? b : b.name).filter(Boolean);
+    
+    return {
+      isSingle: matchedVendor.brand_type === 'Single',
+      allowedBrands: allowedBrandNames.length > 0 ? allowedBrandNames : null
+    };
+  };
+
+  const { isSingle: isSingleBrandVendor, allowedBrands: vendorAllowedBrands } = getVendorBrandConfig();
+
+  // Determine if a single brand is already locked in (for Single Brand parties)
+  const lockedBrand = isSingleBrandVendor ? (products.find(p => p.brand)?.brand || null) : null;
+
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, index: number, field: string) => {
     const fields = ['brand', 'item', 'hsn', 'qty', 'rate', 'disc', 'mrp'];
     const currentFieldIndex = fields.indexOf(field);
@@ -732,10 +803,16 @@ export default function PurchaseInvoice() {
     if (e.altKey && (e.key.toLowerCase() === 'c' || e.code === 'KeyC')) {
       e.preventDefault();
       if (['brand', 'size', 'item', 'gst'].includes(field)) {
+        if (field === 'brand' && vendorAllowedBrands !== null) {
+          alert('This party has specific brands assigned. You cannot create a new brand on the fly.');
+          return;
+        }
         setMasterModal({ 
           type: field === 'gst' ? 'hsn' : field as any,
           initialValue: e.currentTarget.value || '',
-          rowIndex: index
+          rowIndex: index,
+          initialBrand: field === 'item' ? products[index].brand : undefined,
+          initialBrandId: field === 'item' ? products[index].brand_id : undefined
         });
       }
       return;
@@ -743,7 +820,14 @@ export default function PurchaseInvoice() {
 
     if (field === 'brand' && activeBrandRow === index) {
       const query = (products[index].brand || '').toLowerCase();
-      const filtered = availableBrands.filter(b => (b.name || '').toLowerCase().startsWith(query)).slice(0, 8);
+      let baseBrands = availableBrands;
+      if (vendorAllowedBrands !== null) {
+        baseBrands = baseBrands.filter(b => vendorAllowedBrands.includes(b.name));
+      }
+      if (isSingleBrandVendor && lockedBrand) {
+        baseBrands = baseBrands.filter(b => b.name === lockedBrand);
+      }
+      const filtered = baseBrands.filter(b => (b.name || '').toLowerCase().startsWith(query)).slice(0, 8);
       
       if (e.key === 'ArrowDown') {
         e.preventDefault();
@@ -753,15 +837,25 @@ export default function PurchaseInvoice() {
         e.preventDefault();
         setBrandSuggestionIndex(prev => Math.max(prev - 1, 0));
         return;
-      } else if ((e.key === 'Enter' || e.key === 'Tab' || e.key === 'ArrowRight') && filtered.length > 0) {
-        e.preventDefault();
-        const selected = filtered[brandSuggestionIndex];
-        const newProducts = [...products];
-        newProducts[index] = { ...newProducts[index], brand_id: selected.id, brand: selected.name || '' };
-        setProducts(newProducts);
-        setActiveBrandRow(null);
-        document.getElementById(`row-${index}-item`)?.focus();
-        return;
+      } else if (e.key === 'Enter' || ((e.key === 'Tab' || e.key === 'ArrowRight') && query.trim() !== '')) {
+        if (filtered.length > 0) {
+          e.preventDefault();
+          const selected = filtered[brandSuggestionIndex];
+          const newProducts = [...products];
+          newProducts[index] = { ...newProducts[index], brand_id: selected.id, brand: selected.name || '' };
+          setProducts(newProducts);
+          setActiveBrandRow(null);
+          document.getElementById(`row-${index}-item`)?.focus();
+          return;
+        } else if (query.trim() !== '' && vendorAllowedBrands === null) {
+          e.preventDefault();
+          setMasterModal({ 
+            type: 'brand',
+            initialValue: e.currentTarget.value || '',
+            rowIndex: index
+          });
+          return;
+        }
       }
     }
 
@@ -777,19 +871,29 @@ export default function PurchaseInvoice() {
         e.preventDefault();
         setHsnSuggestionIndex(prev => Math.max(prev - 1, 0));
         return;
-      } else if ((e.key === 'Enter' || e.key === 'Tab' || e.key === 'ArrowRight') && filtered.length > 0) {
-        e.preventDefault();
-        const selected = filtered[hsnSuggestionIndex];
-        const newProducts = [...products];
-        newProducts[index] = { 
-          ...newProducts[index], 
-          hsn: selected.name || '', 
-          gst: selected.tax_percent !== undefined ? selected.tax_percent : (newProducts[index].gst || 0) 
-        };
-        setProducts(newProducts);
-        setActiveHsnRow(null);
-        document.getElementById(`row-${index}-qty`)?.focus();
-        return;
+      } else if (e.key === 'Enter' || ((e.key === 'Tab' || e.key === 'ArrowRight') && query.trim() !== '')) {
+        if (filtered.length > 0) {
+          e.preventDefault();
+          const selected = filtered[hsnSuggestionIndex];
+          const newProducts = [...products];
+          newProducts[index] = { 
+            ...newProducts[index], 
+            hsn: selected.name || '', 
+            gst: selected.tax_percent !== undefined ? selected.tax_percent : (newProducts[index].gst || 0) 
+          };
+          setProducts(newProducts);
+          setActiveHsnRow(null);
+          document.getElementById(`row-${index}-qty`)?.focus();
+          return;
+        } else if (query.trim() !== '') {
+          e.preventDefault();
+          setMasterModal({ 
+            type: 'hsn',
+            initialValue: e.currentTarget.value || '',
+            rowIndex: index
+          });
+          return;
+        }
       }
     }
 
@@ -799,8 +903,7 @@ export default function PurchaseInvoice() {
       const rowBrandName = (products[index].brand || '').toLowerCase();
       const filtered = availableItems.filter(s => {
         const textMatch = (s.name || s.item_name || '').toLowerCase().includes(query);
-        if (rowBrandId) return textMatch && s.brand_id === rowBrandId;
-        if (rowBrandName) return textMatch && (s.brand || '').toLowerCase() === rowBrandName;
+        if (rowBrandId) return textMatch && String(s.brand_id) === String(rowBrandId);
         return textMatch;
       }).slice(0, 8);
       
@@ -812,15 +915,27 @@ export default function PurchaseInvoice() {
         e.preventDefault();
         setSuggestionIndex(prev => Math.max(prev - 1, 0));
         return;
-      } else if ((e.key === 'Enter' || e.key === 'Tab' || e.key === 'ArrowRight') && filtered.length > 0) {
-        e.preventDefault();
-        const selected = filtered[suggestionIndex];
-        const newProducts = [...products];
-        newProducts[index] = { ...newProducts[index], item_id: selected.id, item: selected.name || selected.item_name, brand_id: selected.brand_id || null, brand: selected.brand || newProducts[index].brand || '', rate: selected.purchase_price || selected.rate || newProducts[index].rate || '' };
-        setProducts(newProducts);
-        setActiveSuggestionRow(null);
-        document.getElementById(`row-${index}-qty`)?.focus();
-        return;
+      } else if (e.key === 'Enter' || ((e.key === 'Tab' || e.key === 'ArrowRight') && query.trim() !== '')) {
+        if (filtered.length > 0) {
+          e.preventDefault();
+          const selected = filtered[suggestionIndex];
+          const newProducts = [...products];
+          newProducts[index] = { ...newProducts[index], item_id: selected.id, item: selected.name || selected.item_name, brand_id: selected.brand_id || null, brand: selected.brand || newProducts[index].brand || '', rate: selected.purchase_price || selected.rate || newProducts[index].rate || '' };
+          setProducts(newProducts);
+          setActiveSuggestionRow(null);
+          setActiveSizeMatrixRow(index);
+          return;
+        } else if (query.trim() !== '') {
+          e.preventDefault();
+          setMasterModal({ 
+            type: 'item',
+            initialValue: e.currentTarget.value || '',
+            rowIndex: index,
+            initialBrand: products[index].brand,
+            initialBrandId: products[index].brand_id
+          });
+          return;
+        }
       }
     }
 
@@ -832,10 +947,10 @@ export default function PurchaseInvoice() {
         if (index === products.length - 1) {
           addProduct();
           setTimeout(() => {
-            document.getElementById(`row-${index + 1}-item`)?.focus();
+            document.getElementById(`row-${index + 1}-brand`)?.focus();
           }, 10);
         } else {
-          document.getElementById(`row-${index + 1}-item`)?.focus();
+          document.getElementById(`row-${index + 1}-brand`)?.focus();
         }
       }
     } else if (e.key === 'ArrowLeft') {
@@ -1129,8 +1244,15 @@ export default function PurchaseInvoice() {
                           onSelect={opt => {
                             setTimeout(() => document.getElementById('input-transporter')?.focus(), 10);
                           }}
+                          renderOption={(opt: any, isSelected: boolean) => (
+                            <div className="flex justify-between items-center">
+                              <span>{opt.name}</span>
+                              {opt.employee_id && <span className="text-[10px] bg-slate-200 px-1 rounded text-slate-600 font-mono">ID: {opt.employee_id}</span>}
+                            </div>
+                          )}
                           options={activeUsers}
                           displayKey="name"
+                          searchKeys={['name', 'employee_id']}
                           className="border border-slate-500 bg-white px-1 w-full focus:outline-none focus:border-black focus:bg-[#ffffe0]"
                           width="100%"
                         />
@@ -1140,12 +1262,64 @@ export default function PurchaseInvoice() {
 
                   <div className="flex items-center">
                     <span className="w-[100px] text-slate-800 font-bold mr-2">Transporter :</span>
-                    <input type="text" id="input-transporter" value={invoiceData.transporter} onChange={e => setInvoiceData({...invoiceData, transporter: e.target.value})} onKeyDown={e => handleHeaderKeyDown(e, 'input-lrNo')} className="border border-slate-500 bg-white px-1 flex-1 focus:outline-none focus:border-black focus:bg-[#ffffe0]" />
+                    <div className="relative flex-1">
+                      <SearchableDropdown
+                        id="input-transporter"
+                        value={invoiceData.transporter}
+                        onChange={val => handleInvoiceChange('transporter', val)}
+                        onNotFound={() => setShowTransporterModal(true)}
+                        onKeyDown={e => {
+                          if (e.altKey && (e.key.toLowerCase() === 'c' || e.code === 'KeyC')) {
+                            e.preventDefault();
+                            setShowTransporterModal(true);
+                          } else {
+                            handleHeaderKeyDown(e, 'input-lrNo');
+                          }
+                        }}
+                        onSelect={opt => {
+                          setTimeout(() => document.getElementById('input-lrNo')?.focus(), 10);
+                        }}
+                        options={transporters}
+                        displayKey="name"
+                        className="border border-slate-500 bg-white px-1 w-full focus:outline-none focus:border-black focus:bg-[#ffffe0]"
+                        width="100%"
+                      />
+                    </div>
                   </div>
 
                   <div className="flex items-center">
-                    <span className="w-[100px] text-slate-800 font-bold mr-2">L R No :</span>
-                    <input type="text" id="input-lrNo" value={invoiceData.lrNo} onChange={e => setInvoiceData({...invoiceData, lrNo: e.target.value})} onKeyDown={e => handleHeaderKeyDown(e, 'input-bale')} className="border border-slate-500 bg-white px-1 flex-1 focus:outline-none focus:border-black focus:bg-[#ffffe0]" />
+                    {invoiceData.transporter.trim().toUpperCase() === 'HAND' ? (
+                      <>
+                        <span className="w-[100px] text-slate-800 font-bold mr-2">Receiver :</span>
+                        <div className="relative flex-1">
+                          <SearchableDropdown
+                            id="input-lrNo"
+                            value={invoiceData.lrNo}
+                            onChange={val => setInvoiceData({...invoiceData, lrNo: val})}
+                            onKeyDown={e => handleHeaderKeyDown(e, 'input-bale')}
+                            onSelect={opt => {
+                              setTimeout(() => document.getElementById('input-bale')?.focus(), 10);
+                            }}
+                            renderOption={(opt: any, isSelected: boolean) => (
+                              <div className="flex justify-between items-center">
+                                <span>{opt.name}</span>
+                                {opt.employee_id && <span className="text-[10px] bg-slate-200 px-1 rounded text-slate-600 font-mono">ID: {opt.employee_id}</span>}
+                              </div>
+                            )}
+                            options={activeUsers}
+                            displayKey="name"
+                            searchKeys={['name', 'employee_id']}
+                            className="border border-slate-500 bg-white px-1 w-full focus:outline-none focus:border-black focus:bg-[#ffffe0]"
+                            width="100%"
+                          />
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <span className="w-[100px] text-slate-800 font-bold mr-2">L R No :</span>
+                        <input type="text" id="input-lrNo" value={invoiceData.lrNo} onBlur={handleLRNoBlur} onChange={e => setInvoiceData({...invoiceData, lrNo: e.target.value})} onKeyDown={e => handleHeaderKeyDown(e, 'input-bale')} className="border border-slate-500 bg-white px-1 flex-1 focus:outline-none focus:border-black focus:bg-[#ffffe0]" />
+                      </>
+                    )}
                   </div>
 
                   <div className="flex items-center">
@@ -1193,7 +1367,7 @@ export default function PurchaseInvoice() {
                     </div>
                     <div className="flex items-center w-[250px]">
                       <span className="w-[80px] text-slate-800 font-bold mr-2">Party GSTIN:</span>
-                      <input type="text" value="" readOnly className="border border-slate-300 bg-slate-100 px-1 flex-1 focus:outline-none font-mono text-slate-600" />
+                      <input type="text" value={vendors.find(v => (v.name || '').toLowerCase() === (invoiceData.supplier || '').toLowerCase())?.gstin || vendors.find(v => (v.name || '').toLowerCase() === (invoiceData.supplier || '').toLowerCase())?.gst || vendors.find(v => (v.name || '').toLowerCase() === (invoiceData.supplier || '').toLowerCase())?.gstin_no || ""} readOnly className="border border-slate-300 bg-slate-100 px-1 flex-1 focus:outline-none font-mono text-slate-600" />
                     </div>
                   </div>
 
@@ -1225,7 +1399,7 @@ export default function PurchaseInvoice() {
                     </div>
                     <div className="flex items-center flex-[1.5]">
                       <span className="w-[100px] text-slate-800 font-bold mr-2">GST On :</span>
-                      <select id="input-gstOn" value={invoiceData.gstOn} onChange={e => setInvoiceData({...invoiceData, gstOn: e.target.value as any})} onKeyDown={e => handleHeaderKeyDown(e, 'row-0-item')} className="border border-slate-500 bg-white px-1 flex-1 focus:outline-none focus:border-black focus:bg-[#ffffe0]">
+                      <select id="input-gstOn" value={invoiceData.gstOn} onChange={e => setInvoiceData({...invoiceData, gstOn: e.target.value as any})} onKeyDown={e => handleHeaderKeyDown(e, 'row-0-brand')} className="border border-slate-500 bg-white px-1 flex-1 focus:outline-none focus:border-black focus:bg-[#ffffe0]">
                         <option value="total">Entire Invoice</option>
                         <option value="items">Individual Line Items</option>
                       </select>
@@ -1299,17 +1473,40 @@ export default function PurchaseInvoice() {
                           <input id={`row-${index}-brand`} type="text" value={item.brand} onChange={e => { updateProduct(index, 'brand', e.target.value); setBrandSuggestionIndex(0); }} onFocus={(e) => handleBrandFocus(e, index)} onBlur={handleBrandBlur} onKeyDown={(e) => handleKeyDown(e, index, 'brand')} className="w-full bg-transparent focus:bg-[#ffffe0] focus:outline-none px-1" autoComplete="off" />
                           {activeBrandRow === index && (
                             <div className="absolute top-full left-0 mt-0 bg-white border-2 border-black z-50 w-[200px] shadow-md max-h-[150px] overflow-y-auto">
-                              {availableBrands.filter(b => (b.name || '').toLowerCase().startsWith((products[index].brand || '').toLowerCase())).slice(0, 8).map((suggestion, sIdx) => (
-                                <div key={suggestion.id} className={`px-2 py-1 flex justify-between cursor-pointer ${sIdx === brandSuggestionIndex ? 'bg-[#ffe000] text-black font-bold' : 'hover:bg-slate-200'}`} onClick={() => {
-                                  const newProducts = [...products];
-                                  newProducts[index] = { ...newProducts[index], brand_id: suggestion.id, brand: suggestion.name || '' };
-                                  setProducts(newProducts);
-                                  setActiveBrandRow(null);
-                                  document.getElementById(`row-${index}-item`)?.focus();
-                                }}>
-                                  <span>{suggestion.name}</span>
-                                </div>
-                              ))}
+                              {(() => {
+                                const query = (products[index].brand || '').toLowerCase();
+                                
+                                // Filter based on selected party
+                                let filteredBrands = availableBrands;
+                                if (vendorAllowedBrands !== null) {
+                                  filteredBrands = filteredBrands.filter(b => vendorAllowedBrands.includes(b.name));
+                                }
+                                if (isSingleBrandVendor && lockedBrand) {
+                                  filteredBrands = filteredBrands.filter(b => b.name === lockedBrand);
+                                }
+
+                                const filtered = filteredBrands.filter(b => (b.name || '').toLowerCase().startsWith(query)).slice(0, 8);
+                                if (filtered.length > 0) {
+                                  return filtered.map((suggestion, sIdx) => (
+                                    <div key={suggestion.id} className={`px-2 py-1 flex justify-between cursor-pointer ${sIdx === brandSuggestionIndex ? 'bg-[#ffe000] text-black font-bold' : 'hover:bg-slate-200'}`} onClick={() => {
+                                      const newProducts = [...products];
+                                      newProducts[index] = { ...newProducts[index], brand_id: suggestion.id, brand: suggestion.name || '' };
+                                      setProducts(newProducts);
+                                      setActiveBrandRow(null);
+                                      document.getElementById(`row-${index}-item`)?.focus();
+                                    }}>
+                                      <span>{suggestion.name}</span>
+                                    </div>
+                                  ));
+                                } else if (products[index].brand && vendorAllowedBrands === null) {
+                                  return (
+                                    <div className="px-2 py-2 text-[11px] text-slate-500 italic bg-white">
+                                      Press <span className="font-bold text-black">Alt+C</span> to create "{products[index].brand}"
+                                    </div>
+                                  );
+                                }
+                                return null;
+                              })()}
                             </div>
                           )}
                         </td>
@@ -1317,26 +1514,36 @@ export default function PurchaseInvoice() {
                           <input id={`row-${index}-item`} type="text" value={item.item} onChange={e => { updateProduct(index, 'item', e.target.value); setSuggestionIndex(0); }} onFocus={(e) => handleItemFocus(e, index)} onBlur={handleItemBlur} onKeyDown={(e) => handleKeyDown(e, index, 'item')} className="w-full bg-transparent focus:bg-[#ffffe0] focus:outline-none px-1" autoComplete="off" />
                           {activeSuggestionRow === index && (
                             <div className="absolute top-full left-0 mt-0 bg-white border-2 border-black z-50 w-[300px] shadow-md max-h-[150px] overflow-y-auto">
-                              {availableItems.filter(s => {
-                              const q = (products[index].item || '').toLowerCase();
-                              const textMatch = (s.name || s.item_name || '').toLowerCase().includes(q);
-                              const bId = products[index].brand_id;
-                              const bName = (products[index].brand || '').toLowerCase();
-                              if (bId) return textMatch && s.brand_id === bId;
-                              if (bName) return textMatch && (s.brand || '').toLowerCase() === bName;
-                              return textMatch;
-                            }).slice(0, 8).map((suggestion, sIdx) => (
-                                <div key={suggestion.id} className={`px-2 py-1 flex justify-between cursor-pointer ${sIdx === suggestionIndex ? 'bg-[#ffe000] text-black font-bold' : 'hover:bg-slate-200'}`} onClick={() => {
-                                  const newProducts = [...products];
-                                  newProducts[index] = { ...newProducts[index], item: suggestion.name || suggestion.item_name, brand: suggestion.brand || newProducts[index].brand || '', rate: suggestion.purchase_price || suggestion.rate || '' };
-                                  setProducts(newProducts);
-                                  setActiveSuggestionRow(null);
-                                  document.getElementById(`row-${index}-qty`)?.focus();
-                                }}>
-                                  <span>{suggestion.name || suggestion.item_name} <span className="text-[10px] text-slate-500 font-normal ml-2">{suggestion.type || suggestion.item_type}</span></span>
-                                  <span className="text-slate-600">Stock: {suggestion.stock || 0}</span>
-                                </div>
-                              ))}
+                              {(() => {
+                                const q = (products[index].item || '').toLowerCase();
+                                const filtered = availableItems.filter(s => {
+                                  const textMatch = (s.name || s.item_name || '').toLowerCase().includes(q);
+                                  const bId = products[index].brand_id;
+                                  if (bId) return textMatch && String(s.brand_id) === String(bId);
+                                  return textMatch;
+                                }).slice(0, 8);
+                                if (filtered.length > 0) {
+                                  return filtered.map((suggestion, sIdx) => (
+                                    <div key={suggestion.id} className={`px-2 py-1 flex justify-between cursor-pointer ${sIdx === suggestionIndex ? 'bg-[#ffe000] text-black font-bold' : 'hover:bg-slate-200'}`} onClick={() => {
+                                      const newProducts = [...products];
+                                      newProducts[index] = { ...newProducts[index], item: suggestion.name || suggestion.item_name, brand: suggestion.brand || newProducts[index].brand || '', rate: suggestion.purchase_price || suggestion.rate || '' };
+                                      setProducts(newProducts);
+                                      setActiveSuggestionRow(null);
+                                      setActiveSizeMatrixRow(index);
+                                    }}>
+                                      <span>{suggestion.name || suggestion.item_name} <span className="text-[10px] text-slate-500 font-normal ml-2">{suggestion.type || suggestion.item_type}</span></span>
+                                      <span className="text-slate-600">Stock: {suggestion.stock || 0}</span>
+                                    </div>
+                                  ));
+                                } else if (products[index].item) {
+                                  return (
+                                    <div className="px-2 py-2 text-[11px] text-slate-500 italic bg-white">
+                                      Press <span className="font-bold text-black">Alt+C</span> to create "{products[index].item}" in {products[index].brand || 'Brand'}
+                                    </div>
+                                  );
+                                }
+                                return null;
+                              })()}
                             </div>
                           )}
                         </td>
@@ -1344,21 +1551,34 @@ export default function PurchaseInvoice() {
                           <input id={`row-${index}-hsn`} type="text" value={item.hsn || ''} onChange={e => { updateProduct(index, 'hsn', e.target.value); setHsnSuggestionIndex(0); }} onFocus={(e) => handleHsnFocus(e, index)} onBlur={handleHsnBlur} onKeyDown={(e) => handleKeyDown(e, index, 'hsn')} className="w-full bg-transparent focus:bg-[#ffffe0] focus:outline-none px-1" autoComplete="off" />
                           {activeHsnRow === index && (
                             <div className="absolute top-full left-0 mt-0 bg-white border-2 border-black z-50 w-[300px] shadow-md max-h-[150px] overflow-y-auto">
-                              {availableHsns.filter(s => (s.name || '').toLowerCase().startsWith((products[index].hsn || '').toLowerCase())).slice(0, 8).map((suggestion, sIdx) => (
-                                <div key={suggestion.id} className={`px-2 py-1 flex flex-col cursor-pointer ${sIdx === hsnSuggestionIndex ? 'bg-[#ffe000] text-black font-bold' : 'hover:bg-slate-200'}`} onClick={() => {
-                                  const newProducts = [...products];
-                                  newProducts[index] = { 
-                                    ...newProducts[index], 
-                                    hsn: suggestion.name || '', 
-                                    gst: suggestion.tax_percent !== undefined ? suggestion.tax_percent : (newProducts[index].gst || 0) 
-                                  };
-                                  setProducts(newProducts);
-                                  setActiveHsnRow(null);
-                                  document.getElementById(`row-${index}-qty`)?.focus();
-                                }}>
-                                  <span className="text-[11px]"><span className="font-bold text-[#1b5e58]">{suggestion.name}</span> - {suggestion.description} ({suggestion.tax_percent !== undefined ? suggestion.tax_percent : 0}%)</span>
-                                </div>
-                              ))}
+                              {(() => {
+                                const query = (products[index].hsn || '').toLowerCase();
+                                const filtered = availableHsns.filter(s => (s.name || '').toLowerCase().startsWith(query)).slice(0, 8);
+                                if (filtered.length > 0) {
+                                  return filtered.map((suggestion, sIdx) => (
+                                    <div key={suggestion.id} className={`px-2 py-1 flex flex-col cursor-pointer ${sIdx === hsnSuggestionIndex ? 'bg-[#ffe000] text-black font-bold' : 'hover:bg-slate-200'}`} onClick={() => {
+                                      const newProducts = [...products];
+                                      newProducts[index] = { 
+                                        ...newProducts[index], 
+                                        hsn: suggestion.name || '', 
+                                        gst: suggestion.tax_percent !== undefined ? suggestion.tax_percent : (newProducts[index].gst || 0) 
+                                      };
+                                      setProducts(newProducts);
+                                      setActiveHsnRow(null);
+                                      document.getElementById(`row-${index}-qty`)?.focus();
+                                    }}>
+                                      <span className="text-[11px]"><span className="font-bold text-[#1b5e58]">{suggestion.name}</span> - {suggestion.description} ({suggestion.tax_percent !== undefined ? suggestion.tax_percent : 0}%)</span>
+                                    </div>
+                                  ));
+                                } else if (products[index].hsn) {
+                                  return (
+                                    <div className="px-2 py-2 text-[11px] text-slate-500 italic bg-white">
+                                      Press <span className="font-bold text-black">Alt+C</span> to create "{products[index].hsn}"
+                                    </div>
+                                  );
+                                }
+                                return null;
+                              })()}
                             </div>
                           )}
                         </td>
@@ -1405,8 +1625,8 @@ export default function PurchaseInvoice() {
                                 setActiveModalRow(index);
                               } else if (e.key === 'Enter') {
                                 e.preventDefault();
-                                if (invoiceData.showSize || invoiceData.designNo || invoiceData.colourNo || invoiceData.showLocation) {
-                                  setActiveModalRow(index);
+                                if (item.item) {
+                                  setActiveSizeMatrixRow(index);
                                 } else {
                                   handleKeyDown(e, index, 'qty');
                                 }
@@ -1681,12 +1901,42 @@ export default function PurchaseInvoice() {
         }}
       />
 
+      <SizeAllocationModal
+        isOpen={activeSizeMatrixRow !== null}
+        onClose={() => setActiveSizeMatrixRow(null)}
+        itemName={activeSizeMatrixRow !== null ? products[activeSizeMatrixRow].item : ''}
+        brandId={activeSizeMatrixRow !== null ? products[activeSizeMatrixRow].brand_id : ''}
+        onSave={(allocatedSizes, summaryInfo) => {
+          if (activeSizeMatrixRow !== null) {
+            updateProduct(activeSizeMatrixRow, 'qty', summaryInfo.totalQty);
+            updateProduct(activeSizeMatrixRow, 'rate', summaryInfo.avgRate);
+            updateProduct(activeSizeMatrixRow, 'size', summaryInfo.sizeDisplay);
+            updateProduct(activeSizeMatrixRow, 'matrixData', allocatedSizes);
+            
+            if (activeSizeMatrixRow === products.length - 1) {
+               setProducts([...products, { id: Date.now(), item: '', brand: '', qty: '', rate: '', disc: 0, gst: 0, design: '', colour: '', size: '', mrp: 0 }]);
+            }
+          }
+          setActiveSizeMatrixRow(null);
+        }}
+      />
+
       <PartyModal 
         isOpen={showPartyModal}
         onClose={() => setShowPartyModal(false)}
         initialPartyName={invoiceData.supplier}
+        editPartyData={vendors.find(v => (v.name || '').toLowerCase() === (invoiceData.supplier || '').toLowerCase())}
+        availableBrands={availableBrands}
         onSave={(newParty) => {
-          setVendors(prev => [...prev, newParty]);
+          setVendors(prev => {
+            const existingIdx = prev.findIndex(p => p.id === newParty.id);
+            if (existingIdx >= 0) {
+              const updated = [...prev];
+              updated[existingIdx] = newParty;
+              return updated;
+            }
+            return [...prev, newParty];
+          });
           handleInvoiceChange('supplier', newParty.name);
           setShowPartyModal(false);
           setImportErrors(prev => prev.filter(e => !(e.type === 'vendor' && (e.vendor || '').toLowerCase() === (newParty.name || '').toLowerCase())));
@@ -1696,28 +1946,81 @@ export default function PurchaseInvoice() {
         }}
       />
 
+      <TransporterModal 
+        isOpen={showTransporterModal}
+        onClose={() => setShowTransporterModal(false)}
+        initialTransporterName={invoiceData.transporter}
+        onSave={(newTransporter) => {
+          setTransporters(prev => [...prev, newTransporter]);
+          handleInvoiceChange('transporter', newTransporter.name);
+          setShowTransporterModal(false);
+          setTimeout(() => {
+            document.getElementById('input-lrNo')?.focus();
+          }, 100);
+        }}
+      />
+
       <MasterCreationModal 
         isOpen={masterModal !== null}
         onClose={() => setMasterModal(null)}
         masterType={masterModal?.type || null}
         initialValue={masterModal?.initialValue || ''}
+        initialBrand={masterModal?.initialBrand}
+        initialBrandId={masterModal?.initialBrandId}
         onSave={(type, data) => {
            console.log(`Created new master of type ${type}:`, data);
            if (masterModal) {
              const { type: savedType, rowIndex } = masterModal;
              const fieldMap: any = { hsn: 'hsn', brand: 'brand', item: 'item', size: 'size' };
              const field = fieldMap[savedType];
-             if (field) {
+             if (savedType === 'item') {
+               setAvailableItems(prev => [...prev, { id: data.id, name: data.name, item_name: data.name, brand: data.brand, brand_id: data.brand_id || null }]);
+               setProducts(prev => {
+                 const newP = [...prev];
+                 newP[rowIndex] = { 
+                   ...newP[rowIndex], 
+                   item: data.name, 
+                   item_id: data.id || newP[rowIndex].item_id, 
+                   brand: data.brand || newP[rowIndex].brand, 
+                   hsn: data.hsn || newP[rowIndex].hsn 
+                 };
+                 return newP;
+               });
+             } else if (savedType === 'hsn') {
+               setAvailableHsns(prev => [...prev, { name: data.name, tax_percent: data.tax_percent }]);
+               setProducts(prev => {
+                 const newP = [...prev];
+                 newP[rowIndex] = {
+                   ...newP[rowIndex],
+                   hsn: data.name,
+                   gst: data.tax_percent !== undefined ? data.tax_percent : (newP[rowIndex].gst || 0)
+                 };
+                 return newP;
+               });
+             } else if (savedType === 'brand') {
+               setAvailableBrands(prev => [...prev, { id: data.id, name: data.name }]);
+               setProducts(prev => {
+                 const newP = [...prev];
+                 newP[rowIndex] = {
+                   ...newP[rowIndex],
+                   brand: data.name,
+                   brand_id: data.id || newP[rowIndex].brand_id
+                 };
+                 return newP;
+               });
+             } else if (field) {
                updateProduct(rowIndex, field, data.name);
+             }
                // Move focus to next field
                const fields = ['brand', 'item', 'hsn', 'qty', 'rate', 'disc', 'mrp'];
                const currentFieldIndex = fields.indexOf(field);
                setTimeout(() => {
-                 if (currentFieldIndex < fields.length - 1) {
+                 if (currentFieldIndex > -1 && currentFieldIndex < fields.length - 1) {
                    document.getElementById(`row-${rowIndex}-${fields[currentFieldIndex + 1]}`)?.focus();
+                 } else {
+                   document.getElementById(`row-${rowIndex}-qty`)?.focus();
                  }
                }, 100);
-             }
            }
            setMasterModal(null);
            // In a real implementation, we would POST to the backend and then set the local input value

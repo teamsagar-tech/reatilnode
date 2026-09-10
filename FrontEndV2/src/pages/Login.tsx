@@ -11,6 +11,13 @@ export default function Login() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const triggerLogin = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleLogin(e as any);
+    }
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!username || !password) return;
@@ -80,6 +87,7 @@ export default function Login() {
                       className="w-2/3 border border-slate-500 p-1 px-2 focus:bg-white focus:outline-none focus:border-black shadow-inner" 
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
+                      onKeyDown={triggerLogin}
                       autoFocus
                       disabled={loading}
                     />
@@ -93,6 +101,7 @@ export default function Login() {
                         className="w-full border border-slate-500 p-1 px-2 pr-8 focus:bg-white focus:outline-none focus:border-black shadow-inner tracking-widest" 
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
+                        onKeyDown={triggerLogin}
                         disabled={loading}
                       />
                       <button 

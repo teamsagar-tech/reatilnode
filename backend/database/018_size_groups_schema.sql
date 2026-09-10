@@ -1,0 +1,22 @@
+CREATE TABLE SizeGroups (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    firm_id INT NOT NULL,
+    group_name VARCHAR(100) NOT NULL,
+    sizes JSON NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (firm_id) REFERENCES Firms(id) ON DELETE CASCADE
+);
+
+CREATE TABLE BrandSizeGroups (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    firm_id INT NOT NULL,
+    brand_id INT NOT NULL,
+    size_group_id INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (firm_id) REFERENCES Firms(id) ON DELETE CASCADE,
+    FOREIGN KEY (brand_id) REFERENCES Brands(id) ON DELETE CASCADE,
+    FOREIGN KEY (size_group_id) REFERENCES SizeGroups(id) ON DELETE CASCADE,
+    UNIQUE KEY (firm_id, brand_id, size_group_id)
+);

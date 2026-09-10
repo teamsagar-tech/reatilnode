@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import MasterCreationModal from '../../../components/inventory/MasterCreationModal';
+import ConfirmModal from '../../../components/ui/ConfirmModal';
 
 const SectionTitle = ({ children }: { children: React.ReactNode }) => (
     <div className="font-bold text-[#1b5e58] text-[12px] border-b border-[#a3c3be] mb-2 mt-2 pb-1 uppercase tracking-wider bg-[#eef5ed] px-1">
@@ -32,6 +33,7 @@ const SectionTitle = ({ children }: { children: React.ReactNode }) => (
 
 export default function ItemMaster() {
   const navigate = useNavigate();
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [mode, setMode] = useState('list'); // 'list' or 'create'
   const [editId, setEditId] = useState<number | null>(null);
   const [formData, setFormData] = useState<any>({});
@@ -377,10 +379,9 @@ export default function ItemMaster() {
                   {/* Action Buttons */}
                   <div className='flex justify-end gap-2 pt-2 border-t border-slate-300 mt-2 shrink-0'>
                     <button 
-                      onClick={() => {
-                        setFormData({});
-                        setEditId(null);
-                      }}
+                      type="button"
+                      onClick={() => setShowResetConfirm(true)} 
+                      tabIndex={-1}
                       className='bg-red-50 border border-red-300 px-6 py-1 text-red-700 font-bold hover:bg-red-100 shadow-[inset_1px_1px_0_rgba(255,255,255,0.8)] outline-none focus:bg-red-200'
                     >
                       Reset
@@ -442,7 +443,23 @@ export default function ItemMaster() {
         <div className='bg-[#1b5e58] text-white text-[11px] px-4 py-1 flex justify-between items-center border-t-2 border-[#12423d]'>
           <div className='font-medium tracking-wide'>Item Master</div>
         </div>
-      </div>
+      
+        <ConfirmModal
+          isOpen={showResetConfirm}
+          title="Reset Form?"
+          message="Are you sure you want to clear all data? This cannot be undone."
+          type="warning"
+          onConfirm={() => {
+            const resetFn = () => {
+                        setFormData({});
+                        setEditId(null);
+                      };
+            resetFn();
+            setShowResetConfirm(false);
+          }}
+          onCancel={() => setShowResetConfirm(false)}
+        />
+        </div>
       
       <MasterCreationModal 
         isOpen={masterModal !== null}

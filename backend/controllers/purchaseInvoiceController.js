@@ -217,6 +217,18 @@ exports.create = async (req, res) => {
             [itemId, attr.size_id || null, attr.color_id || null, attr.design_id || null, attr.qty || 0, barcode]
           );
         }
+      } else if (item.matrixData && Array.isArray(item.matrixData) && item.matrixData.length > 0) {
+        // Handle Size Matrix Data
+        for (let matrixRow of item.matrixData) {
+          let barcode = `${invoiceId}-${itemId}-${Date.now() % 100000}`;
+          // matrixRow contains { size, qty, rate, mrp }
+          await conn.execute(
+            `INSERT INTO PurchaseInvoiceItemAttributes 
+             (invoice_item_id, size_id, qty, barcode, purchase_rate, mrp) 
+             VALUES (?, ?, ?, ?, ?, ?)`,
+            [itemId, matrixRow.size || null, matrixRow.qty || 0, barcode, matrixRow.rate || null, matrixRow.mrp || null]
+          );
+        }
       }
     }
 
@@ -348,6 +360,16 @@ exports.update = async (req, res) => {
             [itemId, attr.size_id || null, attr.color_id || null, attr.design_id || null, attr.qty || 0, barcode]
           );
         }
+      } else if (item.matrixData && Array.isArray(item.matrixData) && item.matrixData.length > 0) {
+        for (let matrixRow of item.matrixData) {
+          let barcode = `${id}-${itemId}-${Date.now() % 100000}`;
+          await conn.execute(
+            `INSERT INTO PurchaseInvoiceItemAttributes 
+             (invoice_item_id, size_id, qty, barcode, purchase_rate, mrp) 
+             VALUES (?, ?, ?, ?, ?, ?)`,
+            [itemId, matrixRow.size || null, matrixRow.qty || 0, barcode, matrixRow.rate || null, matrixRow.mrp || null]
+          );
+        }
       }
     }
 
@@ -359,5 +381,30 @@ exports.update = async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   } finally {
     conn.release();
+  }
+};
+
+exports.checkLR = async (req, res) => {
+  const { transporter_id, lr_no } = req.query;
+  const firm_id = req.firm_id;
+
+  if (!transporter_id || !lr_no) {
+    return res.status(400).json({ error: 'Missing transporter_id or lr_no' });
+  }
+
+  try {
+    const [rows] = await db.execute(
+      'SELECT id, invoice_number FROM PurchaseInvoices WHERE firm_id = ? AND transporter_id = ? AND lr_no = ? AND is_active = 1',
+      [firm_id, transporter_id, lr_no]
+    );
+
+    if (rows.length > 0) {
+      res.json({ exists: true, invoice_number: rows[0].invoice_number });
+    } else {
+      res.json({ exists: false });
+    }
+  } catch (error) {
+    console.error('Error checking LR No:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 };

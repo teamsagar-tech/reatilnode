@@ -9,18 +9,20 @@ router.use(authenticateToken);
 router.use(tenantMiddleware);
 
 // Transporters
-router.get('/transporters', requirePermission('masters', 'Read'), logisticsController.getTransporters);
-router.post('/transporters', requirePermission('masters', 'Create'), logisticsController.createTransporter);
+router.get('/transporters', requirePermission('masters', 'read'), logisticsController.getTransporters);
+router.post('/transporters', requirePermission('masters', 'write'), logisticsController.createTransporter);
 
 // Hundekaris
-router.get('/hundekari', requirePermission('masters', 'Read'), logisticsController.getHundekaris);
-router.post('/hundekari', requirePermission('masters', 'Create'), logisticsController.createHundekari);
+router.get('/hundekari', requirePermission('masters', 'read'), logisticsController.getHundekaris);
+router.post('/hundekari', requirePermission('masters', 'write'), logisticsController.createHundekari);
 
 // Unlinked LRs (LR Register)
-router.get('/unlinked-lrs', requirePermission('inventory', 'Read'), logisticsController.getUnlinkedLRs);
-router.post('/unlinked-lrs', requirePermission('inventory', 'Create'), logisticsController.createUnlinkedLR);
+router.get('/unlinked-lrs', requirePermission('logistics', 'read'), logisticsController.getUnlinkedLRs);
+router.post('/unlinked-lrs', requirePermission('logistics', 'write'), logisticsController.createUnlinkedLR);
+router.post('/bulk-unlinked-lrs', requirePermission('logistics', 'write'), logisticsController.createBulkUnlinkedLR);
+router.post('/verify-lr-bales', requirePermission('logistics', 'read'), logisticsController.verifyLRBales);
 
 // Pending LRs from Purchase Invoices
-router.get('/pending-lrs', requirePermission('inventory', 'Read'), logisticsController.getPendingLRs);
+router.get('/pending-lrs', requirePermission('logistics', 'read'), logisticsController.getPendingLRs);
 
 module.exports = router;

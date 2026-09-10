@@ -44,7 +44,7 @@ export default function PointOfSales() {
 
   const handleBarcodeScan = (barcode: string) => {
     // Mock Product Lookup
-    const mockProduct = {
+    const mockProduct: any = {
       id: Date.now(),
       sr: cart.length + 1,
       sl: '01',

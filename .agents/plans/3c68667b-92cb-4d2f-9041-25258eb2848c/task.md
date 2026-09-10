@@ -1,0 +1,7 @@
+- [ ] Backup old Next.js sandbox
+- [ ] Initialize Node.js Express backend
+- [ ] Implement `server.js` and `db.js` for Express
+- [ ] Initialize Vite React frontend
+- [ ] Port premium UI to Vite `App.tsx`
+- [ ] Test the integrated build locally
+- [ ] Deploy to live server

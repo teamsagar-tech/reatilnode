@@ -1,24 +1,49 @@
-# UI Modernization & V2 Sync
+# Walkthrough: Global Keyboard Shortcut System
 
-I have completed the fixes to address the layout concerns while strictly preserving the required form keys from `FrontEndV2`.
+I have successfully implemented the architectural foundation for the Tally-style global keyboard shortcut system. The application can now safely handle `Alt`/`Option` shortcuts without triggering unwanted browser defaults.
 
-## Dashboard & Layout
-- **Restored Modern Layout (`DashboardLayout.tsx`)**: Removed the side-bar from the global layout so the dashboard page uses the full width under the horizontal header.
-- **Header (`Header.tsx`)**: The top horizontal navigation (Dashboard, Inventory, Sales, Customers) is active and seamlessly integrates with the layout.
-- **Redesigned Dashboard (`Dashboard.tsx`)**: Removed the legacy "Gateway of RetailNode" Tally UI menu from the main dashboard page. The `/dashboard` route now displays a beautiful, modern glassmorphic overview containing statistics, recent orders, and system activity matching the overall design aesthetic.
+## What Was Completed
 
-## Form Keys Synchronization
-I reviewed the master pages (`ItemMaster`, `BrandMaster`, `CategoryMaster`, `PartyMaster`) and aligned their data structures to perfectly match `FrontEndV2`:
+1. **State Management (`useKeyboardStore`)**:
+   - Created a Zustand store to maintain a registry of active shortcut callbacks.
+   - It supports contextual shortcuts, allowing different screens (like `SalesInvoice` vs `MainMenu`) to define their own handlers for the same keys.
+   - Priority support ensures that modals or overlapping layers can override lower-level shortcuts.
 
-- **Removed Hallucinated Fields**: Safely removed incorrectly hallucinated "Premium" fields (such as `cess`, `minStock`, `maxStock`, `purchaseRate` in `ItemMaster`; `Manufacturer` in `BrandMaster`; `Description` in `CategoryMaster`) that were not present in V2.
-- **Exact Field Matching**:
-  - `ItemMaster` now explicitly requests: Item Name, Marathi Name, Brand ID, HSN/SAC Code, GST %, and Default Unit Type.
-  - `BrandMaster` correctly tracks: Name and Short Name.
-  - `CategoryMaster` accurately retains: Category Name and Department.
-  - `PartyMaster` was confirmed to be a perfect 1:1 match (with all its contact, legal, and bank tabs) and required no changes.
+2. **Core Event Listener (`useGlobalKeyboard`)**:
+   - Created a root-level hook that attaches to the `window` `keydown` event in the capture phase.
+   - **Crucially, it intercepts `e.altKey` and aggressively calls `e.preventDefault()`** for single-character keys, arrows, and delete keys, effectively neutralizing browser menu popups and accidental history navigation.
+   - The existing `Enter-to-Tab` logic was cleanly migrated into this hook as the default fallback behavior when no specific Enter shortcut is registered.
 
-## Verification
-- **Build Status**: Verified that the frontend compiles cleanly (`npm run build` returned code 0 with 0 errors).
-- **Servers Running**: Both servers remain online on ports `8088` (`FrontEnd`) and `8077` (`FrontEndV2`).
+3. **Consumer Hook (`useShortcut`)**:
+   - Provided a simple, declarative hook for components to register their shortcuts:
+     ```tsx
+     useShortcut({
+       keys: 'Alt+S',
+       callback: handleSave,
+       context: 'SalesInvoice'
+     });
+     ```
+   - Automatically handles cleanup (unregistration) when the component unmounts.
 
-Please check `http://localhost:8088/dashboard` and verify if the design and data flow now meet your expectations!
+4. **Integration**:
+   - Integrated the `useGlobalKeyboard` hook into `App.tsx`, replacing the old inline `useEffect` and activating the system application-wide.
+
+## Next Steps for You
+
+You can now start wiring up your forms! For example, inside `BrandMaster.tsx`, you can add:
+
+```tsx
+import { useShortcut } from '../../hooks/useShortcut';
+
+// inside the component:
+useShortcut({
+  keys: 'Alt+S',
+  callback: () => {
+    // trigger form submission logic
+    console.log("Global save triggered!");
+  }
+});
+```
+
+> [!TIP]
+> Remember to utilize the `context` parameter if you only want a shortcut to be active when a specific route or modal is "active". You can set the active context globally via `useKeyboardStore.getState().setActiveContext('...')`.

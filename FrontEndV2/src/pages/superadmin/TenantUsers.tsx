@@ -35,6 +35,7 @@ const AVAILABLE_MODULES = [
           { id: 'subStyle', label: 'Sub-Style' },
           { id: 'designMaster', label: 'Design Master' },
           { id: 'sizeMaster', label: 'Size Master' },
+          { id: 'sizeSetMaster', label: 'Size Sets Master' },
           { id: 'colorMaster', label: 'Color Master' },
           { id: 'material', label: 'Material' },
           { id: 'hsnSac', label: 'HSN/SAC' }

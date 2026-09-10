@@ -17,7 +17,10 @@ const allowedMasters = {
   sections: 'Sections',
   subcategories: 'SubCategories',
   substyles: 'SubStyles',
-  hsnsacs: 'HSNSACs'
+  hsnsacs: 'HSNSACs',
+  sizesets: 'SizeSets',
+  partycategories: 'PartyCategories',
+  partysubcategories: 'PartySubCategories'
 };
 
 const getTableName = (type) => {
@@ -29,11 +32,16 @@ exports.getAll = async (req, res) => {
   const tableName = getTableName(req.params.type);
   if (!tableName) return res.status(400).json({ error: 'Invalid master type' });
 
-  const { search } = req.query;
+  const { search, categoryId } = req.query;
 
   try {
     let query = `SELECT * FROM ${tableName} WHERE firm_id = ?`;
     let params = [req.firm_id];
+
+    if (tableName === 'PartySubCategories' && categoryId) {
+      query += ` AND category_id = ?`;
+      params.push(categoryId);
+    }
 
     if (search) {
       query += ` AND name LIKE ?`;
@@ -72,17 +80,31 @@ exports.create = async (req, res) => {
   const tableName = getTableName(req.params.type);
   if (!tableName) return res.status(400).json({ error: 'Invalid master type' });
 
-  const { name, description, is_active, tax_percent } = req.body;
-  if (!name) return res.status(400).json({ error: 'Name is required' });
+    const { name, description, is_active, tax_percent, size_group, size_scale, sizes_list, category_id } = req.body;
+    console.log("CREATE MASTER REQUEST BODY:", req.body);
+    if (!name) return res.status(400).json({ error: 'Name is required' });
 
-  try {
-    let query = `INSERT INTO ${tableName} (firm_id, name, description, is_active) VALUES (?, ?, ?, ?)`;
-    let params = [req.firm_id, name, description || null, is_active !== undefined ? is_active : true];
+    try {
+      let query = `INSERT INTO ${tableName} (firm_id, name, description, is_active) VALUES (?, ?, ?, ?)`;
+      let params = [req.firm_id, name, description || null, is_active !== undefined ? is_active : true];
 
-    if (tableName === 'HSNSACs' && tax_percent !== undefined) {
-      query = `INSERT INTO ${tableName} (firm_id, name, description, is_active, tax_percent) VALUES (?, ?, ?, ?, ?)`;
-      params.push(tax_percent || 0);
-    }
+      if (tableName === 'PartyCategories') {
+        query = `INSERT INTO ${tableName} (firm_id, name) VALUES (?, ?)`;
+        params = [req.firm_id, name];
+      } else if (tableName === 'PartySubCategories') {
+        if (!category_id) return res.status(400).json({ error: 'Category ID is required for subcategory' });
+        query = `INSERT INTO ${tableName} (firm_id, category_id, name) VALUES (?, ?, ?)`;
+        params = [req.firm_id, category_id, name];
+      } else if (tableName === 'HSNSACs' && tax_percent !== undefined) {
+        query = `INSERT INTO ${tableName} (firm_id, name, description, is_active, tax_percent) VALUES (?, ?, ?, ?, ?)`;
+        params.push(tax_percent || 0);
+      } else if (tableName === 'Sizes' && size_group !== undefined) {
+        query = `INSERT INTO ${tableName} (firm_id, name, description, is_active, size_group) VALUES (?, ?, ?, ?, ?)`;
+        params.push(size_group || null);
+      } else if (tableName === 'SizeSets') {
+        query = `INSERT INTO ${tableName} (firm_id, name, size_scale, sizes_list, is_active) VALUES (?, ?, ?, ?, ?)`;
+        params = [req.firm_id, name, size_scale || null, sizes_list ? JSON.stringify(sizes_list) : null, is_active !== undefined ? is_active : true];
+      }
 
     const [result] = await db.execute(query, params);
     res.status(201).json({ message: 'Created successfully', id: result.insertId });
@@ -96,17 +118,23 @@ exports.update = async (req, res) => {
   const tableName = getTableName(req.params.type);
   if (!tableName) return res.status(400).json({ error: 'Invalid master type' });
 
-  const { name, description, is_active, tax_percent } = req.body;
-  if (!name) return res.status(400).json({ error: 'Name is required' });
+    const { name, description, is_active, tax_percent, size_group, size_scale, sizes_list } = req.body;
+    if (!name) return res.status(400).json({ error: 'Name is required' });
 
-  try {
-    let query = `UPDATE ${tableName} SET name=?, description=?, is_active=? WHERE id=? AND firm_id=?`;
-    let params = [name, description || null, is_active !== undefined ? is_active : true, req.params.id, req.firm_id];
+    try {
+      let query = `UPDATE ${tableName} SET name=?, description=?, is_active=? WHERE id=? AND firm_id=?`;
+      let params = [name, description || null, is_active !== undefined ? is_active : true, req.params.id, req.firm_id];
 
-    if (tableName === 'HSNSACs' && tax_percent !== undefined) {
-      query = `UPDATE ${tableName} SET name=?, description=?, is_active=?, tax_percent=? WHERE id=? AND firm_id=?`;
-      params = [name, description || null, is_active !== undefined ? is_active : true, tax_percent || 0, req.params.id, req.firm_id];
-    }
+      if (tableName === 'HSNSACs' && tax_percent !== undefined) {
+        query = `UPDATE ${tableName} SET name=?, description=?, is_active=?, tax_percent=? WHERE id=? AND firm_id=?`;
+        params = [name, description || null, is_active !== undefined ? is_active : true, tax_percent || 0, req.params.id, req.firm_id];
+      } else if (tableName === 'Sizes' && size_group !== undefined) {
+        query = `UPDATE ${tableName} SET name=?, description=?, is_active=?, size_group=? WHERE id=? AND firm_id=?`;
+        params = [name, description || null, is_active !== undefined ? is_active : true, size_group || null, req.params.id, req.firm_id];
+      } else if (tableName === 'SizeSets') {
+        query = `UPDATE ${tableName} SET name=?, size_scale=?, sizes_list=?, is_active=? WHERE id=? AND firm_id=?`;
+        params = [name, size_scale || null, sizes_list ? JSON.stringify(sizes_list) : null, is_active !== undefined ? is_active : true, req.params.id, req.firm_id];
+      }
 
     const [result] = await db.execute(query, params);
     if (result.affectedRows === 0) return res.status(404).json({ error: 'Record not found' });

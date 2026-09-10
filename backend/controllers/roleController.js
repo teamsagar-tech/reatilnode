@@ -2,8 +2,7 @@ const db = require('../config/db');
 
 exports.getAllRoles = async (req, res) => {
   try {
-    const firmId = req.user.role === 'superadmin' && req.query.firm_id ? req.query.firm_id : req.user.firm_id;
-    const [rows] = await db.execute('SELECT * FROM Roles WHERE firm_id = ? ORDER BY created_at DESC', [firmId]);
+    const [rows] = await db.execute('SELECT * FROM Roles WHERE firm_id = ? ORDER BY created_at DESC', [req.firm_id]);
     res.json(rows);
   } catch (error) {
     console.error('Error fetching roles:', error);
@@ -13,7 +12,7 @@ exports.getAllRoles = async (req, res) => {
 
 exports.createRole = async (req, res) => {
   const { name, permissions } = req.body;
-  const firmId = req.user.role === 'superadmin' && req.body.firm_id ? req.body.firm_id : req.user.firm_id;
+  const firmId = req.firm_id;
 
   try {
     const [result] = await db.execute(
@@ -35,7 +34,7 @@ exports.updateRole = async (req, res) => {
     // Verify ownership
     const [roleRows] = await db.execute('SELECT firm_id FROM Roles WHERE id = ?', [id]);
     if (roleRows.length === 0) return res.status(404).json({ error: 'Role not found' });
-    if (req.user.role !== 'superadmin' && roleRows[0].firm_id !== req.user.firm_id) {
+    if (req.user.role !== 'superadmin' && roleRows[0].firm_id !== req.firm_id) {
       return res.status(403).json({ error: 'Forbidden' });
     }
 

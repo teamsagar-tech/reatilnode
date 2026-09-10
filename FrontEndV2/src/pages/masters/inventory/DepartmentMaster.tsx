@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
+import ConfirmModal from '../../../components/ui/ConfirmModal';
 
 
 const SectionTitle = ({ children }: { children: React.ReactNode }) => (
@@ -27,6 +28,9 @@ const InputRow = ({ id, label, value, onChange, width = 'flex-1', type = 'text',
 
 export default function DepartmentMaster() {
   const navigate = useNavigate();
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteId, setDeleteId] = useState<number | null>(null);
   const [mode, setMode] = useState('list'); // 'list' or 'create'
   const [formData, setFormData] = useState<any>({});
   
@@ -86,8 +90,30 @@ export default function DepartmentMaster() {
     }
   };
 
+  const handleDeleteDepartment = async () => {
+    if (!deleteId) return;
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/generic/departments/${deleteId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      });
+      if (res.ok) {
+        setShowDeleteConfirm(false);
+        setDeleteId(null);
+        fetchDepartments();
+      } else {
+        alert('Failed to delete department');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Error deleting department');
+    }
+  };
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (showResetConfirm || showDeleteConfirm) return;
+
       if (e.key === 'Escape') {
         e.preventDefault();
         if (mode === 'create') {
@@ -110,6 +136,12 @@ export default function DepartmentMaster() {
         } else if (e.key === 'ArrowUp') {
           e.preventDefault();
           setSelectedIndex(prev => Math.max(prev - 1, 0));
+        } else if (e.key === 'F5') {
+          e.preventDefault();
+          if (departments[selectedIndex]) {
+            setDeleteId(departments[selectedIndex].id);
+            setShowDeleteConfirm(true);
+          }
         } else if (e.key === 'Enter') {
           e.preventDefault();
           if (departments[selectedIndex]) {
@@ -126,7 +158,7 @@ export default function DepartmentMaster() {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [navigate, mode, formData, departments, selectedIndex]);
+  }, [navigate, mode, formData, departments, selectedIndex, showResetConfirm, showDeleteConfirm]);
 
   return (
     <>
@@ -202,10 +234,9 @@ export default function DepartmentMaster() {
                   {/* Action Buttons */}
                   <div className='flex justify-end gap-2 pt-2 border-t border-slate-300 mt-2 shrink-0'>
                     <button 
-                      onClick={() => {
-                        setFormData({});
-                        setEditId(null);
-                      }}
+                      type="button"
+                      onClick={() => setShowResetConfirm(true)} 
+                      tabIndex={-1}
                       className='bg-red-50 border border-red-300 px-6 py-1 text-red-700 font-bold hover:bg-red-100 shadow-[inset_1px_1px_0_rgba(255,255,255,0.8)] outline-none focus:bg-red-200'
                     >
                       Reset
@@ -265,7 +296,24 @@ export default function DepartmentMaster() {
         <div className='bg-[#1b5e58] text-white text-[11px] px-4 py-1 flex justify-between items-center border-t-2 border-[#12423d]'>
           <div className='font-medium tracking-wide'>Department Master</div>
         </div>
-      </div>
+        <ConfirmModal 
+          isOpen={showResetConfirm}
+          message="Are you sure you want to reset the form?"
+          onConfirm={() => {
+            setFormData({});
+            setEditId(null);
+            setShowResetConfirm(false);
+          }}
+          onCancel={() => setShowResetConfirm(false)}
+        />
+        
+        <ConfirmModal 
+          isOpen={showDeleteConfirm}
+          message="Are you sure you want to delete this department?"
+          onConfirm={handleDeleteDepartment}
+          onCancel={() => setShowDeleteConfirm(false)}
+        />
+        </div>
     </>
   );
 }

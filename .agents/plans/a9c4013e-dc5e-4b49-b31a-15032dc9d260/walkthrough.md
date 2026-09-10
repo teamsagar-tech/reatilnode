@@ -1,32 +1,59 @@
-# Phase 2: Transaction Voucher Standardization
+# Walkthrough: Employee ID and User Series Management
 
-I have completed the comprehensive audit and standardized the remaining transaction/voucher pages across the application to perfectly align with the `SKILL.md` rules.
+I have fully implemented the Employee ID feature and User Series management across the application, allowing firms to manage employee numbers and automatically search users by their assigned ID.
 
-## Standardized Components
-I refactored the following components:
-1. `FrontEndV2/src/pages/sales/POSPage.tsx`
-2. `FrontEndV2/src/pages/sales/Returns/SalesReturn.tsx`
-3. `FrontEndV2/src/pages/purchase/Returns/PurchaseReturn.tsx`
+## 1. Database Schema
+- Added `employee_id` to the `Users` table (Local & Production).
+- Created the `UserSeries` table to manage reserved series ranges for different groups (e.g. Admins, First Floor).
 
-## Applied Structural Changes
-For each of the components listed above, I strictly applied the Tally-style voucher architecture:
+## 2. User Master Page
+- Created the **User Master** page at `Settings > Users`.
+- The page follows the standard Tally-style layout with a list view and creation forms.
+- **Features included:**
+  - View a list of all existing users and their assigned Employee IDs.
+  - View a list of Employee ID Series and their reserved ranges (e.g., 1-100, 101-200).
+  - Create new Users with a specific Employee ID.
+  - Create new ID Series with a name, start number, and end number.
 
-### 1. The `35/65` Split Header
-I converted the old single-row header (`flex gap-12`) into two distinct panels:
-- **Left Panel (35% width):** Houses the secondary/meta inputs (e.g. Payments, Coupons, Customer).
-- **Right Panel (65% width):** Houses the primary operational inputs (e.g. The Barcode Scanner).
+## 3. Order By Auto-Selection
+- Modified the **SearchableDropdown** component to support a new `searchKeys` property, allowing filtering by multiple fields.
+- Applied `searchKeys={['name', 'employee_id']}` to the **Order By** dropdown in the Purchase Invoice page.
+- Now, when a user types "7" in the dropdown, the system will filter for the employee who has ID "7" and automatically select them when the user hits Enter.
+- Enhanced the UI of the dropdown to visually display the Employee ID alongside the employee's name for clarity.
 
-### 2. The `60/40` Split Footer
-I replaced the single-bar summary footer with the Two-Part layout:
-- **Left Panel (60% width):** Now houses a dedicated "Narration" text area. *Note: As agreed, I moved the "Remark" input from the top header down into this Narration box for both Sales and Purchase Returns.*
-- **Right Panel (40% width):** Houses the stacked, detailed Totals and Summary calculations.
+## 4. Backend & Deployment
+- Created all the necessary backend routes (`POST /api/users`, `GET /api/user-series`, etc.) for managing Users and Series.
+- Deployed the frontend and backend updates to the production server (162.19.81.108) and restarted the application.
 
-### 3. Absolute Bottom Status Bar
-I updated the absolute bottom `div` outside of the main layout container to perfectly match the global standard. It now dynamically displays:
-- Active keyboard shortcuts (e.g. `^S : Save`, `Q : Quit`).
-- The current Version (`Version 2.0`).
-- The dynamically injected Tenant Firm (`localStorage.getItem('firm_name')`).
-- The dynamically injected Location (`localStorage.getItem('location_name')`).
+### Next Steps
+You can navigate to **Settings > Users** in the application to start creating Employee ID Series and assigning them to new users. Open **Purchase Invoice** and test searching the *Order By* field by inputting the assigned ID!
+
+
+# User Location Mapping Walkthrough
+
+The User Location Mapping feature is now live on the server. You can assign specific locations to non-admin users. 
+
+## What was implemented
+
+### 1. Database Mapping Table
+Created a new `UserLocations` mapping table in the production database that correctly binds users to their assigned locations. 
+
+### 2. Role Selection
+Added a **Role** dropdown to the `UserMaster` UI:
+- **Standard User**: Can be assigned to specific locations. 
+- **Administrator**: Inherently has access to all locations.
+
+### 3. Location Multi-Select UI
+- If the `Role` is set to **Standard User**, an "Assigned Locations" multi-select box appears below the Employee ID field.
+- It dynamically fetches all the active locations for your firm.
+- You can select as many locations as necessary (e.g., if a manager oversees multiple stores, they can have 3 locations selected).
+- If the user is upgraded to an **Administrator**, their location restrictions are automatically wiped from the database.
 
 > [!TIP]
-> The entire application's transaction layer is now completely unified. You can jump between Purchase Invoices, Purchase Orders, POS, and Returns, and experience the exact same visual hierarchy and structural logic!
+> The backend handles the arrays perfectly. If you un-check a location and hit Save, it deletes it from the `UserLocations` mapping table. If you check a new one, it inserts it!
+
+## Verification
+- Deployed the backend changes (`userController.js`).
+- Created the mapping table using direct MySQL SSH execution.
+- Deployed the frontend changes (`UserMaster.tsx`).
+- Tested the role and location visibility logic. 

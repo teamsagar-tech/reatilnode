@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
+import ConfirmModal from '../../../components/ui/ConfirmModal';
 
 const SectionTitle = ({ children }: { children: React.ReactNode }) => (
   <div className="font-bold text-[#1b5e58] text-[12px] border-b border-[#a3c3be] mb-2 mt-2 pb-1 uppercase tracking-wider bg-[#eef5ed] px-1">
@@ -26,6 +27,9 @@ const InputRow = ({ id, label, value, onChange, width = 'flex-1', type = 'text',
 
 export default function MaterialMaster() {
   const navigate = useNavigate();
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteId, setDeleteId] = useState<number | null>(null);
   const [mode, setMode] = useState('list'); // 'list' or 'create'
   const [formData, setFormData] = useState<any>({});
   
@@ -85,8 +89,30 @@ export default function MaterialMaster() {
     }
   };
 
+  const handleDeleteMaterial = async () => {
+    if (!deleteId) return;
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/generic/materials/${deleteId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      });
+      if (res.ok) {
+        setShowDeleteConfirm(false);
+        setDeleteId(null);
+        fetchMaterials();
+      } else {
+        alert('Failed to delete material');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Error deleting material');
+    }
+  };
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (showResetConfirm || showDeleteConfirm) return;
+
       if (e.key === 'Escape') {
         e.preventDefault();
         if (mode === 'create') {
@@ -109,6 +135,12 @@ export default function MaterialMaster() {
         } else if (e.key === 'ArrowUp') {
           e.preventDefault();
           setSelectedIndex(prev => Math.max(prev - 1, 0));
+        } else if (e.key === 'F5') {
+          e.preventDefault();
+          if (materials[selectedIndex]) {
+            setDeleteId(materials[selectedIndex].id);
+            setShowDeleteConfirm(true);
+          }
         } else if (e.key === 'Enter') {
           e.preventDefault();
           if (materials[selectedIndex]) {
@@ -125,7 +157,7 @@ export default function MaterialMaster() {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [navigate, mode, formData, materials, selectedIndex]);
+  }, [navigate, mode, formData, materials, selectedIndex, showResetConfirm, showDeleteConfirm]);
 
   return (
     <>
@@ -201,10 +233,9 @@ export default function MaterialMaster() {
                   {/* Action Buttons */}
                   <div className='flex justify-end gap-2 pt-2 border-t border-slate-300 mt-2 shrink-0'>
                     <button 
-                      onClick={() => {
-                        setFormData({});
-                        setEditId(null);
-                      }}
+                      type="button"
+                      onClick={() => setShowResetConfirm(true)} 
+                      tabIndex={-1}
                       className='bg-red-50 border border-red-300 px-6 py-1 text-red-700 font-bold hover:bg-red-100 shadow-[inset_1px_1px_0_rgba(255,255,255,0.8)] outline-none focus:bg-red-200'
                     >
                       Reset
@@ -264,7 +295,24 @@ export default function MaterialMaster() {
         <div className='bg-[#1b5e58] text-white text-[11px] px-4 py-1 flex justify-between items-center border-t-2 border-[#12423d]'>
           <div className='font-medium tracking-wide'>Material Master</div>
         </div>
-      </div>
+        <ConfirmModal 
+          isOpen={showResetConfirm}
+          message="Are you sure you want to reset the form?"
+          onConfirm={() => {
+            setFormData({});
+            setEditId(null);
+            setShowResetConfirm(false);
+          }}
+          onCancel={() => setShowResetConfirm(false)}
+        />
+        
+        <ConfirmModal 
+          isOpen={showDeleteConfirm}
+          message="Are you sure you want to delete this material?"
+          onConfirm={handleDeleteMaterial}
+          onCancel={() => setShowDeleteConfirm(false)}
+        />
+        </div>
     </>
   );
 }

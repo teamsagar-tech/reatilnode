@@ -2,7 +2,12 @@ const db = require('../config/db');
 
 exports.getAll = async (req, res) => {
   try {
-    const [rows] = await db.execute('SELECT * FROM Categories WHERE firm_id = ?', [req.firm_id]);
+    const [rows] = await db.execute(`
+      SELECT c.*, d.name as department_name 
+      FROM Categories c 
+      LEFT JOIN Departments d ON c.department_id = d.id 
+      WHERE c.firm_id = ?
+    `, [req.firm_id]);
     res.json(rows);
   } catch (error) {
     console.error('Error fetching categories:', error);
@@ -22,13 +27,13 @@ exports.getById = async (req, res) => {
 };
 
 exports.create = async (req, res) => {
-  const { name, parent_id, description, hsn_code, tax_percent } = req.body;
+  const { name, parent_id, description, hsn_code, tax_percent, department_id } = req.body;
   if (!name) return res.status(400).json({ error: 'Name is required' });
 
   try {
     const [result] = await db.execute(
-      'INSERT INTO Categories (firm_id, name, parent_id, description, hsn_code, tax_percent) VALUES (?, ?, ?, ?, ?, ?)',
-      [req.firm_id, name, parent_id || null, description || null, hsn_code || null, tax_percent || null]
+      'INSERT INTO Categories (firm_id, name, parent_id, description, hsn_code, tax_percent, department_id) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [req.firm_id, name, parent_id || null, description || null, hsn_code || null, tax_percent || null, department_id || null]
     );
     res.status(201).json({ message: 'Category created successfully', id: result.insertId });
   } catch (error) {
@@ -38,11 +43,11 @@ exports.create = async (req, res) => {
 };
 
 exports.update = async (req, res) => {
-  const { name, parent_id, description, hsn_code, tax_percent } = req.body;
+  const { name, parent_id, description, hsn_code, tax_percent, department_id } = req.body;
   try {
     const [result] = await db.execute(
-      'UPDATE Categories SET name=?, parent_id=?, description=?, hsn_code=?, tax_percent=? WHERE id=? AND firm_id=?',
-      [name, parent_id || null, description || null, hsn_code || null, tax_percent || null, req.params.id, req.firm_id]
+      'UPDATE Categories SET name=?, parent_id=?, description=?, hsn_code=?, tax_percent=?, department_id=? WHERE id=? AND firm_id=?',
+      [name, parent_id || null, description || null, hsn_code || null, tax_percent || null, department_id || null, req.params.id, req.firm_id]
     );
     if (result.affectedRows === 0) return res.status(404).json({ error: 'Category not found' });
     res.json({ message: 'Category updated successfully' });

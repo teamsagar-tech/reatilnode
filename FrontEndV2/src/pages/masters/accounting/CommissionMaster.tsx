@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
+import ConfirmModal from '../../../components/ui/ConfirmModal';
 
 export default function CommissionMaster() {
   const navigate = useNavigate();
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [mode, setMode] = useState('list'); // 'list' or 'create'
   const [formData, setFormData] = useState({});
 
@@ -130,7 +132,9 @@ export default function CommissionMaster() {
                   {/* Action Buttons */}
                   <div className='flex justify-end gap-2 pt-2 border-t border-slate-300 mt-2 shrink-0'>
                     <button 
-                      onClick={() => setFormData({})}
+                      type="button"
+                      onClick={() => setShowResetConfirm(true)} 
+                      tabIndex={-1}
                       className='bg-red-50 border border-red-300 px-6 py-1 text-red-700 font-bold hover:bg-red-100 shadow-[inset_1px_1px_0_rgba(255,255,255,0.8)] outline-none focus:bg-red-200'
                     >
                       Reset
@@ -193,7 +197,20 @@ export default function CommissionMaster() {
         <div className='bg-[#1b5e58] text-white text-[11px] px-4 py-1 flex justify-between items-center border-t-2 border-[#12423d]'>
           <div className='font-medium tracking-wide'>CommissionMaster Master</div>
         </div>
-      </div>
+      
+        <ConfirmModal
+          isOpen={showResetConfirm}
+          title="Reset Form?"
+          message="Are you sure you want to clear all data? This cannot be undone."
+          type="warning"
+          onConfirm={() => {
+            const resetFn = () => setFormData({});
+            resetFn();
+            setShowResetConfirm(false);
+          }}
+          onCancel={() => setShowResetConfirm(false)}
+        />
+        </div>
     </>
   );
 }

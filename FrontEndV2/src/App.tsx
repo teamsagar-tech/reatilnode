@@ -1,3 +1,5 @@
+import { useEffect } from 'react';
+import { useGlobalKeyboard } from './hooks/useGlobalKeyboard';
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom"
 import { HelmetProvider } from 'react-helmet-async'
 import Login from "./pages/Login"
@@ -56,6 +58,8 @@ import BulkLabelPrint from "./pages/inventory/BulkLabelPrintPage";
 import BarcodedProducts from "./pages/inventory/Barcodes/BarcodedProducts";
 import BarcodesSearch from "./pages/inventory/Barcodes/BarcodesSearch";
 import AttendanceEntry from "./pages/hr/Attendance/AttendanceEntry";
+import TicketDashboard from "./pages/support/TicketDashboard";
+import TicketDetail from "./pages/support/TicketDetail";
 import ShiftMaster from "./pages/hr/Attendance/ShiftMaster";
 import UserShifts from "./pages/hr/Attendance/UserShifts";
 import SalaryManagement from "./pages/hr/Payroll/SalaryManagement";
@@ -92,6 +96,7 @@ import StyleMaster from "./pages/masters/inventory/StyleMaster"
 import SubStyleMaster from "./pages/masters/inventory/SubStyleMaster"
 import DesignMaster from "./pages/masters/inventory/DesignMaster"
 import SizeMaster from "./pages/masters/inventory/SizeMaster"
+import SizeSetMaster from "./pages/masters/inventory/SizeSetMaster"
 import ColorMaster from "./pages/masters/inventory/ColorMaster"
 import MaterialMaster from "./pages/masters/inventory/MaterialMaster"
 import HSNSACMaster from "./pages/masters/inventory/HSNSACMaster"
@@ -106,16 +111,18 @@ import ChargesTypeMaster from "./pages/masters/config/ChargesTypeMaster"
 import ItemPercentageMaster from "./pages/masters/config/ItemPercentageMaster"
 
 import LRList from "./pages/purchase/LRList"
+import LRList2 from "./pages/purchase/LRList2"
 import ManageReceivable from "./pages/inventory/ManageReceivable"
-import TicketDashboard from "./pages/support/TicketDashboard"
-import TicketDetail from "./pages/support/TicketDetail"
-
 import ProtectedRoute from "./components/auth/ProtectedRoute";
+import ToastContainer from "./components/ui/ToastContainer";
 
 function App() {
+  useGlobalKeyboard();
+
   return (
     <HelmetProvider>
       <Router>
+        <ToastContainer />
         <Routes>
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/login" element={<Login />} />
@@ -131,6 +138,7 @@ function App() {
 
           <Route path="/purchase-invoice" element={<PurchaseInvoice />} />
           <Route path="/lrs" element={<LRList />} />
+          <Route path="/lrs2" element={<LRList2 />} />
           <Route path="/manage-receivable" element={<ManageReceivable />} />
 
           <Route
@@ -222,6 +230,7 @@ function App() {
             <Route path="tickets/:id" element={<TicketDetail />} />
           </Route>
           <Route path="/masters/size" element={<SizeMaster />} />
+          <Route path="/masters/sizeset" element={<SizeSetMaster />} />
           <Route path="/masters/color" element={<ColorMaster />} />
           <Route path="/masters/material" element={<MaterialMaster />} />
           <Route path="/masters/hsnsac" element={<HSNSACMaster />} />

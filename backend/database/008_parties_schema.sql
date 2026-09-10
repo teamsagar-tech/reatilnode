@@ -17,13 +17,8 @@ CREATE TABLE IF NOT EXISTS `Parties` (
   `taluka` VARCHAR(100) NULL,
   `district` VARCHAR(100) NULL,
   
-  `contact_person` VARCHAR(100) NULL,
   `email` VARCHAR(255) NULL,
-  `mobile_number1` VARCHAR(20) NULL,
-  `mobile_number2` VARCHAR(20) NULL,
-  `mobile_number3` VARCHAR(20) NULL,
-  `contact_number2` VARCHAR(20) NULL,
-  `contact_number3` VARCHAR(20) NULL,
+  `dynamic_contacts` JSON NULL,
   
   `account_name` VARCHAR(255) NULL,
   `bank_name` VARCHAR(255) NULL,
@@ -31,6 +26,7 @@ CREATE TABLE IF NOT EXISTS `Parties` (
   `ifsc` VARCHAR(20) NULL,
   `branch` VARCHAR(100) NULL,
   `bank_account_type` VARCHAR(50) NULL,
+  `brand_type` ENUM('Single', 'Multi') DEFAULT 'Multi',
   
   `opening_balance` DECIMAL(15, 2) DEFAULT 0.00,
   `is_active` BOOLEAN DEFAULT TRUE,

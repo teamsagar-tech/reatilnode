@@ -14,6 +14,7 @@ router.use(tenantMiddleware);
 
 router.get('/', requirePermission('purchaseInvoice', 'view'), purchaseInvoiceController.getAll);
 router.post('/check-bulk', requirePermission('purchaseInvoice', 'view'), purchaseInvoiceController.checkBulk);
+router.get('/check-lr', requirePermission('purchaseInvoice', 'view'), purchaseInvoiceController.checkLR);
 router.get('/:id', requirePermission('purchaseInvoice', 'view'), purchaseInvoiceController.getById);
 router.post('/', requirePermission('purchaseInvoice', 'create'), purchaseInvoiceController.create);
 router.put('/:id', requirePermission('purchaseInvoice', 'edit'), purchaseInvoiceController.update);

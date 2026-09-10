@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-
-
+import ConfirmModal from '../../../components/ui/ConfirmModal';
+import SearchableDropdown from '../../../components/SearchableDropdown';
 const SectionTitle = ({ children }: { children: React.ReactNode }) => (
     <div className="font-bold text-[#1b5e58] text-[12px] border-b border-[#a3c3be] mb-2 mt-2 pb-1 uppercase tracking-wider bg-[#eef5ed] px-1">
       {children}
@@ -25,27 +25,13 @@ const InputRow = ({ id, label, value, onChange, width = 'flex-1', type = 'text',
     </div>
   );
 
-const SelectRow = ({ id, label, value, onChange, options, width = 'flex-1' }: any) => (
-    <div className="flex items-center mb-[2px]">
-      <div className="w-[110px] text-slate-800 font-bold text-[11px] text-right pr-2 leading-tight">
-        {label}
-      </div>
-      <select 
-        id={id}
-        className={`bg-white border border-slate-400 px-1 py-[2px] text-[12px] font-bold text-black focus:bg-[#ffffe0] focus:outline-none focus:border-slate-800 ${width}`}
-        value={value || ''}
-        onChange={e => onChange(e.target.value)}
-      >
-        <option value="">Select Parent Category</option>
-        {options.map((opt: any) => (
-          <option key={opt.id} value={opt.id}>{opt.name}</option>
-        ))}
-      </select>
-    </div>
-  );
+
 
 export default function SubCategoryMaster() {
   const navigate = useNavigate();
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteId, setDeleteId] = useState<number | null>(null);
   const [mode, setMode] = useState('list'); // 'list' or 'create'
   const [formData, setFormData] = useState<any>({});
   
@@ -69,7 +55,7 @@ export default function SubCategoryMaster() {
   useEffect(() => {
     if (mode === 'create') {
       setTimeout(() => {
-        document.getElementById('input-name')?.focus();
+        document.getElementById('input-parent')?.focus();
       }, 50);
     }
   }, [mode]);
@@ -112,8 +98,30 @@ export default function SubCategoryMaster() {
     }
   };
 
+  const handleDeleteSubCategory = async () => {
+    if (!deleteId) return;
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/category/${deleteId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      });
+      if (res.ok) {
+        setShowDeleteConfirm(false);
+        setDeleteId(null);
+        fetchCategories();
+      } else {
+        alert('Failed to delete sub category');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Error deleting sub category');
+    }
+  };
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (showResetConfirm || showDeleteConfirm) return;
+
       if (e.key === 'Escape') {
         e.preventDefault();
         if (mode === 'create') {
@@ -136,6 +144,12 @@ export default function SubCategoryMaster() {
         } else if (e.key === 'ArrowUp') {
           e.preventDefault();
           setSelectedIndex(prev => Math.max(prev - 1, 0));
+        } else if (e.key === 'F5') {
+          e.preventDefault();
+          if (subCategories[selectedIndex]) {
+            setDeleteId(subCategories[selectedIndex].id);
+            setShowDeleteConfirm(true);
+          }
         } else if (e.key === 'Enter') {
           e.preventDefault();
           if (subCategories[selectedIndex]) {
@@ -153,7 +167,7 @@ export default function SubCategoryMaster() {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [navigate, mode, formData, subCategories, selectedIndex]);
+  }, [navigate, mode, formData, subCategories, selectedIndex, showResetConfirm, showDeleteConfirm]);
   return (
     <>
       <Helmet>
@@ -221,9 +235,66 @@ export default function SubCategoryMaster() {
                     {/* Column 1: Master Details */}
                     <div className="w-[40%] flex flex-col gap-1 border-r-2 border-slate-300 pr-4 overflow-y-auto pb-4 custom-scrollbar">
                       <SectionTitle>Master Information</SectionTitle>
+                      
+                      <div className="flex items-center mb-[2px]">
+                        <div className="w-[110px] text-slate-800 font-bold text-[11px] text-right pr-2 leading-tight">
+                          Parent Category
+                        </div>
+                        <div className="flex-1 relative">
+                          <SearchableDropdown
+                            id="input-parent"
+                            value={parentCategories.find(p => p.id === formData.parent_id)?.name || ''}
+                            onChange={(val: string) => {
+                              const found = parentCategories.find(p => p.name === val);
+                              if (found) {
+                                setFormData({...formData, parent_id: found.id});
+                              }
+                            }}
+                            onSelect={(opt: any) => {
+                              setTimeout(() => document.getElementById('input-name')?.focus(), 10);
+                            }}
+                            options={parentCategories}
+                            displayKey="name"
+                            className="bg-white border border-slate-400 px-1 py-[2px] text-[12px] font-bold text-black focus:bg-[#ffffe0] focus:outline-none focus:border-slate-800 w-full"
+                          />
+                        </div>
+                      </div>
+
                       <InputRow id="input-name" label="Sub Category Name" value={formData.name} onChange={(v: string) => setFormData({...formData, name: v})} />
-                      <SelectRow label="Parent Category" value={formData.parent_id} onChange={(v: string) => setFormData({...formData, parent_id: v})} options={parentCategories} />
                       <InputRow label="Description" value={formData.description} onChange={(v: string) => setFormData({...formData, description: v})} />
+                    </div>
+
+                    {/* Column 2: Existing SubCategories in selected Parent */}
+                    <div className="flex-[1.5] flex flex-col gap-1 overflow-y-auto pb-4 custom-scrollbar">
+                      {formData.parent_id && (
+                        <>
+                          <SectionTitle>SubCategories in {parentCategories.find(p => p.id === formData.parent_id)?.name || 'Selected Category'}</SectionTitle>
+                          <div className="bg-white border border-slate-300 shadow-sm overflow-hidden flex-1">
+                            <table className='w-full text-left border-collapse'>
+                              <thead className='bg-[#eef5ed] sticky top-0 shadow-sm'>
+                                <tr className='border-b-2 border-slate-400 text-slate-900 font-bold text-[11px]'>
+                                  <th className="px-2 py-1 border-r border-slate-300">Sub Category Name</th>
+                                  <th className="px-2 py-1">Description</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {subCategories.filter((c: any) => c.parent_id === formData.parent_id).length > 0 ? (
+                                  subCategories.filter((c: any) => c.parent_id === formData.parent_id).map((c: any) => (
+                                    <tr key={c.id} className="text-[11px] border-b border-slate-200 hover:bg-[#ffffe0]">
+                                      <td className="px-2 py-[2px] border-r border-slate-300 font-medium text-slate-700">{c.name}</td>
+                                      <td className="px-2 py-[2px] font-medium text-slate-700">{c.description || '-'}</td>
+                                    </tr>
+                                  ))
+                                ) : (
+                                  <tr>
+                                    <td colSpan={2} className="px-2 py-4 text-center text-slate-500 italic text-[11px]">No sub categories found in this category.</td>
+                                  </tr>
+                                )}
+                              </tbody>
+                            </table>
+                          </div>
+                        </>
+                      )}
                     </div>
 
                   </div>
@@ -231,10 +302,9 @@ export default function SubCategoryMaster() {
                   {/* Action Buttons */}
                   <div className='flex justify-end gap-2 pt-2 border-t border-slate-300 mt-2 shrink-0'>
                     <button 
-                      onClick={() => {
-                        setFormData({});
-                        setEditId(null);
-                      }}
+                      type="button"
+                      onClick={() => setShowResetConfirm(true)} 
+                      tabIndex={-1}
                       className='bg-red-50 border border-red-300 px-6 py-1 text-red-700 font-bold hover:bg-red-100 shadow-[inset_1px_1px_0_rgba(255,255,255,0.8)] outline-none focus:bg-red-200'
                     >
                       Reset
@@ -294,7 +364,25 @@ export default function SubCategoryMaster() {
         <div className='bg-[#1b5e58] text-white text-[11px] px-4 py-1 flex justify-between items-center border-t-2 border-[#12423d]'>
           <div className='font-medium tracking-wide'>SubCategory Master</div>
         </div>
-      </div>
+      
+        <ConfirmModal 
+          isOpen={showResetConfirm}
+          message="Are you sure you want to reset the form?"
+          onConfirm={() => {
+            setFormData({});
+            setEditId(null);
+            setShowResetConfirm(false);
+          }}
+          onCancel={() => setShowResetConfirm(false)}
+        />
+        
+        <ConfirmModal 
+          isOpen={showDeleteConfirm}
+          message="Are you sure you want to delete this sub category?"
+          onConfirm={handleDeleteSubCategory}
+          onCancel={() => setShowDeleteConfirm(false)}
+        />
+        </div>
     </>
   );
 }

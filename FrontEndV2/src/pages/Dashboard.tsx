@@ -41,6 +41,7 @@ export default function Dashboard() {
                   { title: "Style", hotkey: "T", to: "/masters/style" },
                   { title: "Sub Style", hotkey: "Y", to: "/masters/substyle" },
                   { title: "Size", hotkey: "Z", to: "/masters/size" },
+                  { title: "Size Sets", hotkey: "T", to: "/masters/sizeset" },
                   { title: "Color", hotkey: "O", to: "/masters/color" },
                   { title: "Material", hotkey: "M", to: "/masters/material" }
                 ]
@@ -68,7 +69,8 @@ export default function Dashboard() {
                 title: "Company Masters",
                 items: [
                   { title: "Location", hotkey: "L", to: "/masters/location" },
-                  { title: "Firm", hotkey: "F", to: "/masters/firm" }
+                  { title: "Firm", hotkey: "F", to: "/masters/firm" },
+                  { title: "User Master", hotkey: "U", to: "/settings/users/user-master" }
                 ]
               }
             }

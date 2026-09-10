@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
+import ConfirmModal from '../../../components/ui/ConfirmModal';
 
 
 const SectionTitle = ({ children }: { children: React.ReactNode }) => (
@@ -27,9 +28,11 @@ const InputRow = ({ id, label, value, onChange, width = 'flex-1', type = 'text',
 
 export default function BrandMaster() {
   const navigate = useNavigate();
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [mode, setMode] = useState('list'); // 'list' or 'create'
   const [formData, setFormData] = useState<any>({});
   const [brands, setBrands] = useState<any[]>([]);
+  const [parties, setParties] = useState<any[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [editId, setEditId] = useState<number | null>(null);
 
@@ -42,8 +45,18 @@ export default function BrandMaster() {
     .catch(console.error);
   };
 
+  const fetchParties = () => {
+    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/party`, {
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    })
+    .then(res => res.json())
+    .then(data => setParties(Array.isArray(data) ? data : (data.data || [])))
+    .catch(console.error);
+  };
+
   useEffect(() => {
     fetchBrands();
+    fetchParties();
   }, []);
 
   const handleSaveBrand = async () => {
@@ -180,7 +193,7 @@ export default function BrandMaster() {
                   <table className='w-full text-left border-collapse border border-slate-400'>
                     <thead className='bg-[#eef5ed]'>
                       <tr className='border-b-2 border-slate-400 text-slate-900 font-bold text-[12px]'>
-                        <th className="px-2 py-1 border-r border-slate-300">ID</th><th className="px-2 py-1 border-r border-slate-300">Brand Name</th><th className="px-2 py-1 border-r border-slate-300">Active</th>
+                        <th className="px-2 py-1 border-r border-slate-300">ID</th><th className="px-2 py-1 border-r border-slate-300">Brand Name</th><th className="px-2 py-1 border-r border-slate-300">Connected Parties</th><th className="px-2 py-1 border-r border-slate-300">Active</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -201,6 +214,17 @@ export default function BrandMaster() {
                           >
                             <td className="px-2 py-1 border-r border-slate-300 font-medium text-slate-700">{row.id}</td>
                             <td className="px-2 py-1 border-r border-slate-300 font-medium text-slate-700">{row.name}</td>
+                            <td className="px-2 py-1 border-r border-slate-300 font-medium text-slate-700 text-[10px]">
+                              {(() => {
+                                const connected = parties.filter(p => {
+                                  try {
+                                    const bList = typeof p.brands === 'string' ? JSON.parse(p.brands) : (p.brands || []);
+                                    return bList.some((b: any) => (b.name || '').toLowerCase() === (row.name || '').toLowerCase());
+                                  } catch (e) { return false; }
+                                });
+                                return connected.length > 0 ? connected.map(p => p.party_name || p.name).join(', ') : '-';
+                              })()}
+                            </td>
                             <td className="px-2 py-1 border-r border-slate-300 font-medium text-slate-700">Active</td>
                           </tr>
                         );
@@ -224,10 +248,9 @@ export default function BrandMaster() {
                   {/* Action Buttons */}
                   <div className='flex justify-end gap-2 pt-2 border-t border-slate-300 mt-2 shrink-0'>
                     <button 
-                      onClick={() => {
-                        setFormData({});
-                        setEditId(null);
-                      }}
+                      type="button"
+                      onClick={() => setShowResetConfirm(true)} 
+                      tabIndex={-1}
                       className='bg-red-50 border border-red-300 px-6 py-1 text-red-700 font-bold hover:bg-red-100 shadow-[inset_1px_1px_0_rgba(255,255,255,0.8)] outline-none focus:bg-red-200'
                     >
                       Reset
@@ -287,7 +310,23 @@ export default function BrandMaster() {
         <div className='bg-[#1b5e58] text-white text-[11px] px-4 py-1 flex justify-between items-center border-t-2 border-[#12423d]'>
           <div className='font-medium tracking-wide'>Brand Master</div>
         </div>
-      </div>
+      
+        <ConfirmModal
+          isOpen={showResetConfirm}
+          title="Reset Form?"
+          message="Are you sure you want to clear all data? This cannot be undone."
+          type="warning"
+          onConfirm={() => {
+            const resetFn = () => {
+                        setFormData({});
+                        setEditId(null);
+                      };
+            resetFn();
+            setShowResetConfirm(false);
+          }}
+          onCancel={() => setShowResetConfirm(false)}
+        />
+        </div>
     </>
   );
 }

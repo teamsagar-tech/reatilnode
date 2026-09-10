@@ -11,6 +11,7 @@ export interface SearchableDropdownProps {
   className?: string;
   autoFocus?: boolean;
   displayKey?: string;
+  searchKeys?: string[];
   renderOption?: (option: any, isSelected: boolean) => React.ReactNode;
   onSelect?: (option: any) => void;
   width?: string;
@@ -19,15 +20,20 @@ export interface SearchableDropdownProps {
 
 export default function SearchableDropdown({
   id, value, onChange, onKeyDown, options, placeholder, className, autoFocus,
-  displayKey = 'name', renderOption, onSelect, width = '350px', onNotFound
+  displayKey = 'name', searchKeys, renderOption, onSelect, width = '350px', onNotFound
 }: SearchableDropdownProps) {
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
   const filtered = options.filter(o => {
+    if (!o) return false;
+    const searchVal = (value || '').toLowerCase();
+    if (searchKeys && typeof o !== 'string') {
+      return searchKeys.some(key => (o[key] || '').toString().toLowerCase().includes(searchVal));
+    }
     const str = typeof o === 'string' ? o : o[displayKey];
-    return (str || '').toLowerCase().includes((value || '').toLowerCase());
+    return (str || '').toLowerCase().includes(searchVal);
   });
 
   useEffect(() => {

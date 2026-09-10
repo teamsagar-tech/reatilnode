@@ -1,0 +1,14 @@
+- [x] **1. Database Changes (Local & Remote)**
+  - [x] Add `employee_id` to `Users` table
+  - [x] Create `UserSeries` table
+- [x] **2. Backend API Updates**
+  - [x] Update `/api/users/purchasers` to return `employee_id`
+  - [x] Create `userSeriesController.js` and `userSeriesRoutes.js` for CRUD on `UserSeries`
+  - [x] Update `userController.js` to handle `employee_id` (create/update user)
+- [x] **3. Frontend UI Updates**
+  - [x] Implement `UserMaster.tsx` (Settings > Users) to manage users and their `employee_id`
+  - [x] Implement UI for `UserSeries` inside `UserMaster.tsx` or a separate master.
+  - [x] Modify `SearchableDropdown` in `PurchaseInvoice.tsx` to search by `employee_id`
+- [x] **4. Deployment & Verification**
+  - [x] Test the flow end-to-end locally.
+  - [x] Deploy backend and frontend changes to production (162.19.81.108).

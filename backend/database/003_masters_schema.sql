@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS `Brands` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `firm_id` INT NOT NULL,
   `name` VARCHAR(100) NOT NULL,
+  `type` VARCHAR(50) DEFAULT 'Single Brand',
   `description` TEXT NULL,
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),

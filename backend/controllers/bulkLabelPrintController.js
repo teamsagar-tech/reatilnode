@@ -1,4 +1,4 @@
-const { pool } = require('../config/db');
+const db = require('../config/db');
 
 exports.getInvoicesForBulk = async (req, res) => {
   try {
@@ -6,15 +6,15 @@ exports.getInvoicesForBulk = async (req, res) => {
     const effectiveFirmId = req.firm_id;
 
     let query = `
-      SELECT i.id, i.bill_no, i.bill_date, i.grn, p.party_name 
+      SELECT i.id, i.bill_no, i.bill_date, i.grn_no as grn, v.name as party_name 
       FROM PurchaseInvoices i
-      LEFT JOIN Parties p ON i.party_id = p.id
+      LEFT JOIN Vendors v ON i.vendor_id = v.id
       WHERE i.firm_id = ? AND i.lr_status IN ('Delivered', 'By Hand')
     `;
     const params = [effectiveFirmId];
 
     if (partyId) {
-      query += ` AND i.party_id = ?`;
+      query += ` AND i.vendor_id = ?`;
       params.push(partyId);
     }
     if (fromDate) {
@@ -30,7 +30,7 @@ exports.getInvoicesForBulk = async (req, res) => {
     query += ` ORDER BY i.bill_date DESC LIMIT ? OFFSET ?`;
     params.push(parseInt(limit), offset);
 
-    const [invoices] = await pool.query(query, params);
+    const [invoices] = await db.execute(query, params);
 
     res.status(200).json({
       success: true,

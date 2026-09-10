@@ -22,7 +22,7 @@ exports.getById = async (req, res) => {
 };
 
 exports.create = async (req, res) => {
-  const { name, description } = req.body;
+  const { name, description, type } = req.body;
   if (!name) return res.status(400).json({ error: 'Name is required' });
 
   try {
@@ -32,8 +32,8 @@ exports.create = async (req, res) => {
     }
 
     const [result] = await db.execute(
-      'INSERT INTO Brands (firm_id, name, description) VALUES (?, ?, ?)',
-      [req.firm_id, name, description || null]
+      'INSERT INTO Brands (firm_id, name, description, type) VALUES (?, ?, ?, ?)',
+      [req.firm_id, name, description || null, type || 'Single Brand']
     );
     res.status(201).json({ message: 'Brand created successfully', id: result.insertId });
   } catch (error) {
@@ -43,7 +43,7 @@ exports.create = async (req, res) => {
 };
 
 exports.update = async (req, res) => {
-  const { name, description } = req.body;
+  const { name, description, type } = req.body;
   try {
     const [existing] = await db.execute('SELECT id FROM Brands WHERE firm_id = ? AND LOWER(name) = LOWER(?) AND id != ?', [req.firm_id, name, req.params.id]);
     if (existing.length > 0) {
@@ -51,8 +51,8 @@ exports.update = async (req, res) => {
     }
 
     const [result] = await db.execute(
-      'UPDATE Brands SET name=?, description=? WHERE id=? AND firm_id=?',
-      [name, description || null, req.params.id, req.firm_id]
+      'UPDATE Brands SET name=?, description=?, type=? WHERE id=? AND firm_id=?',
+      [name, description || null, type || 'Single Brand', req.params.id, req.firm_id]
     );
     if (result.affectedRows === 0) return res.status(404).json({ error: 'Brand not found' });
     res.json({ message: 'Brand updated successfully' });

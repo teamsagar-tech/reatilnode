@@ -11,19 +11,19 @@ export default function LRList() {
   const [selectedIndex, setSelectedIndex] = useState(0);
 
   // Filter States
-  const [filterStatus, setFilterStatus] = useState('');
-  const [filterParty, setFilterParty] = useState('');
   const [filterTransporter, setFilterTransporter] = useState('');
   const [filterLR, setFilterLR] = useState('');
+  const [filterBale, setFilterBale] = useState('');
   const [filterGRN, setFilterGRN] = useState('');
-  const [filterBillNo, setFilterBillNo] = useState('');
+  const [filterParty, setFilterParty] = useState('');
 
   const [formData, setFormData] = useState<any>({});
+  const [lrRows, setLrRows] = useState([{ id: 1, lr_no: '', received_bales: '', invoiced_bales: null as number | null, error: '' }]);
   const [initialData, setInitialData] = useState<any[]>([]);
 
   useEffect(() => {
     fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/logistics/pending-lrs`, {
-      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      headers: { 'Authorization': `Bearer ${sessionStorage.getItem('token') || localStorage.getItem('token')}` }
     })
     .then(res => res.json())
     .then(data => setInitialData(Array.isArray(data) ? data : []))
@@ -32,13 +32,13 @@ export default function LRList() {
 
   const filteredData = React.useMemo(() => {
     return initialData.filter(item => {
-      const matchStatus = filterStatus ? item.status === filterStatus : true;
-      const matchParty = filterParty ? item.partyName === filterParty : true;
       const matchTransporter = filterTransporter ? item.transporter === filterTransporter : true;
       const matchLR = filterLR ? item.lrNo === filterLR : true;
+      const matchBale = filterBale ? String(item.bales) === filterBale : true;
       const matchGRN = filterGRN ? item.grn === filterGRN : true;
-      const matchBillNo = filterBillNo ? item.billNo === filterBillNo : true;
-      return matchStatus && matchParty && matchTransporter && matchLR && matchGRN && matchBillNo;
+      const matchParty = filterParty ? item.partyName === filterParty : true;
+      
+      return matchTransporter && matchLR && matchBale && matchGRN && matchParty;
     }).sort((a, b) => {
       const aPending = a.status === 'LR PENDING';
       const bPending = b.status === 'LR PENDING';
@@ -46,15 +46,14 @@ export default function LRList() {
       if (!aPending && bPending) return 1;
       return 0; // retain original order for others
     });
-  }, [initialData, filterStatus, filterParty, filterTransporter, filterLR, filterGRN, filterBillNo]);
+  }, [initialData, filterTransporter, filterLR, filterBale, filterGRN, filterParty]);
 
   // Unique lists for dropdowns
-  const uniqueLRs = Array.from(new Set(initialData.map(i => i.lrNo)));
-  const uniqueGRNs = Array.from(new Set(initialData.map(i => i.grn)));
-  const uniqueStatuses = Array.from(new Set(initialData.map(i => i.status)));
-  const uniqueParties = Array.from(new Set(initialData.map(i => i.partyName)));
-  const uniqueTransporters = Array.from(new Set(initialData.map(i => i.transporter)));
-  const uniqueBillNos = Array.from(new Set(initialData.map(i => i.billNo)));
+  const uniqueTransporters = React.useMemo(() => [...new Set(initialData.map(item => item.transporter).filter(Boolean))], [initialData]);
+  const uniqueLRs = React.useMemo(() => [...new Set(initialData.map(item => item.lrNo).filter(Boolean))], [initialData]);
+  const uniqueBales = React.useMemo(() => [...new Set(initialData.map(item => String(item.bales)).filter(Boolean))], [initialData]);
+  const uniqueGRNs = React.useMemo(() => [...new Set(initialData.map(item => item.grn).filter(Boolean))], [initialData]);
+  const uniqueParties = React.useMemo(() => [...new Set(initialData.map(item => item.partyName).filter(Boolean))], [initialData]);
 
   // Adjust selected index if filtering shrinks the list
   useEffect(() => {
@@ -87,6 +86,10 @@ export default function LRList() {
           e.preventDefault();
           setMode('create');
           setTimeout(() => document.getElementById('field-0')?.focus(), 50);
+        } else if (e.altKey && (e.key.toLowerCase() === 'i' || e.code === 'KeyI' || e.key === 'ˆ')) {
+          e.preventDefault();
+          setMode('inward');
+          setTimeout(() => document.getElementById('field-0')?.focus(), 50);
         }
       } else {
         // Create Mode
@@ -113,6 +116,83 @@ export default function LRList() {
     }
   };
 
+  const handleLRBlur = async (index: number, lr_no: string) => {
+    if (!lr_no.trim()) return;
+    try {
+      const token = sessionStorage.getItem('token') || localStorage.getItem('token');
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/logistics/verify-lr-bales`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ lr_no })
+      });
+      const data = await res.json();
+      
+      const newRows = [...lrRows];
+      if (data.success && data.expectedBales !== null) {
+        newRows[index].invoiced_bales = data.expectedBales;
+        newRows[index].error = '';
+      } else {
+        newRows[index].invoiced_bales = null;
+        newRows[index].error = data.message || 'LR not found';
+      }
+      setLrRows(newRows);
+    } catch (err) {
+      console.error('Error verifying LR:', err);
+    }
+  };
+
+  const handleSaveBatch = async () => {
+    if (!formData.transporter_id || !formData.hundekari_id || !formData.inward_at_location_id) {
+      alert("Please fill all header fields (Transporter, Hundekari, Location)");
+      return;
+    }
+
+    const validRows = lrRows.filter(r => r.lr_no && r.received_bales);
+    if (validRows.length === 0) {
+      alert("Please enter at least one LR row");
+      return;
+    }
+
+    const hasMismatches = validRows.some(r => r.invoiced_bales !== null && parseInt(r.received_bales) !== r.invoiced_bales);
+    if (hasMismatches) {
+      const proceed = window.confirm("Warning: One or more LRs have a mismatch between Received Bales and Invoiced Bales. Are you sure you want to save?");
+      if (!proceed) return;
+    }
+
+    try {
+      const token = sessionStorage.getItem('token') || localStorage.getItem('token');
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/logistics/bulk-unlinked-lrs`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          transporter_id: formData.transporter_id,
+          hundekari_id: formData.hundekari_id,
+          inward_at_location_id: formData.inward_at_location_id,
+          lr_inward_date: formData.lr_inward_date || new Date().toISOString().split('T')[0],
+          lrRows: validRows
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert("Batch LRs inwarded successfully!");
+        setLrRows([{ id: 1, lr_no: '', received_bales: '', invoiced_bales: null, error: '' }]);
+        setFormData({});
+        setMode('list');
+      } else {
+        alert(data.message || "Failed to save");
+      }
+    } catch (err) {
+      console.error("Error saving bulk LRs", err);
+      alert("Server Error while saving");
+    }
+  };
+
   return (
     <>
       <Helmet>
@@ -136,81 +216,89 @@ export default function LRList() {
                    {/* Filters / Header Info */}
                    <div className='flex justify-between items-end mb-2'>
                      <div className='flex gap-4 items-center flex-wrap'>
-                       
-                       <div>
-                         <div className='text-[11px] font-bold text-slate-600 mb-[2px]'>Status</div>
-                         <SearchableDropdown 
-                           className="bg-white border border-slate-400 px-1 py-[2px] text-[12px] font-bold text-black focus:bg-[#ffffe0] focus:outline-none focus:border-slate-800 w-[120px]"
-                           value={filterStatus}
-                           onChange={(v) => setFilterStatus(v)}
-                           options={uniqueStatuses}
-                           placeholder="All"
-                           width="150px"
-                         />
-                       </div>
+                        <div>
+                          <div className='text-[11px] font-bold text-slate-600 mb-[2px]'>Transporter</div>
+                          <SearchableDropdown 
+                            id="filter-transporter"
+                            className="bg-white border border-slate-400 px-1 py-[2px] text-[12px] font-bold text-black focus:bg-[#ffffe0] focus:outline-none focus:border-slate-800 w-[140px]"
+                            value={filterTransporter}
+                            onChange={(v) => setFilterTransporter(v)}
+                            onKeyDown={(e) => { if (e.key === 'Enter') document.getElementById('filter-lr')?.focus(); }}
+                            onSelect={() => setTimeout(() => document.getElementById('filter-lr')?.focus(), 10)}
+                            options={uniqueTransporters}
+                            placeholder="All"
+                            width="200px"
+                          />
+                        </div>
 
-                       <div>
-                         <div className='text-[11px] font-bold text-slate-600 mb-[2px]'>LR No</div>
-                         <SearchableDropdown 
-                           className="bg-white border border-slate-400 px-1 py-[2px] text-[12px] font-bold text-black focus:bg-[#ffffe0] focus:outline-none focus:border-slate-800 w-[120px]"
-                           value={filterLR}
-                           onChange={(v) => setFilterLR(v)}
-                           options={uniqueLRs}
-                           placeholder="All"
-                           width="150px"
-                         />
-                       </div>
+                        <div>
+                          <div className='text-[11px] font-bold text-slate-600 mb-[2px]'>LR No</div>
+                          <SearchableDropdown 
+                            id="filter-lr"
+                            className="bg-white border border-slate-400 px-1 py-[2px] text-[12px] font-bold text-black focus:bg-[#ffffe0] focus:outline-none focus:border-slate-800 w-[120px]"
+                            value={filterLR}
+                            onChange={(v) => setFilterLR(v)}
+                            onKeyDown={(e) => { if (e.key === 'Enter') document.getElementById('filter-bale')?.focus(); }}
+                            onSelect={() => setTimeout(() => document.getElementById('filter-bale')?.focus(), 10)}
+                            options={uniqueLRs}
+                            placeholder="All"
+                            width="150px"
+                          />
+                        </div>
 
-                       <div>
-                         <div className='text-[11px] font-bold text-slate-600 mb-[2px]'>GRN</div>
-                         <SearchableDropdown 
-                           className="bg-white border border-slate-400 px-1 py-[2px] text-[12px] font-bold text-black focus:bg-[#ffffe0] focus:outline-none focus:border-slate-800 w-[120px]"
-                           value={filterGRN}
-                           onChange={(v) => setFilterGRN(v)}
-                           options={uniqueGRNs}
-                           placeholder="All"
-                           width="150px"
-                         />
-                       </div>
+                        <div>
+                          <div className='text-[11px] font-bold text-slate-600 mb-[2px]'>Bale</div>
+                          <SearchableDropdown 
+                            id="filter-bale"
+                            className="bg-white border border-slate-400 px-1 py-[2px] text-[12px] font-bold text-black focus:bg-[#ffffe0] focus:outline-none focus:border-slate-800 w-[80px]"
+                            value={filterBale}
+                            onChange={(v) => setFilterBale(v)}
+                            onKeyDown={(e) => { if (e.key === 'Enter') document.getElementById('filter-grn')?.focus(); }}
+                            onSelect={() => setTimeout(() => document.getElementById('filter-grn')?.focus(), 10)}
+                            options={uniqueBales}
+                            placeholder="All"
+                            width="100px"
+                          />
+                        </div>
 
-                       <div>
-                         <div className='text-[11px] font-bold text-slate-600 mb-[2px]'>Party Name</div>
-                         <SearchableDropdown 
-                           className="bg-white border border-slate-400 px-1 py-[2px] text-[12px] font-bold text-black focus:bg-[#ffffe0] focus:outline-none focus:border-slate-800 w-[140px]"
-                           value={filterParty}
-                           onChange={(v) => setFilterParty(v)}
-                           options={uniqueParties}
-                           placeholder="All"
-                           width="200px"
-                         />
-                       </div>
-                       
-                       <div>
-                         <div className='text-[11px] font-bold text-slate-600 mb-[2px]'>Bill No</div>
-                         <SearchableDropdown 
-                           className="bg-white border border-slate-400 px-1 py-[2px] text-[12px] font-bold text-black focus:bg-[#ffffe0] focus:outline-none focus:border-slate-800 w-[120px]"
-                           value={filterBillNo}
-                           onChange={(v) => setFilterBillNo(v)}
-                           options={uniqueBillNos}
-                           placeholder="All"
-                           width="150px"
-                         />
-                       </div>
-
-                       <div>
-                         <div className='text-[11px] font-bold text-slate-600 mb-[2px]'>Transporter</div>
-                         <SearchableDropdown 
-                           className="bg-white border border-slate-400 px-1 py-[2px] text-[12px] font-bold text-black focus:bg-[#ffffe0] focus:outline-none focus:border-slate-800 w-[140px]"
-                           value={filterTransporter}
-                           onChange={(v) => setFilterTransporter(v)}
-                           options={uniqueTransporters}
-                           placeholder="All"
-                           width="200px"
-                         />
-                       </div>
+                        <div>
+                          <div className='text-[11px] font-bold text-slate-600 mb-[2px]'>GRN</div>
+                          <SearchableDropdown 
+                            id="filter-grn"
+                            className="bg-white border border-slate-400 px-1 py-[2px] text-[12px] font-bold text-black focus:bg-[#ffffe0] focus:outline-none focus:border-slate-800 w-[120px]"
+                            value={filterGRN}
+                            onChange={(v) => setFilterGRN(v)}
+                            onKeyDown={(e) => { if (e.key === 'Enter') document.getElementById('filter-party')?.focus(); }}
+                            onSelect={() => setTimeout(() => document.getElementById('filter-party')?.focus(), 10)}
+                            options={uniqueGRNs}
+                            placeholder="All"
+                            width="150px"
+                          />
+                        </div>
+                        
+                        <div>
+                          <div className='text-[11px] font-bold text-slate-600 mb-[2px]'>Party Name</div>
+                          <SearchableDropdown 
+                            id="filter-party"
+                            className="bg-white border border-slate-400 px-1 py-[2px] text-[12px] font-bold text-black focus:bg-[#ffffe0] focus:outline-none focus:border-slate-800 w-[140px]"
+                            value={filterParty}
+                            onChange={(v) => setFilterParty(v)}
+                            onKeyDown={(e) => { if (e.key === 'Enter') document.getElementById('filter-transporter')?.focus(); }}
+                            onSelect={() => setTimeout(() => document.getElementById('filter-transporter')?.focus(), 10)}
+                            options={uniqueParties}
+                            placeholder="All"
+                            width="200px"
+                          />
+                        </div>
 
                      </div>
                      <div className='flex items-center gap-2'>
+                       <button 
+                         onClick={() => { setMode('inward'); setTimeout(() => document.getElementById('field-0')?.focus(), 50); }}
+                         className='bg-amber-600 border border-black text-white px-2 py-1 font-bold text-[12px] hover:bg-amber-700 shadow-[2px_2px_0_rgba(0,0,0,1)]'
+                       >
+                         LR Inwarded (Alt+I)
+                       </button>
                        <button 
                          onClick={() => { setMode('create'); setTimeout(() => document.getElementById('field-0')?.focus(), 50); }}
                          className='bg-[#1b5e58] border border-black text-white px-2 py-1 font-bold text-[12px] hover:bg-[#12423d] shadow-[2px_2px_0_rgba(0,0,0,1)]'
@@ -230,13 +318,11 @@ export default function LRList() {
                        <thead className='bg-[#eef5ed] sticky top-0 shadow-sm'>
                          <tr className='border-b-2 border-slate-400 text-slate-900 font-bold'>
                            <th className='px-2 py-1 border-r border-slate-300 w-12 text-center'>ID</th>
+                           <th className='px-2 py-1 border-r border-slate-300'>Transporter</th>
                            <th className='px-2 py-1 border-r border-slate-300 w-24'>LR No</th>
-                           <th className='px-2 py-1 border-r border-slate-300 w-24'>GRN</th>
-                           <th className='px-2 py-1 border-r border-slate-300 w-28'>Status</th>
+                           <th className='px-2 py-1 border-r border-slate-300 w-16 text-center'>Bales</th>
                            <th className='px-2 py-1 border-r border-slate-300'>Party Name</th>
                            <th className='px-2 py-1 border-r border-slate-300 w-24'>Bill No</th>
-                           <th className='px-2 py-1 border-r border-slate-300'>Transporter</th>
-                           <th className='px-2 py-1 border-r border-slate-300 w-16 text-center'>Bales</th>
                            <th className='px-2 py-1 w-24 text-center'>Bill Date</th>
                          </tr>
                        </thead>
@@ -248,13 +334,11 @@ export default function LRList() {
                              className={`cursor-pointer ${selectedIndex === idx ? 'bg-[#ffe000] text-black font-bold' : (idx % 2 === 0 ? 'bg-white' : 'bg-[#fcfaf2]')}`}
                            >
                              <td className={`px-2 py-1 border-r border-slate-300 text-center ${selectedIndex === idx ? 'border-r-black' : ''}`}>{row.id}</td>
+                             <td className={`px-2 py-1 border-r border-slate-300 ${selectedIndex === idx ? 'border-r-black' : ''}`}>{row.transporter}</td>
                              <td className={`px-2 py-1 border-r border-slate-300 ${selectedIndex === idx ? 'border-r-black' : ''}`}>{row.lrNo}</td>
-                             <td className={`px-2 py-1 border-r border-slate-300 ${selectedIndex === idx ? 'border-r-black' : ''}`}>{row.grn}</td>
-                             <td className={`px-2 py-1 border-r border-slate-300 ${selectedIndex === idx ? 'border-r-black' : ''}`}>{row.status}</td>
+                             <td className={`px-2 py-1 border-r border-slate-300 text-center ${selectedIndex === idx ? 'border-r-black' : ''}`}>{row.bales}</td>
                              <td className={`px-2 py-1 border-r border-slate-300 ${selectedIndex === idx ? 'border-r-black' : ''}`}>{row.partyName}</td>
                              <td className={`px-2 py-1 border-r border-slate-300 ${selectedIndex === idx ? 'border-r-black' : ''}`}>{row.billNo}</td>
-                             <td className={`px-2 py-1 border-r border-slate-300 ${selectedIndex === idx ? 'border-r-black' : ''}`}>{row.transporter}</td>
-                             <td className={`px-2 py-1 border-r border-slate-300 text-center ${selectedIndex === idx ? 'border-r-black' : ''}`}>{row.bales}</td>
                              <td className='px-2 py-1 text-center'>{row.billDate}</td>
                            </tr>
                          )) : (
@@ -268,6 +352,149 @@ export default function LRList() {
                      </table>
                    </div>
                  </>
+               ) : mode === 'inward' ? (
+                  <div className='flex flex-col flex-1 p-2 bg-[#fcfaf2]'>
+                    <div className="flex gap-12 max-w-[800px] mb-4">
+                      <div className="flex flex-col gap-1 flex-1">
+                        <div className="text-[12px] font-bold text-[#1b5e58] border-b border-[#a3c3be] mb-2 pb-1">Batch Header Details</div>
+                        
+                        <div className="flex items-center mb-1">
+                          <div className="w-[140px] text-slate-800 font-bold text-[12px] text-right pr-2">Transporter</div>
+                          <SearchableDropdown 
+                            className="flex-1 bg-white border border-slate-400 px-1 py-[2px] text-[12px] font-bold text-black focus:bg-[#ffffe0] focus:outline-none focus:border-slate-800"
+                            value={formData.transporter_id || ''}
+                            onChange={(v) => setFormData({...formData, transporter_id: v})}
+                            options={['VRL Logistics', 'SafeExpress', 'TCI Freight']} // Mocked for now
+                            placeholder="Select Transporter"
+                          />
+                        </div>
+
+                        <div className="flex items-center mb-1">
+                          <div className="w-[140px] text-slate-800 font-bold text-[12px] text-right pr-2">Hundekari</div>
+                          <SearchableDropdown 
+                            className="flex-1 bg-white border border-slate-400 px-1 py-[2px] text-[12px] font-bold text-black focus:bg-[#ffffe0] focus:outline-none focus:border-slate-800"
+                            value={formData.hundekari_id || ''}
+                            onChange={(v) => setFormData({...formData, hundekari_id: v})}
+                            options={['Shreeji Transport', 'Kalyan Hundekari']}
+                            placeholder="Select Hundekari"
+                          />
+                        </div>
+
+                        <div className="flex items-center mb-1 mt-4">
+                          <div className="w-[140px] text-slate-800 font-bold text-[12px] text-right pr-2">Inward Location</div>
+                          <SearchableDropdown 
+                            className="flex-1 bg-white border border-slate-400 px-1 py-[2px] text-[12px] font-bold text-black focus:bg-[#ffffe0] focus:outline-none focus:border-slate-800"
+                            value={formData.inward_at_location_id || ''}
+                            onChange={(v) => setFormData({...formData, inward_at_location_id: v})}
+                            options={['Godown A', 'Main Store', 'Warehouse 1']}
+                            placeholder="Select Location"
+                          />
+                        </div>
+
+                        <div className="flex items-center mb-1">
+                          <div className="w-[140px] text-slate-800 font-bold text-[12px] text-right pr-2">LR Inward Date</div>
+                          <input 
+                            type="date"
+                            className="flex-1 bg-white border border-slate-400 px-1 py-[2px] text-[12px] font-bold text-black focus:bg-[#ffffe0] focus:outline-none focus:border-slate-800"
+                            value={formData.lr_inward_date || new Date().toISOString().split('T')[0]}
+                            onChange={(e) => setFormData({...formData, lr_inward_date: e.target.value})}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col flex-1 border border-black bg-white max-w-[900px]">
+                      <table className="w-full">
+                        <thead className="bg-[#e8f0eb] border-b border-black">
+                          <tr>
+                            <th className="px-2 py-1 text-left text-[12px] font-bold text-black border-r border-slate-400 w-[50px]">S.No</th>
+                            <th className="px-2 py-1 text-left text-[12px] font-bold text-black border-r border-slate-400 w-[200px]">LR No</th>
+                            <th className="px-2 py-1 text-left text-[12px] font-bold text-black border-r border-slate-400 w-[120px]">Received Bales</th>
+                            <th className="px-2 py-1 text-left text-[12px] font-bold text-black border-r border-slate-400 w-[120px]">Invoiced Bales</th>
+                            <th className="px-2 py-1 text-left text-[12px] font-bold text-black border-r border-slate-400">Status</th>
+                            <th className="px-2 py-1 text-center text-[12px] font-bold text-black w-[50px]">Action</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {lrRows.map((row, index) => (
+                            <tr key={row.id} className="border-b border-slate-300 hover:bg-[#ffffe0]">
+                              <td className="px-2 py-1 text-[12px] font-bold text-slate-700 border-r border-slate-400">{index + 1}</td>
+                              <td className="border-r border-slate-400 p-0">
+                                <input 
+                                  type="text"
+                                  className="w-full bg-transparent px-2 py-1 text-[12px] font-bold text-black focus:bg-[#ffffe0] focus:outline-none"
+                                  value={row.lr_no}
+                                  onChange={(e) => {
+                                    const newRows = [...lrRows];
+                                    newRows[index].lr_no = e.target.value.toUpperCase();
+                                    setLrRows(newRows);
+                                  }}
+                                  onBlur={() => handleLRBlur(index, row.lr_no)}
+                                  placeholder="Enter LR No"
+                                />
+                              </td>
+                              <td className="border-r border-slate-400 p-0">
+                                <input 
+                                  type="number"
+                                  className="w-full bg-transparent px-2 py-1 text-[12px] font-bold text-black focus:bg-[#ffffe0] focus:outline-none"
+                                  value={row.received_bales}
+                                  onChange={(e) => {
+                                    const newRows = [...lrRows];
+                                    newRows[index].received_bales = e.target.value;
+                                    setLrRows(newRows);
+                                  }}
+                                  placeholder="0"
+                                />
+                              </td>
+                              <td className="px-2 py-1 text-[12px] font-bold text-slate-700 border-r border-slate-400 bg-slate-100">
+                                {row.invoiced_bales !== null ? row.invoiced_bales : '-'}
+                              </td>
+                              <td className="px-2 py-1 text-[12px] font-bold border-r border-slate-400">
+                                {row.invoiced_bales !== null ? (
+                                  parseInt(row.received_bales) === row.invoiced_bales ? (
+                                    <span className="text-green-600 flex items-center gap-1">✅ Matched</span>
+                                  ) : (
+                                    <span className="text-red-600 flex items-center gap-1" title={row.error}>⚠️ Mismatch</span>
+                                  )
+                                ) : (
+                                  <span className="text-slate-500">{row.error || 'Pending'}</span>
+                                )}
+                              </td>
+                              <td className="px-2 py-1 text-center">
+                                <button 
+                                  onClick={() => {
+                                    if (lrRows.length > 1) {
+                                      setLrRows(lrRows.filter((_, i) => i !== index));
+                                    }
+                                  }}
+                                  className="text-red-600 font-bold hover:text-red-800"
+                                >
+                                  X
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      <div className="p-2 border-t border-black bg-[#f1f5f9]">
+                        <button 
+                          onClick={() => setLrRows([...lrRows, { id: Date.now(), lr_no: '', received_bales: '', invoiced_bales: null, error: '' }])}
+                          className="text-[#1b5e58] font-bold text-[12px] hover:underline"
+                        >
+                          + Add Another LR
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="mt-8">
+                       <button 
+                         onClick={handleSaveBatch}
+                         className='bg-[#1b5e58] border border-black text-white px-6 py-1.5 font-bold text-[12px] hover:bg-[#12423d] shadow-[2px_2px_0_rgba(0,0,0,1)]'
+                       >
+                         Save Bulk LR Inward (Cmd+S)
+                       </button>
+                    </div>
+                  </div>
                ) : (
                  <div className='flex flex-col mt-4'>
                    <div className='flex flex-col mb-4 bg-white border border-slate-400 p-4 shadow-sm max-w-[600px]'>

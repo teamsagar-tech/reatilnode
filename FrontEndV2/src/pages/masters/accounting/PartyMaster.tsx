@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import MasterCreationModal from '../../../components/inventory/MasterCreationModal';
 import SearchableDropdown from '../../../components/SearchableDropdown';
+import { toast } from "../../../store/useToastStore";
+import ConfirmModal from '../../../components/ui/ConfirmModal';
 
 
 const SectionTitle = ({ children }: { children: React.ReactNode }) => (
@@ -28,6 +30,7 @@ const InputRow = ({ label, value, onChange, width = 'flex-1', type = 'text', pla
 
 export default function PartyMaster() {
   const navigate = useNavigate();
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [mode, setMode] = useState('list'); // 'list' or 'create'
   const [editId, setEditId] = useState<number | null>(null);
   
@@ -328,10 +331,10 @@ export default function PartyMaster() {
 
   const handleSaveParty = async () => {
     if (gstStatusError) {
-      return alert(`Cannot save this Party. The GSTIN status is: ${gstStatusError}`);
+      return toast.error(`Cannot save this Party. The GSTIN status is: ${gstStatusError}`, 'Validation Error');
     }
     if (!formData.partyName) {
-      alert('Party Name is required');
+      toast.warning('Party Name is required', 'Validation');
       return;
     }
     try {
@@ -361,11 +364,11 @@ export default function PartyMaster() {
         setMode('list');
         fetchParties();
       } else {
-        alert('Failed to save party');
+        toast.error('Failed to save party', 'Error');
       }
     } catch (err) {
       console.error(err);
-      alert('Error saving party');
+      toast.error('Error saving party', 'Error');
     }
   };
 
@@ -739,7 +742,7 @@ export default function PartyMaster() {
                             onClick={() => {
                               const b = availableBrands.find(b => b.name.toLowerCase() === tempBrand.toLowerCase());
                               if (b) addBrand(b.name);
-                              else alert('Please select a valid brand or press Alt+C to create one.');
+                              else toast.warning('Please select a valid brand or press Alt+C to create one.', 'Validation');
                             }}
                             className="bg-[#eef5ed] border border-[#a3c3be] px-2 py-[2px] font-bold text-black hover:bg-[#ffe000] text-[11px] shadow-[inset_1px_1px_0_rgba(255,255,255,0.8)]"
                           >
@@ -779,21 +782,9 @@ export default function PartyMaster() {
                   {/* Action Buttons */}
                   <div className='flex justify-end gap-2 pt-2 border-t border-slate-300 mt-2 shrink-0'>
                     <button 
-                      onClick={() => {
-                        setFormData({
-                          gstin: '', panNumber: '', state: 'Maharashtra', stateCode: '27',
-                          partyName: '', shortName: '', type: 'Sundry Debtor (Customer)',
-                          line1: '', line2: '', line3: '', pincode: '', city: '', taluka: '', district: '',
-                          contactPerson: '', mobileNumber: '', email: '',
-                          contactNumber2: '', mobileNumber2: '', contactNumber3: '', mobileNumber3: '',
-                          accountName: '', bankName: '', accountNumber: '', ifsc: '', branch: '', bankAccountType: 'Savings',
-                          gstRawData: null
-                        });
-                        setCategories([]);
-                        setBrands([]);
-                        setGstStatusError(null);
-                        setEditId(null);
-                      }}
+                      type="button"
+                      onClick={() => setShowResetConfirm(true)} 
+                      tabIndex={-1}
                       className='bg-red-50 border border-red-300 px-6 py-1 text-red-700 font-bold hover:bg-red-100 shadow-[inset_1px_1px_0_rgba(255,255,255,0.8)] outline-none focus:bg-red-200'
                     >
                       Reset
@@ -833,7 +824,7 @@ export default function PartyMaster() {
                ].map((f) => (
                  <button 
                    key={f.key} 
-                   onClick={() => { alert('Party Saved!'); setMode('list'); }}
+                   onClick={() => { toast.success('Party Saved Successfully!', 'Success'); setMode('list'); }}
                    className='flex flex-row items-center px-2 py-1 bg-[#e0efeb] border border-[#a3c3be] hover:bg-[#c9e1dd] hover:border-[#81a09d] text-left transition-all shadow-[inset_1px_1px_0_rgba(255,255,255,0.8)]'
                  >
                    <span className='font-bold text-black text-[11px] w-[35px]'>{f.key}</span>
@@ -858,7 +849,34 @@ export default function PartyMaster() {
         <div className='bg-[#1b5e58] text-white text-[11px] px-4 py-1 flex justify-between items-center border-t-2 border-[#12423d]'>
           <div className='font-medium tracking-wide'>Party Master (Ledger Creation)</div>
         </div>
-      </div>
+      
+        <ConfirmModal
+          isOpen={showResetConfirm}
+          title="Reset Form?"
+          message="Are you sure you want to clear all data? This cannot be undone."
+          type="warning"
+          onConfirm={() => {
+            const resetFn = () => {
+                        setFormData({
+                          gstin: '', panNumber: '', state: 'Maharashtra', stateCode: '27',
+                          partyName: '', shortName: '', type: 'Sundry Debtor (Customer)',
+                          line1: '', line2: '', line3: '', pincode: '', city: '', taluka: '', district: '',
+                          contactPerson: '', mobileNumber: '', email: '',
+                          contactNumber2: '', mobileNumber2: '', contactNumber3: '', mobileNumber3: '',
+                          accountName: '', bankName: '', accountNumber: '', ifsc: '', branch: '', bankAccountType: 'Savings',
+                          gstRawData: null
+                        });
+                        setCategories([]);
+                        setBrands([]);
+                        setGstStatusError(null);
+                        setEditId(null);
+                      };
+            resetFn();
+            setShowResetConfirm(false);
+          }}
+          onCancel={() => setShowResetConfirm(false)}
+        />
+        </div>
       
       {masterModal && (
         <MasterCreationModal 

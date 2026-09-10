@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-
+import ConfirmModal from '../../../components/ui/ConfirmModal';
+import { useGlobalKeyboard } from '../../../hooks/useGlobalKeyboard';
+import SearchableDropdown from '../../../components/SearchableDropdown';
 
 const SectionTitle = ({ children }: { children: React.ReactNode }) => (
     <div className="font-bold text-[#1b5e58] text-[12px] border-b border-[#a3c3be] mb-2 mt-2 pb-1 uppercase tracking-wider bg-[#eef5ed] px-1">
@@ -27,30 +29,36 @@ const InputRow = ({ id, label, value, onChange, width = 'flex-1', type = 'text',
   </div>
 );
 
-const SelectRow = ({ id, label, value, onChange, options, width = 'flex-1' }: any) => (
-  <div className="flex items-center mb-[2px]">
+const SelectRow = ({ label, value, onChange, onKeyDown, options, width = 'flex-1', id = '' }: any) => (
+  <div className={`flex items-center mb-[2px] ${width}`}>
     <div className="w-[110px] text-slate-800 font-bold text-[11px] text-right pr-2 leading-tight">
       {label}
     </div>
-    <select 
-      id={id}
-      className={`bg-white border border-slate-400 px-1 py-[2px] text-[12px] font-bold text-black focus:bg-[#ffffe0] focus:outline-none focus:border-slate-800 ${width}`}
-      value={value || ''}
-      onChange={e => onChange(e.target.value)}
-    >
-      <option value="">Select Parent Category</option>
-      {options.map((opt: any) => (
-        <option key={opt.id} value={opt.id}>{opt.name}</option>
-      ))}
-    </select>
+    <div className="flex-1 flex">
+      <SearchableDropdown
+        id={id}
+        value={value}
+        onChange={onChange}
+        onKeyDown={onKeyDown}
+        options={options}
+        placeholder="Select..."
+        className="w-full bg-white border border-slate-400 px-1 py-[2px] text-[12px] font-bold text-black focus:bg-[#ffffe0] focus:outline-none focus:border-slate-800"
+        width="100%"
+      />
+    </div>
   </div>
 );
 
+
 export default function CategoryMaster() {
   const navigate = useNavigate();
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteId, setDeleteId] = useState<number | null>(null);
   const [mode, setMode] = useState('list'); // 'list' or 'create'
   const [formData, setFormData] = useState<any>({});
   const [categories, setCategories] = useState<any[]>([]);
+  const [departments, setDepartments] = useState<any[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [editId, setEditId] = useState<number | null>(null);
 
@@ -63,14 +71,24 @@ export default function CategoryMaster() {
     .catch(console.error);
   };
 
+  const fetchDepartments = () => {
+    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/generic/departments`, {
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    })
+    .then(res => res.json())
+    .then(data => setDepartments(Array.isArray(data) ? data : []))
+    .catch(console.error);
+  };
+
   useEffect(() => {
     fetchCategories();
+    fetchDepartments();
   }, []);
 
   useEffect(() => {
     if (mode === 'create') {
       setTimeout(() => {
-        document.getElementById('input-name')?.focus();
+        document.getElementById('input-department')?.focus();
       }, 50);
     }
   }, [mode]);
@@ -90,7 +108,11 @@ export default function CategoryMaster() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
-        body: JSON.stringify({ name: formData.name, description: formData.description, hsn_code: formData.hsn_code, tax_percent: parseFloat(formData.tax_percent) || 0 })
+        body: JSON.stringify({ 
+          name: formData.name, 
+          description: formData.description,
+          department_id: departments.find(d => d.name === formData.department_name)?.id || null
+        })
       });
       if (res.ok) {
         setFormData({});
@@ -106,8 +128,30 @@ export default function CategoryMaster() {
     }
   };
 
+  const handleDeleteCategory = async () => {
+    if (!deleteId) return;
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/category/${deleteId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      });
+      if (res.ok) {
+        setShowDeleteConfirm(false);
+        setDeleteId(null);
+        fetchCategories();
+      } else {
+        alert('Failed to delete category');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Error deleting category');
+    }
+  };
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (showResetConfirm || showDeleteConfirm) return;
+
       if (e.key === 'Escape') {
         e.preventDefault();
         if (mode === 'create') {
@@ -130,6 +174,12 @@ export default function CategoryMaster() {
         } else if (e.key === 'ArrowUp') {
           e.preventDefault();
           setSelectedIndex(prev => Math.max(prev - 1, 0));
+        } else if (e.key === 'F5') {
+          e.preventDefault();
+          if (categories[selectedIndex]) {
+            setDeleteId(categories[selectedIndex].id);
+            setShowDeleteConfirm(true);
+          }
         } else if (e.key === 'Enter') {
           e.preventDefault();
           if (categories[selectedIndex]) {
@@ -137,8 +187,7 @@ export default function CategoryMaster() {
             setFormData({
               name: row.name,
               description: row.description || '',
-              hsn_code: row.hsn_code || '',
-              tax_percent: row.tax_percent || ''
+              department_name: row.department_name || ''
             });
             setEditId(row.id);
             setMode('create');
@@ -148,7 +197,7 @@ export default function CategoryMaster() {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [navigate, mode, formData, categories, selectedIndex]);
+  }, [navigate, mode, formData, categories, selectedIndex, showResetConfirm, showDeleteConfirm]);
 
   const handleFieldKeyDown = (e: React.KeyboardEvent, nextFieldId: string) => {
     if (e.key === 'Enter') {
@@ -193,7 +242,7 @@ export default function CategoryMaster() {
                   <table className='w-full text-left border-collapse border border-slate-400'>
                     <thead className='bg-[#eef5ed]'>
                       <tr className='border-b-2 border-slate-400 text-slate-900 font-bold text-[12px]'>
-                        <th className="px-2 py-1 border-r border-slate-300">ID</th><th className="px-2 py-1 border-r border-slate-300">Category Name</th><th className="px-2 py-1 border-r border-slate-300">Description</th>
+                        <th className="px-2 py-1 border-r border-slate-300">ID</th><th className="px-2 py-1 border-r border-slate-300">Department</th><th className="px-2 py-1 border-r border-slate-300">Category Name</th><th className="px-2 py-1 border-r border-slate-300">Description</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -205,8 +254,7 @@ export default function CategoryMaster() {
                               setFormData({
                                 name: row.name,
                                 description: row.description || '',
-                                hsn_code: row.hsn_code || '',
-                                tax_percent: row.tax_percent || ''
+                                department_name: row.department_name || ''
                               });
                               setEditId(row.id);
                               setMode('create');
@@ -215,6 +263,7 @@ export default function CategoryMaster() {
                             className={`text-[12px] border-b border-slate-300 ${idx === selectedIndex ? 'bg-[#ffe000]' : (idx % 2 === 0 ? 'bg-white' : 'bg-[#fcfaf2]')} hover:bg-[#ffffe0] cursor-pointer`}
                           >
                             <td className="px-2 py-1 border-r border-slate-300 font-medium text-slate-700">{row.id}</td>
+                            <td className="px-2 py-1 border-r border-slate-300 font-medium text-slate-700">{row.department_name || '-'}</td>
                             <td className="px-2 py-1 border-r border-slate-300 font-medium text-slate-700">{row.name}</td>
                             <td className="px-2 py-1 border-r border-slate-300 font-medium text-slate-700">{row.description || '-'}</td>
                           </tr>
@@ -230,10 +279,61 @@ export default function CategoryMaster() {
                     {/* Column 1: Master Details */}
                     <div className="w-[40%] flex flex-col gap-1 border-r-2 border-slate-300 pr-4 overflow-y-auto pb-4 custom-scrollbar">
                       <SectionTitle>Master Information</SectionTitle>
-                    <InputRow id="input-name" label="Category Name" value={formData.name} onChange={(v: string) => setFormData({...formData, name: v})} />
-                    <InputRow label="Description" value={formData.description} onChange={(v: string) => setFormData({...formData, description: v})} />
-                    <InputRow label="Default HSN Code" value={formData.hsn_code} onChange={(v: string) => setFormData({...formData, hsn_code: v})} />
-                    <InputRow type="number" label="Default Tax %" value={formData.tax_percent} onChange={(v: string) => setFormData({...formData, tax_percent: v})} />
+                      
+                      <div className="flex items-center mb-[2px]">
+                        <div className="w-[110px] text-slate-800 font-bold text-[11px] text-right pr-2 leading-tight">
+                          Department
+                        </div>
+                        <div className="flex-1 relative">
+                          <SearchableDropdown
+                            id="input-department"
+                            value={formData.department_name || ''}
+                            onChange={(val: string) => setFormData({...formData, department_name: val})}
+                            onSelect={(opt: any) => {
+                              setTimeout(() => document.getElementById('input-name')?.focus(), 10);
+                            }}
+                            options={departments}
+                            displayKey="name"
+                            className="bg-white border border-slate-400 px-1 py-[2px] text-[12px] font-bold text-black focus:bg-[#ffffe0] focus:outline-none focus:border-slate-800 w-full"
+                          />
+                        </div>
+                      </div>
+
+                      <InputRow id="input-name" label="Category Name" value={formData.name} onChange={(v: string) => setFormData({...formData, name: v})} />
+                      <InputRow label="Description" value={formData.description} onChange={(v: string) => setFormData({...formData, description: v})} />
+                    </div>
+
+                    {/* Column 2: Existing Categories in selected Department */}
+                    <div className="flex-[1.5] flex flex-col gap-1 overflow-y-auto pb-4 custom-scrollbar">
+                      {formData.department_name && (
+                        <>
+                          <SectionTitle>Categories in {formData.department_name}</SectionTitle>
+                          <div className="bg-white border border-slate-300 shadow-sm overflow-hidden flex-1">
+                            <table className='w-full text-left border-collapse'>
+                              <thead className='bg-[#eef5ed] sticky top-0 shadow-sm'>
+                                <tr className='border-b-2 border-slate-400 text-slate-900 font-bold text-[11px]'>
+                                  <th className="px-2 py-1 border-r border-slate-300">Category Name</th>
+                                  <th className="px-2 py-1">Description</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {categories.filter((c: any) => c.department_name === formData.department_name).length > 0 ? (
+                                  categories.filter((c: any) => c.department_name === formData.department_name).map((c: any) => (
+                                    <tr key={c.id} className="text-[11px] border-b border-slate-200 hover:bg-[#ffffe0]">
+                                      <td className="px-2 py-[2px] border-r border-slate-300 font-medium text-slate-700">{c.name}</td>
+                                      <td className="px-2 py-[2px] font-medium text-slate-700">{c.description || '-'}</td>
+                                    </tr>
+                                  ))
+                                ) : (
+                                  <tr>
+                                    <td colSpan={2} className="px-2 py-4 text-center text-slate-500 italic text-[11px]">No categories found in this department.</td>
+                                  </tr>
+                                )}
+                              </tbody>
+                            </table>
+                          </div>
+                        </>
+                      )}
                     </div>
 
                   </div>
@@ -241,10 +341,9 @@ export default function CategoryMaster() {
                   {/* Action Buttons */}
                   <div className='flex justify-end gap-2 pt-2 border-t border-slate-300 mt-2 shrink-0'>
                     <button 
-                      onClick={() => {
-                        setFormData({});
-                        setEditId(null);
-                      }}
+                      type="button"
+                      onClick={() => setShowResetConfirm(true)} 
+                      tabIndex={-1}
                       className='bg-red-50 border border-red-300 px-6 py-1 text-red-700 font-bold hover:bg-red-100 shadow-[inset_1px_1px_0_rgba(255,255,255,0.8)] outline-none focus:bg-red-200'
                     >
                       Reset
@@ -304,7 +403,26 @@ export default function CategoryMaster() {
         <div className='bg-[#1b5e58] text-white text-[11px] px-4 py-1 flex justify-between items-center border-t-2 border-[#12423d]'>
           <div className='font-medium tracking-wide'>Category Master</div>
         </div>
-      </div>
+      
+      
+      <ConfirmModal 
+        isOpen={showResetConfirm}
+        message="Are you sure you want to reset the form?"
+        onConfirm={() => {
+          setFormData({});
+          setEditId(null);
+          setShowResetConfirm(false);
+        }}
+        onCancel={() => setShowResetConfirm(false)}
+      />
+      
+      <ConfirmModal 
+        isOpen={showDeleteConfirm}
+        message="Are you sure you want to delete this category?"
+        onConfirm={handleDeleteCategory}
+        onCancel={() => setShowDeleteConfirm(false)}
+      />
+    </div>
     </>
   );
 }

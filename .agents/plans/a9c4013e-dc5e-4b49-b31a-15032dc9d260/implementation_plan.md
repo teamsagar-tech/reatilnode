@@ -1,38 +1,30 @@
-# Transaction Voucher UI Standardization Audit
+# Party Master Updates & Dynamic Contacts
 
-Based on the newly formalized `SKILL.md` rules for the "Transaction Voucher Standard Layout (Tally Style)", I have audited the remaining transaction pages. 
+This plan covers the requested changes for the Party Master, including architectural changes to support dynamic contacts and several UI/layout improvements.
 
-## Audit Findings
-The following core transaction pages currently utilize the correct `w-[120px]` Right Sidebar, but they do **NOT** follow the strict `35/65` Split Header, the `60/40` Split Footer, or the standard Bottom Status Bar layout:
-1. `FrontEndV2/src/pages/sales/POSPage.tsx`
-2. `FrontEndV2/src/pages/sales/Returns/SalesReturn.tsx`
-3. `FrontEndV2/src/pages/purchase/Returns/PurchaseReturn.tsx`
-
-*Note: `ManageReceivable.tsx` is considered a list/action page rather than a voucher entry page, so it will retain its current table-centric layout but can be updated to include the standard bottom status bar for consistency.*
+## User Review Required
+> [!IMPORTANT]
+> **Dynamic Contacts Storage**: Currently, the database has hardcoded columns for exactly 3 contacts (`contact_person`, `mobile_number1`, `mobile_number2`, etc.). 
+> To support dynamic contacts (unlimited contacts with labels like "Office", "Factory"), I propose **adding a new JSON column `contacts`** to the `Parties` database table. This is the cleanest approach for a highly scalable SaaS backend. We will update the UI to allow adding/removing contact rows dynamically. Do you approve this schema change?
 
 ## Proposed Changes
 
-### Component 1: `POSPage.tsx`
-- **[MODIFY]** [POSPage.tsx](file:///Users/ratan/Downloads/RetailNodeV2/FrontEndV2/src/pages/sales/POSPage.tsx)
-  - Restructure the top header from `flex gap-12` to `flex flex-row` with `w-[35%]` (Payments, Coupons) and `w-[65%]` (Customer, Salesman, Barcode Scanner) sections.
-  - Restructure the footer from a single row to the Two-Part layout: `w-[60%]` left section (Narration/Notes) and `w-[40%]` right section (Detailed Totals).
-  - Update the absolute bottom status bar to display the standard `Version 2.0 | Firm | Location` and keyboard shortcuts.
+### 1. Database Schema (`retailnode_db`)
+- **Add JSON Column**: Alter the `Parties` table to include a `contacts` JSON column. 
+- The JSON structure will be an array of objects: `[{ type: "Office", name: "John", phone: "9876543210" }, ...]`.
 
-### Component 2: `SalesReturn.tsx`
-- **[MODIFY]** [SalesReturn.tsx](file:///Users/ratan/Downloads/RetailNodeV2/FrontEndV2/src/pages/sales/Returns/SalesReturn.tsx)
-  - Apply the `35/65` Split Top Form layout.
-  - Apply the `60/40` Split Footer layout.
-  - Update the bottom status bar to match the global standard while retaining the red "Sales Return" header theme.
+### 2. Backend (`backend/controllers/partyController.js`)
+- Update the `createParty` and `updateParty` endpoints to accept a `contacts` array from the frontend.
+- Save this array to the new JSON column in the database.
 
-### Component 3: `PurchaseReturn.tsx`
-- **[MODIFY]** [PurchaseReturn.tsx](file:///Users/ratan/Downloads/RetailNodeV2/FrontEndV2/src/pages/purchase/Returns/PurchaseReturn.tsx)
-  - Apply the `35/65` Split Top Form layout.
-  - Apply the `60/40` Split Footer layout.
-  - Update the bottom status bar to match the global standard while retaining the brown "Purchase Return" header theme.
-
-## Open Questions
-> [!IMPORTANT]
-> The original standard includes a "Narration" text area in the `60%` footer split. Since `SalesReturn` and `PurchaseReturn` currently capture their "Remark" in the top header, should I move the "Remark" field down to the footer Narration box to perfectly match `PurchaseInvoice.tsx`?
+### 3. Frontend UI (`PartyMaster.tsx` & `PartyModal.tsx`)
+- **Address Widths**: Double the width of Address Line 1, 2, and 3 inputs (`w-[500px]` or similar).
+- **Remove Party Type**: Remove the "Type" dropdown (Sundry Debtor / Creditor) and hardcode the payload to default to `Sundry Creditor (Vendor)` when creating a party from this page.
+- **Dynamic Contacts UI**: Replace the static Contact 1, 2, 3 fields with a dynamic list where users can click "Add Contact" to add multiple contacts. Each contact will have a dropdown for Type (Office, Factory, Warehouse, Other), a Name input, and a Mobile input.
+- **Whitespace**: Tighten vertical gaps to eliminate unnecessary white space and fit more content on a single screen without scrolling.
 
 ## Verification Plan
-After updating these files, I will verify the structural alignment and ensure that all React state bindings and `ref` auto-focus triggers for the Barcode Scanners still function correctly.
+1. Apply the UI layout tweaks (Address width, Type removal, Whitespace).
+2. Execute the MySQL schema change via the backend.
+3. Update the frontend state to use a `contacts` array and test saving a new Party with dynamic contacts.
+4. Verify the data saves successfully via the backend API.

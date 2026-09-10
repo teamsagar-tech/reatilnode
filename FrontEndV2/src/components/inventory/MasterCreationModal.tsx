@@ -5,8 +5,11 @@ interface MasterCreationModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (type: string, data: any) => void;
-  masterType: 'brand' | 'size' | 'item' | 'hsn' | null;
+  masterType: 'brand' | 'size' | 'sizegroup' | 'item' | 'hsn' | 'partycategory' | 'partysubcategory' | null;
   initialValue?: string;
+  initialBrand?: string;
+  initialBrandId?: number | null;
+  parentId?: number | null;
 }
 
 const InputRow = ({ label, value, onChange, placeholder = "", width = "flex-1", onKeyDown }: any) => (
@@ -35,10 +38,11 @@ const InputRow = ({ label, value, onChange, placeholder = "", width = "flex-1", 
   </div>
 );
 
-export default function MasterCreationModal({ isOpen, onClose, onSave, masterType, initialValue = '' }: MasterCreationModalProps) {
+export default function MasterCreationModal({ isOpen, onClose, onSave, masterType, initialValue = '', initialBrand, initialBrandId, parentId }: MasterCreationModalProps) {
   const [name, setName] = useState('');
   const [extra1, setExtra1] = useState('');
   const [extra2, setExtra2] = useState('');
+  const [extra3, setExtra3] = useState('');
   
   // Auto-suggest state for HSN
   const [hsnSuggestions, setHsnSuggestions] = useState<any[]>([]);
@@ -60,7 +64,7 @@ export default function MasterCreationModal({ isOpen, onClose, onSave, masterTyp
   useEffect(() => {
     if (isOpen) {
       setName(initialValue || '');
-      setExtra1('');
+      setExtra1(masterType === 'item' && initialBrand ? initialBrand : '');
       setExtra2('');
       setHsnSuggestions([]);
       setFocusedIndex(-1);
@@ -68,7 +72,7 @@ export default function MasterCreationModal({ isOpen, onClose, onSave, masterTyp
         firstInputRef.current?.focus();
       }, 100);
     }
-  }, [isOpen, masterType, initialValue]);
+  }, [isOpen, masterType, initialValue, initialBrand]);
 
   const handleHsnChange = (val: string) => {
     setExtra2(val);
@@ -152,15 +156,29 @@ export default function MasterCreationModal({ isOpen, onClose, onSave, masterTyp
     let endpoint = '';
     
     if (masterType === 'item') {
-      data = { name, brand: extra1, hsn: extra2 };
+      const finalBrandId = extra1 === initialBrand ? initialBrandId : null;
+      data = { name, brand: extra1, brand_id: finalBrandId, hsn: extra2 };
       endpoint = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/items`;
     } else if (masterType === 'hsn') {
-      data = { name, description: extra1 };
+      data = { name, description: extra1, tax_percent: extra3 ? parseFloat(extra3) : 0 };
       endpoint = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/generic/hsnsacs`;
     } else if (masterType === 'brand') {
       endpoint = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/brand`;
     } else if (masterType === 'size') {
       endpoint = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/generic/sizes`;
+    } else if (masterType === 'sizeset') {
+      const sizesArray = (extra1 || '').split(',').map(s => s.trim()).filter(Boolean);
+      data = { name: name, size_scale: 'Other', sizes_list: sizesArray };
+      endpoint = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/generic/sizesets`;
+    } else if (masterType === 'sizegroup') {
+      const sizesArray = (extra1 || '').split(',').map(s => s.trim()).filter(Boolean);
+      data = { groupName: name, sizes: sizesArray };
+      endpoint = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/size-groups`;
+    } else if (masterType === 'partycategory') {
+      endpoint = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/generic/partycategories`;
+    } else if (masterType === 'partysubcategory') {
+      data = { name, category_id: parentId };
+      endpoint = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/generic/partysubcategories`;
     }
 
     try {
@@ -182,6 +200,15 @@ export default function MasterCreationModal({ isOpen, onClose, onSave, masterTyp
           alert(errText);
           return;
         }
+        
+        try {
+          const resData = await response.json();
+          if (resData.id) {
+            data.id = resData.id;
+          } else if (resData.insertId) {
+            data.id = resData.insertId;
+          }
+        } catch(e) {}
       }
     } catch (err) {
       console.error('Error creating master:', err);
@@ -200,6 +227,8 @@ export default function MasterCreationModal({ isOpen, onClose, onSave, masterTyp
       case 'size': return 'Size Creation';
       case 'item': return 'Item Creation';
       case 'hsn': return 'HSN/SAC Creation';
+      case 'partycategory': return 'Category Creation';
+      case 'partysubcategory': return 'Subcategory Creation';
       default: return 'Master Creation';
     }
   };
@@ -272,7 +301,14 @@ export default function MasterCreationModal({ isOpen, onClose, onSave, masterTyp
           )}
 
           {masterType === 'hsn' && (
-            <InputRow label="Description" value={extra1} onChange={setExtra1} />
+            <>
+              <InputRow label="Description" value={extra1} onChange={setExtra1} />
+              <InputRow label="Tax % (GST)" value={extra3} onChange={setExtra3} />
+            </>
+          )}
+
+          {masterType === 'sizegroup' && (
+            <InputRow label="Sizes (Comma separated)" value={extra1} onChange={setExtra1} placeholder="e.g. 28, 30, 32" />
           )}
 
           <div className="flex justify-end gap-2 mt-4 pt-2 border-t border-[#a3c3be]">

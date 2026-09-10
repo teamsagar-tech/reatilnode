@@ -11,5 +11,6 @@ router.use(tenantMiddleware);
 router.get('/', requirePermission('accounting', 'read'), partyController.getAllParties);
 router.post('/', requirePermission('accounting', 'write'), partyController.createParty);
 router.put('/:id', requirePermission('accounting', 'write'), partyController.updateParty);
+router.delete('/:id', requirePermission('accounting', 'delete'), partyController.deleteParty);
 
 module.exports = router;
