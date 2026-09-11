@@ -4,6 +4,7 @@ import PremiumVoucherTemplate from '../../components/layout/PremiumVoucherTempla
 import SearchableDropdown from '../../components/SearchableDropdown';
 import { ShoppingCart, Search, FileText, CheckCircle2 } from 'lucide-react';
 import MultiAttributeModal from '../../components/inventory/MultiAttributeModal';
+import SizeAllocationModal from '../../components/inventory/SizeAllocationModal';
 
 const ITEM_SUGGESTIONS = [
   { id: 101, name: 'Basic Cotton T-Shirt', type: 'Readymade', stock: 15, sizes: { S: 5, M: 8, L: 2, XL: 0 }, sales: 40, status: 'Reorder', brand: 'Nike', rate: 450 },
@@ -63,7 +64,7 @@ export default function PurchaseInvoice() {
   ]);
 
   const [activeSuggestionRow, setActiveSuggestionRow] = useState<number | null>(null);
-  const [suggestionIndex, setSuggestionIndex] = useState<number>(0);
+  const [suggestionIndex, setSuggestionIndex] = useState(0);
   const [showPurchaserDropdown, setShowPurchaserDropdown] = useState(false);
   const [purchaserIndex, setPurchaserIndex] = useState(0);
   const [showSupplierDropdown, setShowSupplierDropdown] = useState(false);
@@ -71,6 +72,7 @@ export default function PurchaseInvoice() {
 
   // Multi-Attribute Modal State
   const [activeModalRow, setActiveModalRow] = useState<number | null>(null);
+  const [activeSizeMatrixRow, setActiveSizeMatrixRow] = useState<number | null>(null);
 
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
@@ -138,7 +140,6 @@ export default function PurchaseInvoice() {
   const [purchasers, setPurchasers] = useState<any[]>([]);
 
   useEffect(() => {
-    // Fetch Vendors
     fetch('https://api.retailnode.in/api/vendors', {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     })
@@ -146,7 +147,6 @@ export default function PurchaseInvoice() {
     .then(data => setVendors(Array.isArray(data) ? data : []))
     .catch(console.error);
 
-    // Fetch Purchasers
     fetch('https://api.retailnode.in/api/users/purchasers', {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     })
@@ -172,20 +172,16 @@ export default function PurchaseInvoice() {
     >
       <div className="flex flex-col lg:flex-row gap-4 h-full">
          
-         {/* Left Main Form Area */}
          <div className="flex-1 flex flex-col min-w-0 min-h-0 gap-4">
             
-            {/* Top Filter Card */}
             <div className="bg-white/80 backdrop-blur-xl border border-slate-200/60 rounded-2xl shadow-sm p-5 shrink-0">
                <div className="grid grid-cols-1 md:grid-cols-12 gap-x-6 gap-y-4">
                   
-                  {/* P.O. No */}
                   <div className="col-span-12 md:col-span-3">
                      <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wider">P.O. No</label>
                      <input id="po_no" type="text" value={invoiceData.orderNo} onChange={e => handleInvoiceChange('orderNo', e.target.value)} onKeyDown={e => handleKeyDown(e, 'supplier')} className="w-full px-3 py-2.5 rounded-xl bg-white border border-slate-300 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none uppercase" placeholder="Enter P.O." />
                   </div>
                   
-                  {/* Party */}
                   <div className="col-span-12 md:col-span-6 relative">
                      <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wider flex justify-between">
                         Party / Supplier
@@ -203,7 +199,6 @@ export default function PurchaseInvoice() {
                      />
                   </div>
 
-                  {/* Firm */}
                   <div className="col-span-12 md:col-span-3">
                      <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wider">Firm / Location</label>
                      <select id="firm" value={invoiceData.firm} onChange={e => handleInvoiceChange('firm', e.target.value)} onKeyDown={e => handleKeyDown(e, 'purchaser')} className="w-full px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none mb-2">
@@ -214,7 +209,6 @@ export default function PurchaseInvoice() {
 
                   <div className="col-span-12 border-t border-slate-100 my-1"></div>
 
-                  {/* Order By */}
                   <div className="col-span-12 md:col-span-3">
                      <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wider">Order By</label>
                      <SearchableDropdown
@@ -229,7 +223,6 @@ export default function PurchaseInvoice() {
                      />
                   </div>
 
-                  {/* Bill No & Date */}
                   <div className="col-span-12 md:col-span-3">
                      <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wider">Bill No</label>
                      <input id="bill_no" type="text" value={invoiceData.billNo} onChange={e => handleInvoiceChange('billNo', e.target.value)} onKeyDown={e => handleKeyDown(e, 'bill_date')} className="w-full px-3 py-2.5 rounded-xl bg-white border border-slate-300 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none" placeholder="Invoice Number" />
@@ -240,7 +233,6 @@ export default function PurchaseInvoice() {
                      <input id="bill_date" type="date" value={invoiceData.billDate} onChange={e => handleInvoiceChange('billDate', e.target.value)} onKeyDown={e => handleKeyDown(e, 'receive_date')} className="w-full px-3 py-2.5 rounded-xl bg-white border border-slate-300 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none" />
                   </div>
 
-                  {/* Receive Date */}
                   <div className="col-span-12 md:col-span-3">
                      <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wider">Receive Date</label>
                      <input id="receive_date" type="date" value={invoiceData.receiveDate} onChange={e => handleInvoiceChange('receiveDate', e.target.value)} className="w-full px-3 py-2.5 rounded-xl bg-white border border-slate-300 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none" />
@@ -248,7 +240,6 @@ export default function PurchaseInvoice() {
 
                   <div className="col-span-12 border-t border-slate-100 my-1"></div>
                   
-                  {/* Display Settings Toggles */}
                   <div className="col-span-12 flex items-center justify-between">
                      <div className="flex flex-wrap gap-4">
                         <label className="flex items-center gap-2 cursor-pointer group">
@@ -295,7 +286,6 @@ export default function PurchaseInvoice() {
                </div>
             </div>
 
-            {/* Data Grid Card */}
             <div className="flex-1 bg-white/90 backdrop-blur-xl border border-slate-200/60 rounded-2xl shadow-sm flex flex-col min-h-0 relative">
                <div className="overflow-auto flex-1">
                   <table className='w-full text-left border-collapse whitespace-nowrap min-w-[800px]'>
@@ -322,7 +312,19 @@ export default function PurchaseInvoice() {
                                 <input type="text" value={item.brand} onChange={e => updateProduct(index, 'brand', e.target.value)} className="w-full bg-transparent focus:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 rounded px-2 py-1 font-semibold text-slate-700" placeholder="Brand..." />
                              </td>
                              <td className="px-4 py-2.5">
-                                <input type="text" value={item.item} onChange={e => updateProduct(index, 'item', e.target.value)} className="w-full bg-transparent focus:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 rounded px-2 py-1 font-semibold text-slate-700" placeholder="Type item name..." />
+                                <input 
+                                  type="text" 
+                                  value={item.item} 
+                                  onChange={e => updateProduct(index, 'item', e.target.value)} 
+                                  onKeyDown={e => {
+                                    if (e.key === 'Enter' && item.item) {
+                                      e.preventDefault();
+                                      setActiveSizeMatrixRow(index);
+                                    }
+                                  }}
+                                  className="w-full bg-transparent focus:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 rounded px-2 py-1 font-semibold text-slate-700" 
+                                  placeholder="Type item name..." 
+                                />
                              </td>
                              {invoiceData.designNo && (
                                 <td className="px-4 py-2.5">
@@ -378,7 +380,6 @@ export default function PurchaseInvoice() {
                   </table>
                </div>
                
-               {/* Actions Footer inside Data Grid (Add Row) */}
                <div className="bg-slate-50 border-t border-slate-200 p-3 flex justify-center">
                   <button onClick={addProduct} className="px-4 py-1.5 rounded-lg bg-indigo-50 text-indigo-600 text-xs font-bold hover:bg-indigo-100 transition-colors border border-indigo-200">
                      + Add Another Item
@@ -388,7 +389,6 @@ export default function PurchaseInvoice() {
 
          </div>
 
-         {/* Right Sidebar Financial Summary */}
          <div className="w-full lg:w-[350px] shrink-0 flex flex-col gap-4">
             
             <div className="bg-white/80 backdrop-blur-xl border border-slate-200/60 rounded-2xl shadow-sm overflow-hidden flex flex-col flex-1">
@@ -462,7 +462,6 @@ export default function PurchaseInvoice() {
                   </div>
                </div>
 
-               {/* Grand Total Area */}
                <div className="bg-gradient-to-br from-indigo-600 to-indigo-700 p-5 shrink-0 text-white">
                   <p className="text-indigo-200 text-xs font-bold uppercase tracking-wider mb-1 text-right">Net Payable</p>
                   <p className="text-4xl font-black text-right tracking-tight">₹{finalAmount.toFixed(2)}</p>
@@ -484,6 +483,25 @@ export default function PurchaseInvoice() {
             updateProduct(activeModalRow, 'attributes', attributes);
           }
           setActiveModalRow(null);
+        }}
+      />
+
+      <SizeAllocationModal
+        isOpen={activeSizeMatrixRow !== null}
+        onClose={() => setActiveSizeMatrixRow(null)}
+        itemName={activeSizeMatrixRow !== null ? products[activeSizeMatrixRow].item : ''}
+        brandId={activeSizeMatrixRow !== null ? products[activeSizeMatrixRow].brand : ''}
+        onSave={(allocatedSizes, summaryInfo) => {
+          if (activeSizeMatrixRow !== null) {
+            updateProduct(activeSizeMatrixRow, 'qty', summaryInfo.totalQty);
+            updateProduct(activeSizeMatrixRow, 'rate', summaryInfo.avgRate);
+            updateProduct(activeSizeMatrixRow, 'matrixData', allocatedSizes);
+            
+            if (activeSizeMatrixRow === products.length - 1) {
+               setProducts([...products, { id: Date.now(), item: '', brand: '', qty: '', rate: '', disc: 0, gst: 0, design: '', colour: '', size: '', mrp: 0 }]);
+            }
+          }
+          setActiveSizeMatrixRow(null);
         }}
       />
     </PremiumVoucherTemplate>

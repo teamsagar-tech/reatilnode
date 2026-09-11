@@ -53,6 +53,7 @@ export default function Header() {
             { name: "Sub-Style", path: "/masters/substyle" },
             { name: "Design Master", path: "/masters/design" },
             { name: "Size Master", path: "/masters/size" },
+            { name: "Size Group", path: "/masters/size-group" },
             { name: "Color Master", path: "/masters/color" },
             { name: "Material", path: "/masters/material" },
             { name: "HSN/SAC", path: "/masters/hsnsac" }
@@ -94,6 +95,7 @@ export default function Header() {
             { name: "Sub-Style", path: "/masters/substyle" },
             { name: "Design Master", path: "/masters/design" },
             { name: "Size Master", path: "/masters/size" },
+            { name: "Size Group", path: "/masters/size-group" },
             { name: "Color Master", path: "/masters/color" },
             { name: "Material", path: "/masters/material" },
             { name: "HSN/SAC", path: "/masters/hsnsac" }

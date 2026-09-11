@@ -156,6 +156,29 @@ export default function BrandMaster() {
                       <SectionTitle>Brand Information</SectionTitle>
                       <InputRow id="field-0" label="Brand Name" value={formData.name} onChange={(v: string) => setFormData({...formData, name: v})} />
                       <InputRow label="Short Name" value={formData.shortName} onChange={(v: string) => setFormData({...formData, shortName: v})} />
+                      
+                      <div className="mt-4">
+                        <SectionTitle>Linked Size Groups (Matrix)</SectionTitle>
+                        <div className="flex items-start mb-1.5 hover:bg-slate-50/50 p-1 rounded-lg transition-colors group">
+                          <div className="w-[130px] text-slate-700 font-bold text-[11px] text-right pr-3 leading-tight tracking-wide group-hover:text-indigo-700 transition-colors pt-2">
+                            Select Groups
+                          </div>
+                          <div className="flex-1 border border-slate-200 rounded-md p-2 bg-white min-h-[60px]">
+                             {/* Placeholder for Multi-Select Checkboxes */}
+                             <label className="flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer mb-1">
+                                <input type="checkbox" className="accent-indigo-600" />
+                                Momento Sizes (1 to 16)
+                             </label>
+                             <label className="flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer">
+                                <input type="checkbox" className="accent-indigo-600" />
+                                Mens Standard (S-XXL)
+                             </label>
+                             <div className="text-[10px] text-slate-400 mt-2 font-medium italic">
+                                *Checked groups will appear at the top of the dropdown when purchasing this brand.
+                             </div>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                     
                     <div className="flex-1" />

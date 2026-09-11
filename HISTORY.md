@@ -219,3 +219,89 @@ These refinements transform the CSV import from a basic shell to a highly reliab
 ## [2026-09-09] Logistics API Auth Fix
 - **Bug Fix**: The `/lrs` frontend route was failing to display pending LRs because the backend `logisticsRoutes.js` was missing `authenticateToken` and `tenantMiddleware`. This omission caused the `requirePermission` middleware to crash with a `500 Internal Server Error` when trying to read user roles.
 - **Resolution**: Injected the required authentication and tenant isolation middlewares into `backend/routes/logisticsRoutes.js`, ensuring secure and functional data fetching for pending LRs.
+
+## September 10, 2026: Employee ID and User Series Management
+**Feature Summary:**
+- Added the ability for Tenant Admins to manage User Employee IDs and ID Series via `Settings > Users` (User Master).
+- Added `employee_id` to the `Users` table and created a `UserSeries` table for managing logical ranges for employees (e.g., Admins 1-100, 1st Floor 101-200).
+- Updated the `SearchableDropdown` component in the frontend to support an array of `searchKeys`, allowing users to be searched by their Name or Employee ID.
+- Upgraded the Purchase Invoice "Order By" dropdown so typing the Employee ID (e.g., 7) automatically searches for the assigned user and selects them upon Enter.
+
+**Rationale:**
+- Customers requested the ability to quickly select order buyers using a unique numerical ID, particularly when multiple users share similar names or when operating via quick numerical entry (Tally-style data entry). 
+- Providing customizable ID Series allows physical shop floors or departments to logically group IDs.
+
+**Current State:**
+- The Tenant can now view their users at `/api/users` and manage series at `/api/user-series`. Both frontend and backend are successfully deployed.
+
+### Brand Master & Party Contacts Updates
+- **Brand Master API & DB Fix**: The UI previously supported selecting a `type` (Single Brand vs Multiple Brands) but the underlying MySQL `Brands` table was missing the `type` column. This resulted in SQL errors (`Unknown column 'type'`) during `INSERT` and `UPDATE` operations, causing Brand creation and updates to fail. Added `type VARCHAR(50) DEFAULT 'Single Brand'` to the database and restarted the backend API on PM2. All CRUD operations (Create, Update, Delete) are now fully functional and verified via the API.
+- **Brand Master UI Update**: Modified `BrandMaster.tsx` to display inputs on a single page without scrollbars. Restructured input width from full width (`flex-1`) to explicit required widths (`w-[250px]`) as requested.
+- **Party Master & Modal**: Updated the "Mobile" label in dynamic contacts to dynamically reflect the contact person's first name if available (e.g., "Rajesh Mobile").
+
+- **[2026-09-10] PartyMaster Layout Update**: Re-engineered `PartyMaster.tsx` to utilize a denser row-wise stacked layout structure instead of the default 3-column Tally vertical stack, fulfilling user request for a tighter UX.
+
+- **[2026-09-10] PartyMaster Minor Layout Updates**: Removed 'Type' and 'Opening Bal' fields per user request, and upgraded the Contact Information block to use a dynamic adding/removing list structure instead of hardcoded 1/2/3 inputs.
+
+- **[2026-09-10] PartyModal API Fix**: Updated the `PartyModal.tsx` (used in Purchase Invoice) to target the `/api/masters/party` endpoint instead of `/api/vendors`, and re-mapped its payload fields to properly insert into the `Parties` table so that newly created parties show up in `PartyMaster.tsx`.
+
+- **[2026-09-10] PartyModal Layout Clone**: Migrated the exact dense, row-wise layout architecture (including state tracking, dynamic contacts, and form UI) from `PartyMaster.tsx` into the `PartyModal.tsx` popup to ensure absolute visual parity between the master ledger and the invoice popup ledger creation form.
+
+- **[2026-09-10] PartyModal Brand Dependencies Fix**: Resolved a `ReferenceError: tempBrand is not defined` bug that occurred during the layout clone by injecting the missing state variables (brands, tempBrand, availableBrands) and the `MasterCreationModal` import/rendering logic into `PartyModal.tsx`.
+
+- **[2026-09-10] PartyModal Layout Clone (Final)**: Successfully replaced the old 3-column legacy layout structure of `PartyModal.tsx` with the dense, row-wise layout block natively extracted from `PartyMaster.tsx`, ensuring absolute parity between the modal and master page.
+
+- **[2026-09-10] PartyModal Layout Clone (Final)**: Successfully replaced the old 3-column legacy layout structure of `PartyModal.tsx` with the dense, row-wise layout block natively extracted from `PartyMaster.tsx`, ensuring absolute parity between the modal and master page.
+
+- **[2026-09-10] Party Categories Master Sync**: Replaced the plain-text Category & Subcategory inputs in `PartyMaster.tsx` and `PartyModal.tsx` with smart auto-suggest dropdowns synced with a new backend master tables (`PartyCategories` and `PartySubCategories`). Implemented parent-child linkage, preventing subcategory selection until a valid category is chosen, and enabled on-the-fly creation via `Alt+C` using the `MasterCreationModal`.
+
+### 2026-09-10 - Party Brand Constraints
+- **Database**: Added `brand_type` ENUM('Single', 'Multi') column to `Parties` table.
+- **Backend API**: Updated `partyController.js` to save/update the `brand_type` field.
+- **Party Master/Modal**: Added a "Brand Type: Single / Multi" dropdown to the Categorization & Brands UI section, allowing users to configure whether a party is restricted to a single brand.
+- **Purchase Invoice Grid**:
+  - Automatically restricts the Brand dropdown to ONLY the brands assigned to the selected party.
+  - Hides the "Alt+C" brand creation shortcut if the party has specific brands assigned.
+  - Enforces the "Single Brand" rule by locking all subsequent rows in the invoice to the brand selected in the first row.
+  - Allows full brand access and creation if the party has no brands assigned.
+
+### 2026-09-10 - Purchase Invoice Size Matrix (Horizontal Input)
+- **Database**: 
+  - Created `SizeGroups` (id, group_name, sizes array) for Global Size Masters.
+  - Altered `PurchaseInvoiceItemAttributes` to include `purchase_rate` and `mrp` columns to support size-level pricing variations.
+- **Backend API**:
+  - Created `sizeGroupController.js` and `sizeGroupRoutes.js` for CRUD operations on Size Groups.
+  - Updated `purchaseInvoiceController.js` to parse `matrixData` array and insert size-level quantities, purchase rates, and MRPs directly into the Attributes table.
+- **Frontend UI**:
+  - Created `SizeGroupMaster.tsx` for defining named size arrays (e.g. "Momento Sizes (1 to 16)").
+  - Updated `BrandMaster.tsx` UI to allow assigning Size Groups to Brands (Hybrid Option C).
+  - Created `SizeAllocationModal.tsx` for Purchase Invoices. This modal features an "Auto-Increment Setup Bar" for rapidly generating rate/MRP steps across sizes, and a Horizontal Matrix Grid for Tally-style rapid data entry (Tab to move across sizes).
+  - Integrated `SizeAllocationModal` into `PurchaseInvoice.tsx`. Pressing Enter on the Item field now opens the Matrix modal, which auto-summarizes back into a single clean line item on the main grid.
+
+## 2026-09-10: Form Accessibility and Reset Bug Fix
+**Features Implemented:**
+1. **Form Accessibility Skill**: Created a permanent Agent Skill (`retailnode-form-accessibility`) to enforce standards for keyboard navigation, shortcut consistency, safe resets, and toast notifications.
+2. **Enter-to-Tab Refactor**: Updated `GlobalEnterNavigation` in `App.tsx` to automatically skip any element with `tabIndex={-1}`.
+3. **Safe Resets**: Refactored over 20+ Master Forms to assign `tabIndex={-1}` to their "Reset" buttons. This completely prevents the critical bug where users accidentally cleared their entire form when pressing Enter at the last input field. 
+4. **Confirm Modal for Resets**: Integrated `ConfirmModal` for all Reset actions across Master Forms to ask the user "yes or no" before clearing.
+5. **Toast Notifications**: Replaced browser `alert()` on `PartyMaster.tsx` saves with standard `toast` notifications.
+
+### 2026-09-10 - Global Keyboard Navigation System (Tally Style)
+- **Frontend Architecture**: Implemented a centralized keyboard shortcut and navigation system mimicking Tally ERP, using a web-safe "Alt" (Windows) / "Option" (Mac) paradigm.
+- **State Management**: Created `useKeyboardStore.ts` (Zustand) to maintain a registry of active shortcut callbacks, supporting contextual shortcuts (e.g., specific to `SalesInvoice` vs `Global`).
+- **Core Event Listener**: Created `useGlobalKeyboard.ts` hook (integrated into `App.tsx`) that intercepts `window` `keydown` events. It aggressively neutralizes browser defaults for `e.altKey` (blocking menu popups) and handles the legacy global `Enter-to-Tab` logic.
+- **Consumer Hook**: Provided `useShortcut.ts` for developers to easily register/unregister component-level shortcuts (e.g., `Alt+S` for Save) with automatic cleanup on unmount.
+- **Artifacts**: Implementation plan, tasks, and walkthrough have been persisted to `.agents/plans/`.
+
+### Sep 11, 2026: Restored Custom Size Master UI (Scale/Set Split)
+- **Files Modified**: `FrontEndV2/src/pages/masters/inventory/SizeMaster.tsx`
+- **Rationale**: An earlier specialized UI for `SizeMaster` (which displayed sizes grouped by primary scales like INCH, SIZE, CM separately from complex Size Sets) had been overwritten by a standard master boilerplate during a deployment sync. The user uploaded a screenshot to prove the desired state. 
+- **Implementation**: 
+  - Rewrote the `SizeMaster.tsx` list view to fetch from `/api/masters/generic/sizesets`.
+  - Used JS array filtering to extract primary scales (`['inch', 'size', 'cm', 'number']`) and rendered them as side-by-side pill badges (Top Section).
+  - Remaining sets (e.g. `S-L` matrix definitions) are rendered in a lower `SCALE: SIZE` data table.
+  - Wired the "Manage Size Sets" button to route to `/masters/sizeset`.
+  - Implemented the standard "Create Mode" 2-column input layout for creating individual generic sizes, wired strictly to global keyboard listeners (`Alt+C`, `Ctrl+A`, `Escape`) with modal protection.
+- **Architecture State**: The frontend components are strictly unified around accessibility patterns. Generic masters share standard components (`ConfirmModal`), and specialized visual layouts (like `SizeMaster`) fall back to standardized 2-column input blocks when entering 'create' mode.
+- **Minor Update**: Fixed a focus loss bug in `SizeMaster.tsx`'s Create Mode by moving `InputRow` and `SectionTitle` component definitions outside the main component. Added a `Size Scale` dropdown in the first position to explicitly classify single sizes.
+- **Database Seeded**: Populated the production `Sizes` and `SizeGroups` tables with CM, INCH, and SIZE matrices so `SizeSetMaster` has exact sizes for allocation.

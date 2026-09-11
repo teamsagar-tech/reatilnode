@@ -91,6 +91,7 @@ import StyleMaster from "./pages/masters/inventory/StyleMaster"
 import SubStyleMaster from "./pages/masters/inventory/SubStyleMaster"
 import DesignMaster from "./pages/masters/inventory/DesignMaster"
 import SizeMaster from "./pages/masters/inventory/SizeMaster"
+import SizeGroupMaster from "./pages/masters/inventory/SizeGroupMaster"
 import ColorMaster from "./pages/masters/inventory/ColorMaster"
 import MaterialMaster from "./pages/masters/inventory/MaterialMaster"
 import HSNSACMaster from "./pages/masters/inventory/HSNSACMaster"
@@ -207,6 +208,7 @@ function App() {
             <Route path="/masters/substyle" element={<SubStyleMaster />} />
             <Route path="/masters/design" element={<DesignMaster />} />
             <Route path="/masters/size" element={<SizeMaster />} />
+            <Route path="/masters/size-group" element={<SizeGroupMaster />} />
             <Route path="/masters/color" element={<ColorMaster />} />
             <Route path="/masters/material" element={<MaterialMaster />} />
             <Route path="/masters/hsnsac" element={<HSNSACMaster />} />
