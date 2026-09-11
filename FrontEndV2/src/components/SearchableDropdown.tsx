@@ -109,6 +109,7 @@ export default function SearchableDropdown({
         onBlur={e => {
           // Small timeout to allow click events on dropdown options to fire first
           setTimeout(() => {
+            setOpen(false);
             if (open && filtered.length === 0 && value.trim() !== '' && onNotFound) {
               onNotFound(value);
             }

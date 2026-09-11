@@ -157,6 +157,7 @@ export default function SubCategoryMaster() {
             setFormData({
               name: row.name,
               parent_id: row.parent_id,
+              parent_name: parentCategories.find(c => c.id === row.parent_id)?.name || '',
               description: row.description || ''
             });
             setEditId(row.id);
@@ -211,6 +212,7 @@ export default function SubCategoryMaster() {
                               setFormData({
                                 name: row.name,
                                 parent_id: row.parent_id,
+                                parent_name: parentCategories.find(c => c.id === row.parent_id)?.name || '',
                                 description: row.description || ''
                               });
                               setEditId(row.id);
@@ -243,12 +245,10 @@ export default function SubCategoryMaster() {
                         <div className="flex-1 relative">
                           <SearchableDropdown
                             id="input-parent"
-                            value={parentCategories.find(p => p.id === formData.parent_id)?.name || ''}
+                            value={formData.parent_name !== undefined ? formData.parent_name : (parentCategories.find(p => p.id === formData.parent_id)?.name || '')}
                             onChange={(val: string) => {
                               const found = parentCategories.find(p => p.name === val);
-                              if (found) {
-                                setFormData({...formData, parent_id: found.id});
-                              }
+                              setFormData({...formData, parent_name: val, parent_id: found ? found.id : null});
                             }}
                             onSelect={(opt: any) => {
                               setTimeout(() => document.getElementById('input-name')?.focus(), 10);

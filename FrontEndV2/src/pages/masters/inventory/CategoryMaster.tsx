@@ -67,7 +67,7 @@ export default function CategoryMaster() {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     })
     .then(res => res.json())
-    .then(data => setCategories(Array.isArray(data) ? data : []))
+    .then(data => setCategories(Array.isArray(data) ? data.filter((c: any) => !c.parent_id) : []))
     .catch(console.error);
   };
 

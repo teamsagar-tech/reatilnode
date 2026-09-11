@@ -40,7 +40,7 @@ export default function PurchaseInvoice() {
     lrNo: '',
     bale: '',
     billNo: '',
-    billDate: '',
+    billDate: new Date().toISOString().split('T')[0],
     receiveDate: '',
     totalQuantity: '',
     billAmount: '',
@@ -243,7 +243,7 @@ export default function PurchaseInvoice() {
       } else {
         // Clear form if no queue
         setInvoiceData({
-            supplier: '', billNo: '', billDate: '', receiveDate: new Date().toISOString().split('T')[0],
+            supplier: '', billNo: '', billDate: new Date().toISOString().split('T')[0], receiveDate: new Date().toISOString().split('T')[0],
             totalQuantity: '', billAmount: '', showLocation: false,
             designNo: false, colourNo: false, showSize: false, showPurchaseDiscount: false, showMarkdown: false,
             poNo: '', orderBy: '', transporter: '', lrNo: '', bale: '', narration: '',
@@ -1371,7 +1371,7 @@ export default function PurchaseInvoice() {
                     </div>
                   </div>
 
-                  {/* Row 2: Bill No, Date, Receive Date */}
+                  {/* Row 2: Bill No, Date */}
                   <div className="flex items-center gap-4">
                     <div className="flex items-center flex-1">
                       <span className="w-[80px] text-slate-800 font-bold mr-2">Bill No :</span>
@@ -1379,11 +1379,7 @@ export default function PurchaseInvoice() {
                     </div>
                     <div className="flex items-center flex-[1.5]">
                       <span className="w-[80px] text-slate-800 font-bold mr-2">Bill Date :</span>
-                      <input type="date" id="input-billDate" value={invoiceData.billDate} onChange={e => setInvoiceData({...invoiceData, billDate: e.target.value})} onKeyDown={e => handleHeaderKeyDown(e, 'input-receiveDate')} className="border border-slate-500 bg-white px-1 flex-1 focus:outline-none focus:border-black focus:bg-[#ffffe0]" />
-                    </div>
-                    <div className="flex items-center flex-[1.5]">
-                      <span className="w-[100px] text-slate-800 font-bold mr-2">Receive Date :</span>
-                      <input type="date" id="input-receiveDate" value={invoiceData.receiveDate} onChange={e => setInvoiceData({...invoiceData, receiveDate: e.target.value})} onKeyDown={e => handleHeaderKeyDown(e, 'input-totalQty')} className="border border-slate-500 bg-white px-1 flex-1 focus:outline-none focus:border-black focus:bg-[#ffffe0]" />
+                      <input type="date" id="input-billDate" value={invoiceData.billDate} onChange={e => setInvoiceData({...invoiceData, billDate: e.target.value})} onKeyDown={e => handleHeaderKeyDown(e, 'input-totalQty')} className="border border-slate-500 bg-white px-1 flex-1 focus:outline-none focus:border-black focus:bg-[#ffffe0]" />
                     </div>
                   </div>
 
@@ -1417,9 +1413,6 @@ export default function PurchaseInvoice() {
                       </label>
                       <label className="flex items-center gap-1 cursor-pointer">
                          <input type="checkbox" checked={invoiceData.showSize} onChange={e => setInvoiceData({...invoiceData, showSize: e.target.checked})} className="accent-[#1b5e58]" /> Size
-                      </label>
-                      <label className="flex items-center gap-1 cursor-pointer text-indigo-700">
-                         <input type="checkbox" checked={invoiceData.showLocation} onChange={e => setInvoiceData({...invoiceData, showLocation: e.target.checked})} className="accent-indigo-600" /> Location
                       </label>
                       <label className="flex items-center gap-1 cursor-pointer">
                          <input type="checkbox" checked={invoiceData.showPurchaseDiscount} onChange={e => setInvoiceData({...invoiceData, showPurchaseDiscount: e.target.checked})} className="accent-[#1b5e58]" /> Discount %
