@@ -34,7 +34,9 @@ export default function Dashboard() {
                 items: [
                   { title: "Item", hotkey: "I", to: "/masters/item" },
                   { title: "Brand", hotkey: "B", to: "/masters/brand" },
-                  { title: "Category", hotkey: "C", to: "/masters/category" },
+                  { title: "Taxonomy", hotkey: "T", to: "/masters/taxonomy" },
+                  { title: "Cut", hotkey: "C", to: "/masters/cut" },
+                  { title: "Category", hotkey: "Y", to: "/masters/category" },
                   { title: "Sub Category", hotkey: "S", to: "/masters/subcategory" },
                   { title: "Department", hotkey: "D", to: "/masters/department" },
                   { title: "Section", hotkey: "E", to: "/masters/section" },
@@ -181,7 +183,18 @@ export default function Dashboard() {
             { title: "Label Print", hotkey: "L", to: "/inventory/barcodes/label-print-page" },
             { title: "Bulk Label Print", hotkey: "B", to: "/inventory/barcodes/bulk-label-print" },
             { title: "Barcoded Products", hotkey: "P", to: "/inventory/barcodes/barcoded-products" },
-            { title: "Barcodes Search", hotkey: "S", to: "/inventory/barcodes/barcodes-search" }
+            { title: "Barcodes Search", hotkey: "S", to: "/inventory/barcodes/barcodes-search" },
+            {
+              title: "Advanced",
+              hotkey: "A",
+              children: {
+                title: "Advanced Inventory",
+                items: [
+                  { title: "Price List Import", hotkey: "I", to: "/inventory/price-list-import" },
+                  { title: "OCR Prototype", hotkey: "O", to: "/inventory/ocr-test" }
+                ]
+              }
+            }
           ]
         }
       },

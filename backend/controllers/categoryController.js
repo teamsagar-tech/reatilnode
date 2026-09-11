@@ -67,3 +67,42 @@ exports.delete = async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 };
+
+exports.merge = async (req, res) => {
+  const { sourceId, targetId } = req.body;
+  if (!sourceId || !targetId) return res.status(400).json({ error: 'sourceId and targetId are required' });
+
+  try {
+    await db.execute('START TRANSACTION');
+    // Update all items referencing sourceId to point to targetId
+    await db.execute('UPDATE Items SET category_id = ? WHERE category_id = ? AND firm_id = ?', [targetId, sourceId, req.firm_id]);
+    
+    // Update subcategories referencing sourceId as parent_id
+    await db.execute('UPDATE Categories SET parent_id = ? WHERE parent_id = ? AND firm_id = ?', [targetId, sourceId, req.firm_id]);
+
+    // Finally delete the source category
+    await db.execute('DELETE FROM Categories WHERE id = ? AND firm_id = ?', [sourceId, req.firm_id]);
+    
+    await db.execute('COMMIT');
+    res.json({ message: 'Categories merged successfully' });
+  } catch (error) {
+    await db.execute('ROLLBACK');
+    console.error('Error merging categories:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+exports.saveCuts = async (req, res) => {
+  const { cuts } = req.body;
+  try {
+    const [result] = await db.execute(
+      'UPDATE Categories SET cuts = ? WHERE id = ? AND firm_id = ?',
+      [JSON.stringify(cuts || []), req.params.id, req.firm_id]
+    );
+    if (result.affectedRows === 0) return res.status(404).json({ error: 'Category not found' });
+    res.json({ message: 'Cuts assigned successfully' });
+  } catch (error) {
+    console.error('Error assigning cuts:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};

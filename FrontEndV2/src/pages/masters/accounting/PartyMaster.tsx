@@ -61,6 +61,44 @@ export default function PartyMaster() {
     setCategories(categories.filter((_, i) => i !== idx));
   };
 
+  const [availableCategories, setAvailableCategories] = useState<any[]>([]);
+  const [availableSubcategories, setAvailableSubcategories] = useState<any[]>([]);
+  const [showCatSuggestions, setShowCatSuggestions] = useState(false);
+  const [focusedCatIndex, setFocusedCatIndex] = useState(-1);
+  const [selectedCatId, setSelectedCatId] = useState<number | null>(null);
+  const [showSubSuggestions, setShowSubSuggestions] = useState(false);
+  const [focusedSubIndex, setFocusedSubIndex] = useState(-1);
+
+  useEffect(() => {
+    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/category`, {
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (Array.isArray(data)) {
+        setAvailableCategories(data.filter(c => !c.parent_id));
+      }
+    })
+    .catch(console.error);
+  }, []);
+
+  useEffect(() => {
+    if (!selectedCatId) {
+      setAvailableSubcategories([]);
+      return;
+    }
+    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/category`, {
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (Array.isArray(data)) {
+        setAvailableSubcategories(data.filter(c => c.parent_id === selectedCatId));
+      }
+    })
+    .catch(console.error);
+  }, [selectedCatId]);
+
   const [brands, setBrands] = useState<{name: string}[]>([]);
   const [tempBrand, setTempBrand] = useState('');
   const [availableBrands, setAvailableBrands] = useState<any[]>([]);

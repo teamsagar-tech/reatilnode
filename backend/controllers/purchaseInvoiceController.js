@@ -16,6 +16,31 @@ exports.getAll = async (req, res) => {
   }
 };
 
+exports.getLastRate = async (req, res) => {
+  const { vendor_id, item_id } = req.query;
+  if (!vendor_id || !item_id) return res.status(400).json({ error: 'vendor_id and item_id are required' });
+
+  try {
+    const [rows] = await db.execute(`
+      SELECT pii.purchase_rate 
+      FROM PurchaseInvoiceItems pii
+      JOIN PurchaseInvoices pi ON pii.invoice_id = pi.id
+      WHERE pi.vendor_id = ? AND pii.item_id = ? AND pi.firm_id = ?
+      ORDER BY pi.bill_date DESC 
+      LIMIT 1
+    `, [vendor_id, item_id, req.firm_id]);
+    
+    if (rows.length > 0) {
+      res.json({ last_rate: rows[0].purchase_rate });
+    } else {
+      res.json({ last_rate: null });
+    }
+  } catch (error) {
+    console.error('Error fetching last purchase rate:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
 exports.getById = async (req, res) => {
   const conn = await db.getConnection();
   try {
@@ -165,7 +190,7 @@ exports.create = async (req, res) => {
       `INSERT INTO PurchaseInvoices 
        (firm_id, grn_no, vendor_id, bill_no, bill_date, receive_date, discount_percent, discount_amount, commission_percent, commission_amount, total_amount, gst_amount, net_amount, narration, lr_status, purchase_order_id, lr_no, transporter, bales, created_by, ip_address) 
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [req.firm_id, grn_no, vendor_id, bill_no || null, bill_date || null, receive_date || null, discount_percent || 0, discount_amount || 0, commission_percent || 0, commission_amount || 0, total_amount || 0, gst_amount || 0, net_amount || 0, narration || null, lr_status, req.body.purchase_order_id || null, lr_no || null, transporter || null, bales || null, created_by, ip_address]
+      [req.firm_id, grn_no, vendor_id, bill_no || null, bill_date || null, receive_date || new Date(), discount_percent || 0, discount_amount || 0, commission_percent || 0, commission_amount || 0, total_amount || 0, gst_amount || 0, net_amount || 0, narration || null, lr_status, req.body.purchase_order_id || null, lr_no || null, transporter || null, bales || null, created_by, ip_address]
     );
     const invoiceId = invoiceResult.insertId;
 
@@ -329,7 +354,7 @@ exports.update = async (req, res) => {
       `UPDATE PurchaseInvoices 
        SET vendor_id=?, bill_no=?, bill_date=?, receive_date=?, discount_percent=?, discount_amount=?, commission_percent=?, commission_amount=?, total_amount=?, gst_amount=?, net_amount=?, narration=?, purchase_order_id=?, lr_no=?, transporter=?, bales=?, ip_address=?
        WHERE id=? AND firm_id=?`,
-      [vendor_id, bill_no || null, bill_date || null, receive_date || null, discount_percent || 0, discount_amount || 0, commission_percent || 0, commission_amount || 0, total_amount || 0, gst_amount || 0, net_amount || 0, narration || null, req.body.purchase_order_id || null, lr_no || null, transporter || null, bales || null, req.headers['x-forwarded-for'] || req.socket.remoteAddress || null, id, req.firm_id]
+      [vendor_id, bill_no || null, bill_date || null, receive_date || new Date(), discount_percent || 0, discount_amount || 0, commission_percent || 0, commission_amount || 0, total_amount || 0, gst_amount || 0, net_amount || 0, narration || null, req.body.purchase_order_id || null, lr_no || null, transporter || null, bales || null, req.headers['x-forwarded-for'] || req.socket.remoteAddress || null, id, req.firm_id]
     );
 
     // Delete old items (attributes will cascade if set, otherwise we should manually delete attributes first)

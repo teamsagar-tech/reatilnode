@@ -141,7 +141,7 @@ export default function SizeGroupMaster() {
                   <div className='flex justify-between items-center mb-2'>
                     <div className='font-bold text-slate-800 text-[14px]'>List of Size Groups</div>
                     <button 
-                      onClick={() => setShowResetConfirm(true)} tabIndex={-1}); }} 
+                      onClick={() => setMode('create')} tabIndex={-1}
                       className='bg-[#eef5ed] border border-[#a3c3be] px-2 py-1 font-bold text-black shadow-[inset_1px_1px_0_rgba(255,255,255,0.8)] hover:bg-[#ffe000] focus:bg-[#ffe000] outline-none text-[12px]'
                     >Create New (Alt/Opt+C)</button>
                   </div>
@@ -194,7 +194,7 @@ export default function SizeGroupMaster() {
                   {/* Action Buttons */}
                   <div className='flex justify-end gap-2 pt-2 border-t border-slate-300 mt-2 shrink-0'>
                     <button 
-                      onClick={() => setShowResetConfirm(true)} tabIndex={-1})}
+                      onClick={() => setShowResetConfirm(true)} tabIndex={-1}
                       className='bg-red-50 border border-red-300 px-6 py-1 text-red-700 font-bold hover:bg-red-100 shadow-[inset_1px_1px_0_rgba(255,255,255,0.8)] outline-none focus:bg-red-200'
                     >
                       Reset
@@ -262,7 +262,7 @@ export default function SizeGroupMaster() {
         message="Are you sure you want to clear all data? This cannot be undone."
         type="warning"
         onConfirm={() => {
-          const resetFn = () => setFormData({ sizes: '' ;
+          const resetFn = () => setFormData({ sizes: '' });
           resetFn();
           setShowResetConfirm(false);
         }}

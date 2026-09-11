@@ -1,4 +1,5 @@
 const db = require('../config/db');
+const { normalizeMasterName } = require('../utils/normalization');
 
 // Allowed list mapping URL paths to DB Tables
 const allowedMasters = {
@@ -85,6 +86,14 @@ exports.create = async (req, res) => {
     if (!name) return res.status(400).json({ error: 'Name is required' });
 
     try {
+      const normalizedName = normalizeMasterName(name);
+      const [allRecords] = await db.execute(`SELECT id, name FROM ${tableName} WHERE firm_id = ?`, [req.firm_id]);
+      const duplicate = allRecords.find(r => normalizeMasterName(r.name) === normalizedName);
+      
+      if (duplicate) {
+        return res.status(409).json({ error: `Record '${duplicate.name}' already exists (similar name detected).` });
+      }
+
       let query = `INSERT INTO ${tableName} (firm_id, name, description, is_active) VALUES (?, ?, ?, ?)`;
       let params = [req.firm_id, name, description || null, is_active !== undefined ? is_active : true];
 
@@ -122,6 +131,14 @@ exports.update = async (req, res) => {
     if (!name) return res.status(400).json({ error: 'Name is required' });
 
     try {
+      const normalizedName = normalizeMasterName(name);
+      const [allRecords] = await db.execute(`SELECT id, name FROM ${tableName} WHERE firm_id = ?`, [req.firm_id]);
+      const duplicate = allRecords.find(r => r.id !== parseInt(req.params.id) && normalizeMasterName(r.name) === normalizedName);
+      
+      if (duplicate) {
+        return res.status(409).json({ error: `Record '${duplicate.name}' already exists (similar name detected).` });
+      }
+
       let query = `UPDATE ${tableName} SET name=?, description=?, is_active=? WHERE id=? AND firm_id=?`;
       let params = [name, description || null, is_active !== undefined ? is_active : true, req.params.id, req.firm_id];
 

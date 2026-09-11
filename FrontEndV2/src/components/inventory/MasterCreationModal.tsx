@@ -175,10 +175,15 @@ export default function MasterCreationModal({ isOpen, onClose, onSave, masterTyp
       data = { groupName: name, sizes: sizesArray };
       endpoint = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/size-groups`;
     } else if (masterType === 'partycategory') {
-      endpoint = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/generic/partycategories`;
+      data = { name, parent_id: null };
+      endpoint = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/category`;
     } else if (masterType === 'partysubcategory') {
-      data = { name, category_id: parentId };
-      endpoint = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/generic/partysubcategories`;
+      data = { name, parent_id: parentId };
+      endpoint = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/category`;
+    } else if (masterType === 'design') {
+      endpoint = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/generic/designs`;
+    } else if (masterType === 'colour') {
+      endpoint = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/generic/colors`;
     }
 
     try {
@@ -227,8 +232,12 @@ export default function MasterCreationModal({ isOpen, onClose, onSave, masterTyp
       case 'size': return 'Size Creation';
       case 'item': return 'Item Creation';
       case 'hsn': return 'HSN/SAC Creation';
-      case 'partycategory': return 'Category Creation';
-      case 'partysubcategory': return 'Subcategory Creation';
+      case 'sizeset': return 'Size Set Creation';
+      case 'sizegroup': return 'Size Group Creation';
+      case 'partycategory': return 'Party Category Creation';
+      case 'partysubcategory': return 'Party Subcategory Creation';
+      case 'design': return 'Design Creation';
+      case 'colour': return 'Colour Creation';
       default: return 'Master Creation';
     }
   };

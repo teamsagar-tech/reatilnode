@@ -81,11 +81,15 @@ export default function PartyModal({ isOpen, onClose, onSave, initialPartyName =
   const [selectedCatId, setSelectedCatId] = useState<number | null>(null);
 
   useEffect(() => {
-    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/generic/partycategories`, {
+    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/category`, {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     })
     .then(res => res.json())
-    .then(data => setAvailableCategories(Array.isArray(data) ? data : []))
+    .then(data => {
+      if (Array.isArray(data)) {
+        setAvailableCategories(data.filter(c => !c.parent_id));
+      }
+    })
     .catch(console.error);
   }, [masterModal]);
 
@@ -94,11 +98,15 @@ export default function PartyModal({ isOpen, onClose, onSave, initialPartyName =
       setAvailableSubcategories([]);
       return;
     }
-    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/generic/partysubcategories?categoryId=${selectedCatId}`, {
+    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/category`, {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     })
     .then(res => res.json())
-    .then(data => setAvailableSubcategories(Array.isArray(data) ? data : []))
+    .then(data => {
+      if (Array.isArray(data)) {
+        setAvailableSubcategories(data.filter(c => c.parent_id === selectedCatId));
+      }
+    })
     .catch(console.error);
   }, [selectedCatId, masterModal]);
 

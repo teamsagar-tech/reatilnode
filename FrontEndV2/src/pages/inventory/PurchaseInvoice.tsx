@@ -51,14 +51,16 @@ export default function PurchaseInvoice() {
     designNo: false,
     colourNo: false,
     showSize: true,
+    showCutSize: false,
     showLocation: true,
     showPurchaseDiscount: false,
     showMarkdown: false
   });
 
   const [products, setProducts] = useState<any[]>([
-    { id: 1, item_id: null, item: '', brand_id: null, brand: '', qty: '', rate: '', disc: 0, gst: 0, design: '', colour: '', size: '', mrp: 0, attributes: [] }
+    { id: 1, item_id: null, item: '', brand_id: null, brand: '', qty: '', cut_size: '', pieces: '', rate: '', last_rate: null, disc: 0, gst: 0, design: '', colour: '', size: '', mrp: 0, attributes: [] }
   ]);
+  const [cuts, setCuts] = useState<any[]>([]);
 
   useEffect(() => {
     const id = location.state?.invoiceId;
@@ -250,7 +252,7 @@ export default function PurchaseInvoice() {
             discountPercent: 0, discountAmount: 0, commissionPercent: 0, 
             cgstPercent: 'Auto', sgstPercent: 'Auto', otherCharges: 0, purchaser: ''
         });
-        setProducts([{ id: Date.now(), item_id: null, item: '', hsn: '', brand_id: null, brand: '', qty: '', rate: '', disc: 0, gst: 0, design: '', colour: '', size: '', mrp: 0 }]);
+        setProducts([{ id: Date.now(), item_id: null, item: '', hsn: '', brand_id: null, brand: '', qty: '', cut_size: '', pieces: '', rate: '', last_rate: null, disc: 0, gst: 0, design: '', colour: '', size: '', mrp: 0 }]);
       }
     } catch (err: any) {
       console.error(err);
@@ -569,7 +571,7 @@ export default function PurchaseInvoice() {
   const [showItemModal, setShowItemModal] = useState(false);
   const [showPartyModal, setShowPartyModal] = useState(false);
   const [showTransporterModal, setShowTransporterModal] = useState(false);
-  const [masterModal, setMasterModal] = useState<{ type: 'brand' | 'size' | 'item' | 'hsn', initialValue: string, rowIndex: number, initialBrand?: string } | null>(null);
+  const [masterModal, setMasterModal] = useState<{ type: 'brand' | 'size' | 'item' | 'hsn' | 'design' | 'colour', initialValue: string, rowIndex: number, initialBrand?: string, initialBrandId?: number | null } | null>(null);
   const [masterCreationState, setMasterCreationState] = useState<{isOpen: boolean; type: string; initialValue: string; category?: string; subcategory?: string}>({
       isOpen: false, type: '', initialValue: ''
   });
@@ -592,6 +594,14 @@ export default function PurchaseInvoice() {
   const [availableHsns, setAvailableHsns] = useState<any[]>([]);
   const [hsnSuggestionIndex, setHsnSuggestionIndex] = useState(0);
   const [activeHsnRow, setActiveHsnRow] = useState<number | null>(null);
+
+  const [availableDesigns, setAvailableDesigns] = useState<any[]>([]);
+  const [designSuggestionIndex, setDesignSuggestionIndex] = useState(0);
+  const [activeDesignRow, setActiveDesignRow] = useState<number | null>(null);
+
+  const [availableColours, setAvailableColours] = useState<any[]>([]);
+  const [colourSuggestionIndex, setColourSuggestionIndex] = useState(0);
+  const [activeColourRow, setActiveColourRow] = useState<number | null>(null);
   
   const [locations, setLocations] = useState<any[]>([]);
   const [importQueue, setImportQueue] = useState<any[][]>([]);
@@ -606,6 +616,22 @@ export default function PurchaseInvoice() {
     })
     .then(res => res.json())
     .then(data => setAvailableItems(Array.isArray(data) ? data : []))
+    .catch(console.error);
+
+    // Fetch Designs
+    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/generic/designs`, {
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    })
+    .then(res => res.json())
+    .then(data => setAvailableDesigns(Array.isArray(data) ? data : []))
+    .catch(console.error);
+
+    // Fetch Colours
+    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/generic/colors`, {
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    })
+    .then(res => res.json())
+    .then(data => setAvailableColours(Array.isArray(data) ? data : []))
     .catch(console.error);
 
     // Fetch Brands
@@ -645,6 +671,13 @@ export default function PurchaseInvoice() {
       .then(res => res.json())
       .then(data => setTransporters(Array.isArray(data) ? data : (data.data || [])))
       .catch(err => console.error("Error fetching transporters:", err));
+
+    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/cut`, {
+      headers: { 'Authorization': `Bearer ${sessionStorage.getItem('token') || localStorage.getItem('token')}` }
+    })
+      .then(res => res.json())
+      .then(data => setCuts(Array.isArray(data) ? data : []))
+      .catch(err => console.error("Error fetching cuts:", err));
 
     // Fetch Purchasers
     fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/users/purchasers`, {
@@ -719,7 +752,30 @@ export default function PurchaseInvoice() {
 
 
   const handleInvoiceChange = (field: string, value: any) => {
-    setInvoiceData(prev => ({ ...prev, [field]: value }));
+    setInvoiceData(prev => {
+      const next = { ...prev, [field]: value };
+      if (field === 'supplier') {
+        const matchedVendor = vendors.find(v => (v.name || '').toLowerCase() === (value || '').toLowerCase());
+        if (matchedVendor) {
+           let catString = '';
+           if (typeof matchedVendor.categories === 'string') {
+              catString = matchedVendor.categories.toLowerCase();
+           } else if (Array.isArray(matchedVendor.categories)) {
+              catString = JSON.stringify(matchedVendor.categories).toLowerCase();
+           }
+           if (catString.includes('suit') || catString.includes('shirt')) {
+              next.designNo = true;
+              next.colourNo = true;
+              next.showSize = false;
+              next.showCutSize = true;
+           } else if (catString.includes('ready')) {
+              next.showSize = true;
+              next.showCutSize = false;
+           }
+        }
+      }
+      return next;
+    });
   };
 
   const updateProduct = (index: number, field: string, value: any) => {
@@ -731,7 +787,7 @@ export default function PurchaseInvoice() {
   };
 
   const addProduct = () => {
-    setProducts([...products, { id: Date.now(), item: '', hsn: '', brand: '', qty: '', rate: '', disc: 0, gst: 0, design: '', colour: '', size: '', mrp: 0 }]);
+    setProducts([...products, { id: Date.now(), item: '', hsn: '', brand: '', qty: '', cut_size: '', pieces: '', rate: '', last_rate: null, disc: 0, gst: 0, design: '', colour: '', size: '', mrp: 0 }]);
   };
 
   const removeProduct = (index: number) => {
@@ -739,6 +795,29 @@ export default function PurchaseInvoice() {
       const newProducts = [...products];
       newProducts.splice(index, 1);
       setProducts(newProducts);
+    }
+  };
+
+  const fetchLastRate = async (itemId: number, index: number) => {
+    const matchedVendor = vendors.find(v => (v.name || '').toLowerCase() === (invoiceData.supplier || '').toLowerCase());
+    if (!matchedVendor || !itemId) return;
+    
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/purchase-invoices/last-rate?vendor_id=${matchedVendor.id}&item_id=${itemId}`, {
+        headers: { 'Authorization': `Bearer ${sessionStorage.getItem('token') || localStorage.getItem('token')}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.rate) {
+          setProducts(prev => {
+             const newP = [...prev];
+             newP[index] = { ...newP[index], last_rate: data.rate };
+             return newP;
+          });
+        }
+      }
+    } catch (e) {
+      console.error('Error fetching last rate:', e);
     }
   };
 
@@ -797,14 +876,26 @@ export default function PurchaseInvoice() {
 
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, index: number, field: string) => {
-    const fields = ['brand', 'item', 'hsn', 'qty', 'rate', 'disc', 'mrp'];
+    const fields = ['brand', 'item', 'hsn'];
+    if (invoiceData.designNo) fields.push('design');
+    if (invoiceData.colourNo) fields.push('colour');
+    if (invoiceData.showSize) fields.push('size');
+    fields.push('qty', 'rate');
+    if (invoiceData.showPurchaseDiscount) fields.push('disc');
+    if (invoiceData.showMarkdown) fields.push('mrp');
+    if (invoiceData.gstOn === 'items') fields.push('gst');
+
     const currentFieldIndex = fields.indexOf(field);
 
     if (e.altKey && (e.key.toLowerCase() === 'c' || e.code === 'KeyC')) {
       e.preventDefault();
-      if (['brand', 'size', 'item', 'gst'].includes(field)) {
+      if (['brand', 'size', 'item', 'gst', 'hsn', 'design', 'colour'].includes(field)) {
         if (field === 'brand' && vendorAllowedBrands !== null) {
           alert('This party has specific brands assigned. You cannot create a new brand on the fly.');
+          return;
+        }
+        if (field === 'item' && vendorAllowedBrands !== null) {
+          alert('This party has specific allowed brands. You cannot create a new item on the fly.');
           return;
         }
         setMasterModal({ 
@@ -822,7 +913,7 @@ export default function PurchaseInvoice() {
       const query = (products[index].brand || '').toLowerCase();
       let baseBrands = availableBrands;
       if (vendorAllowedBrands !== null) {
-        baseBrands = baseBrands.filter(b => vendorAllowedBrands.includes(b.name));
+        baseBrands = baseBrands.filter(b => vendorAllowedBrands.some(vb => vb.toLowerCase() === (b.name || '').toLowerCase()));
       }
       if (isSingleBrandVendor && lockedBrand) {
         baseBrands = baseBrands.filter(b => b.name === lockedBrand);
@@ -883,12 +974,95 @@ export default function PurchaseInvoice() {
           };
           setProducts(newProducts);
           setActiveHsnRow(null);
-          document.getElementById(`row-${index}-qty`)?.focus();
+          const nextField = fields[fields.indexOf('hsn') + 1];
+          if (nextField) {
+            document.getElementById(`row-${index}-${nextField}`)?.focus();
+          }
           return;
         } else if (query.trim() !== '') {
           e.preventDefault();
           setMasterModal({ 
             type: 'hsn',
+            initialValue: e.currentTarget.value || '',
+            rowIndex: index
+          });
+          return;
+        }
+      }
+    }
+
+    if (field === 'design' && activeDesignRow === index) {
+      const query = (products[index].design || '').toLowerCase();
+      const filtered = availableDesigns.filter(s => (s.name || '').toLowerCase().startsWith(query)).slice(0, 8);
+      
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setDesignSuggestionIndex(prev => Math.min(prev + 1, filtered.length - 1));
+        return;
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setDesignSuggestionIndex(prev => Math.max(prev - 1, 0));
+        return;
+      } else if (e.key === 'Enter' || ((e.key === 'Tab' || e.key === 'ArrowRight') && query.trim() !== '')) {
+        if (filtered.length > 0) {
+          e.preventDefault();
+          const selected = filtered[designSuggestionIndex];
+          const newProducts = [...products];
+          newProducts[index] = { 
+            ...newProducts[index], 
+            design: selected.name || ''
+          };
+          setProducts(newProducts);
+          setActiveDesignRow(null);
+          const nextField = fields[fields.indexOf('design') + 1];
+          if (nextField) {
+            document.getElementById(`row-${index}-${nextField}`)?.focus();
+          }
+          return;
+        } else if (query.trim() !== '') {
+          e.preventDefault();
+          setMasterModal({ 
+            type: 'design',
+            initialValue: e.currentTarget.value || '',
+            rowIndex: index
+          });
+          return;
+        }
+      }
+    }
+
+    if (field === 'colour' && activeColourRow === index) {
+      const query = (products[index].colour || '').toLowerCase();
+      const filtered = availableColours.filter(s => (s.name || '').toLowerCase().startsWith(query)).slice(0, 8);
+      
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setColourSuggestionIndex(prev => Math.min(prev + 1, filtered.length - 1));
+        return;
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setColourSuggestionIndex(prev => Math.max(prev - 1, 0));
+        return;
+      } else if (e.key === 'Enter' || ((e.key === 'Tab' || e.key === 'ArrowRight') && query.trim() !== '')) {
+        if (filtered.length > 0) {
+          e.preventDefault();
+          const selected = filtered[colourSuggestionIndex];
+          const newProducts = [...products];
+          newProducts[index] = { 
+            ...newProducts[index], 
+            colour: selected.name || ''
+          };
+          setProducts(newProducts);
+          setActiveColourRow(null);
+          const nextField = fields[fields.indexOf('colour') + 1];
+          if (nextField) {
+            document.getElementById(`row-${index}-${nextField}`)?.focus();
+          }
+          return;
+        } else if (query.trim() !== '') {
+          e.preventDefault();
+          setMasterModal({ 
+            type: 'colour',
             initialValue: e.currentTarget.value || '',
             rowIndex: index
           });
@@ -904,6 +1078,10 @@ export default function PurchaseInvoice() {
       const filtered = availableItems.filter(s => {
         const textMatch = (s.name || s.item_name || '').toLowerCase().includes(query);
         if (rowBrandId) return textMatch && String(s.brand_id) === String(rowBrandId);
+        if (vendorAllowedBrands !== null) {
+           const isAllowed = vendorAllowedBrands.some(vb => vb.toLowerCase() === (s.brand || '').toLowerCase());
+           return textMatch && isAllowed;
+        }
         return textMatch;
       }).slice(0, 8);
       
@@ -920,12 +1098,29 @@ export default function PurchaseInvoice() {
           e.preventDefault();
           const selected = filtered[suggestionIndex];
           const newProducts = [...products];
-          newProducts[index] = { ...newProducts[index], item_id: selected.id, item: selected.name || selected.item_name, brand_id: selected.brand_id || null, brand: selected.brand || newProducts[index].brand || '', rate: selected.purchase_price || selected.rate || newProducts[index].rate || '' };
+          newProducts[index] = { 
+            ...newProducts[index], 
+            item_id: selected.id, 
+            item: selected.name || selected.item_name, 
+            brand_id: selected.brand_id || null, 
+            brand: selected.brand || newProducts[index].brand || '', 
+            rate: selected.purchase_price || selected.rate || newProducts[index].rate || '',
+            hsn: selected.hsn_code || selected.hsn || newProducts[index].hsn || '',
+            gst: selected.tax_percent !== undefined ? selected.tax_percent : (newProducts[index].gst || 0)
+          };
           setProducts(newProducts);
           setActiveSuggestionRow(null);
-          setActiveSizeMatrixRow(index);
+          
+          fetchLastRate(selected.id, index);
+          
+          const nextField = fields[fields.indexOf('item') + 1];
+          if (nextField) {
+            setTimeout(() => {
+              document.getElementById(`row-${index}-${nextField}`)?.focus();
+            }, 10);
+          }
           return;
-        } else if (query.trim() !== '') {
+        } else if (query.trim() !== '' && vendorAllowedBrands === null) {
           e.preventDefault();
           setMasterModal({ 
             type: 'item',
@@ -1001,6 +1196,25 @@ export default function PurchaseInvoice() {
     setTimeout(() => setActiveHsnRow(null), 200);
   };
 
+  const handleDesignFocus = (e: React.FocusEvent<HTMLInputElement>, index: number) => {
+    e.target.select();
+    setActiveDesignRow(index);
+    setDesignSuggestionIndex(0);
+  };
+
+  const handleDesignBlur = () => {
+    setTimeout(() => setActiveDesignRow(null), 200);
+  };
+
+  const handleColourFocus = (e: React.FocusEvent<HTMLInputElement>, index: number) => {
+    e.target.select();
+    setActiveColourRow(index);
+    setColourSuggestionIndex(0);
+  };
+
+  const handleColourBlur = () => {
+    setTimeout(() => setActiveColourRow(null), 200);
+  };
 
   const handleCreateMissingMaster = async (err: any) => {
     setIsCreating(true);
@@ -1377,7 +1591,7 @@ export default function PurchaseInvoice() {
                       <span className="w-[80px] text-slate-800 font-bold mr-2">Bill No :</span>
                       <input type="text" id="input-billNo" value={invoiceData.billNo} onChange={e => setInvoiceData({...invoiceData, billNo: e.target.value})} onKeyDown={e => handleHeaderKeyDown(e, 'input-billDate')} className="border border-slate-500 bg-white px-1 flex-1 focus:outline-none focus:border-black focus:bg-[#ffffe0]" />
                     </div>
-                    <div className="flex items-center flex-[1.5]">
+                    <div className="flex items-center flex-1">
                       <span className="w-[80px] text-slate-800 font-bold mr-2">Bill Date :</span>
                       <input type="date" id="input-billDate" value={invoiceData.billDate} onChange={e => setInvoiceData({...invoiceData, billDate: e.target.value})} onKeyDown={e => handleHeaderKeyDown(e, 'input-totalQty')} className="border border-slate-500 bg-white px-1 flex-1 focus:outline-none focus:border-black focus:bg-[#ffffe0]" />
                     </div>
@@ -1450,6 +1664,8 @@ export default function PurchaseInvoice() {
                       {invoiceData.designNo && <th className="px-1 py-1 border-r border-slate-300 w-[80px] text-center">Design</th>}
                       {invoiceData.colourNo && <th className="px-1 py-1 border-r border-slate-300 w-[80px] text-center">Colour</th>}
                       {invoiceData.showSize && <th className="px-1 py-1 border-r border-slate-300 w-[60px] text-center">Size</th>}
+                      {invoiceData.showCutSize && <th className="px-1 py-1 border-r border-slate-300 w-[70px] text-center">Cut Size</th>}
+                      {invoiceData.showCutSize && <th className="px-1 py-1 border-r border-slate-300 w-[60px] text-center">Pieces</th>}
                       <th className="px-1 py-1 border-r border-slate-300 w-[70px] text-center">Quantity</th>
                       <th className="px-1 py-1 border-r border-slate-300 w-[80px] text-center">Rate</th>
                       {invoiceData.showPurchaseDiscount && <th className="px-1 py-1 border-r border-slate-300 w-[60px] text-center">Disc%</th>}
@@ -1472,7 +1688,7 @@ export default function PurchaseInvoice() {
                                 // Filter based on selected party
                                 let filteredBrands = availableBrands;
                                 if (vendorAllowedBrands !== null) {
-                                  filteredBrands = filteredBrands.filter(b => vendorAllowedBrands.includes(b.name));
+                                  filteredBrands = filteredBrands.filter(b => vendorAllowedBrands.some(vb => vb.toLowerCase() === (b.name || '').toLowerCase()));
                                 }
                                 if (isSingleBrandVendor && lockedBrand) {
                                   filteredBrands = filteredBrands.filter(b => b.name === lockedBrand);
@@ -1513,22 +1729,37 @@ export default function PurchaseInvoice() {
                                   const textMatch = (s.name || s.item_name || '').toLowerCase().includes(q);
                                   const bId = products[index].brand_id;
                                   if (bId) return textMatch && String(s.brand_id) === String(bId);
+                                  if (vendorAllowedBrands !== null) {
+                                     const isAllowed = vendorAllowedBrands.some(vb => vb.toLowerCase() === (s.brand || '').toLowerCase());
+                                     return textMatch && isAllowed;
+                                  }
                                   return textMatch;
                                 }).slice(0, 8);
                                 if (filtered.length > 0) {
                                   return filtered.map((suggestion, sIdx) => (
                                     <div key={suggestion.id} className={`px-2 py-1 flex justify-between cursor-pointer ${sIdx === suggestionIndex ? 'bg-[#ffe000] text-black font-bold' : 'hover:bg-slate-200'}`} onClick={() => {
                                       const newProducts = [...products];
-                                      newProducts[index] = { ...newProducts[index], item: suggestion.name || suggestion.item_name, brand: suggestion.brand || newProducts[index].brand || '', rate: suggestion.purchase_price || suggestion.rate || '' };
+                                      newProducts[index] = { 
+                                        ...newProducts[index], 
+                                        item_id: suggestion.id,
+                                        item: suggestion.name || suggestion.item_name, 
+                                        brand_id: suggestion.brand_id || null,
+                                        brand: suggestion.brand || newProducts[index].brand || '', 
+                                        rate: suggestion.purchase_price || suggestion.rate || newProducts[index].rate || '',
+                                        hsn: suggestion.hsn_code || suggestion.hsn || newProducts[index].hsn || '',
+                                        gst: suggestion.tax_percent !== undefined ? suggestion.tax_percent : (newProducts[index].gst || 0)
+                                      };
                                       setProducts(newProducts);
                                       setActiveSuggestionRow(null);
-                                      setActiveSizeMatrixRow(index);
+                                      setTimeout(() => {
+                                        document.getElementById(`row-${index}-hsn`)?.focus();
+                                      }, 10);
                                     }}>
                                       <span>{suggestion.name || suggestion.item_name} <span className="text-[10px] text-slate-500 font-normal ml-2">{suggestion.type || suggestion.item_type}</span></span>
                                       <span className="text-slate-600">Stock: {suggestion.stock || 0}</span>
                                     </div>
                                   ));
-                                } else if (products[index].item) {
+                                } else if (products[index].item && vendorAllowedBrands === null) {
                                   return (
                                     <div className="px-2 py-2 text-[11px] text-slate-500 italic bg-white">
                                       Press <span className="font-bold text-black">Alt+C</span> to create "{products[index].item}" in {products[index].brand || 'Brand'}
@@ -1558,7 +1789,13 @@ export default function PurchaseInvoice() {
                                       };
                                       setProducts(newProducts);
                                       setActiveHsnRow(null);
-                                      document.getElementById(`row-${index}-qty`)?.focus();
+                                      let nextF = 'qty';
+                                      if (invoiceData.showSize) nextF = 'size';
+                                      if (invoiceData.colourNo) nextF = 'colour';
+                                      if (invoiceData.designNo) nextF = 'design';
+                                      setTimeout(() => {
+                                        document.getElementById(`row-${index}-${nextF}`)?.focus();
+                                      }, 10);
                                     }}>
                                       <span className="text-[11px]"><span className="font-bold text-[#1b5e58]">{suggestion.name}</span> - {suggestion.description} ({suggestion.tax_percent !== undefined ? suggestion.tax_percent : 0}%)</span>
                                     </div>
@@ -1576,13 +1813,76 @@ export default function PurchaseInvoice() {
                           )}
                         </td>
                         {invoiceData.designNo && (
-                          <td className="border-r border-slate-300 px-1 py-[2px]">
-                            <input id={`row-${index}-design`} type="text" value={item.design} onChange={e => updateProduct(index, 'design', e.target.value)} onKeyDown={(e) => handleKeyDown(e, index, 'design')} className="w-full bg-transparent focus:bg-[#ffffe0] focus:outline-none px-1" />
+                          <td className="border-r border-slate-300 px-1 py-[2px] relative">
+                            <input id={`row-${index}-design`} type="text" value={item.design} onChange={e => { updateProduct(index, 'design', e.target.value); setDesignSuggestionIndex(0); }} onFocus={(e) => handleDesignFocus(e, index)} onBlur={handleDesignBlur} onKeyDown={(e) => handleKeyDown(e, index, 'design')} className="w-full bg-transparent focus:bg-[#ffffe0] focus:outline-none px-1" autoComplete="off" />
+                            {activeDesignRow === index && (
+                              <div className="absolute top-full left-0 mt-0 bg-white border-2 border-black z-50 w-[200px] shadow-md max-h-[150px] overflow-y-auto">
+                                {(() => {
+                                  const query = (products[index].design || '').toLowerCase();
+                                  const filtered = availableDesigns.filter(s => (s.name || '').toLowerCase().startsWith(query)).slice(0, 8);
+                                  if (filtered.length > 0) {
+                                    return filtered.map((suggestion, sIdx) => (
+                                      <div key={suggestion.id} className={`px-2 py-1 cursor-pointer ${sIdx === designSuggestionIndex ? 'bg-[#ffe000] text-black font-bold' : 'hover:bg-slate-200'}`} onClick={() => {
+                                        const newProducts = [...products];
+                                        newProducts[index] = { ...newProducts[index], design: suggestion.name || '' };
+                                        setProducts(newProducts);
+                                        setActiveDesignRow(null);
+                                        let nextF = 'qty';
+                                        if (invoiceData.colourNo) nextF = 'colour';
+                                        setTimeout(() => {
+                                          document.getElementById(`row-${index}-${nextF}`)?.focus();
+                                        }, 10);
+                                      }}>
+                                        <span className="text-[11px] font-bold text-[#1b5e58]">{suggestion.name}</span>
+                                      </div>
+                                    ));
+                                  } else if (products[index].design) {
+                                    return (
+                                      <div className="px-2 py-2 text-[11px] text-slate-500 italic bg-white">
+                                        Press <span className="font-bold text-black">Alt+C</span> to create "{products[index].design}"
+                                      </div>
+                                    );
+                                  }
+                                  return null;
+                                })()}
+                              </div>
+                            )}
                           </td>
                         )}
                         {invoiceData.colourNo && (
-                          <td className="border-r border-slate-300 px-1 py-[2px]">
-                            <input id={`row-${index}-colour`} type="text" value={item.colour} onChange={e => updateProduct(index, 'colour', e.target.value)} onKeyDown={(e) => handleKeyDown(e, index, 'colour')} className="w-full bg-transparent focus:bg-[#ffffe0] focus:outline-none px-1" />
+                          <td className="border-r border-slate-300 px-1 py-[2px] relative">
+                            <input id={`row-${index}-colour`} type="text" value={item.colour} onChange={e => { updateProduct(index, 'colour', e.target.value); setColourSuggestionIndex(0); }} onFocus={(e) => handleColourFocus(e, index)} onBlur={handleColourBlur} onKeyDown={(e) => handleKeyDown(e, index, 'colour')} className="w-full bg-transparent focus:bg-[#ffffe0] focus:outline-none px-1" autoComplete="off" />
+                            {activeColourRow === index && (
+                              <div className="absolute top-full left-0 mt-0 bg-white border-2 border-black z-50 w-[200px] shadow-md max-h-[150px] overflow-y-auto">
+                                {(() => {
+                                  const query = (products[index].colour || '').toLowerCase();
+                                  const filtered = availableColours.filter(s => (s.name || '').toLowerCase().startsWith(query)).slice(0, 8);
+                                  if (filtered.length > 0) {
+                                    return filtered.map((suggestion, sIdx) => (
+                                      <div key={suggestion.id} className={`px-2 py-1 cursor-pointer ${sIdx === colourSuggestionIndex ? 'bg-[#ffe000] text-black font-bold' : 'hover:bg-slate-200'}`} onClick={() => {
+                                        const newProducts = [...products];
+                                        newProducts[index] = { ...newProducts[index], colour: suggestion.name || '' };
+                                        setProducts(newProducts);
+                                        setActiveColourRow(null);
+                                        let nextF = 'qty';
+                                        setTimeout(() => {
+                                          document.getElementById(`row-${index}-${nextF}`)?.focus();
+                                        }, 10);
+                                      }}>
+                                        <span className="text-[11px] font-bold text-[#1b5e58]">{suggestion.name}</span>
+                                      </div>
+                                    ));
+                                  } else if (products[index].colour) {
+                                    return (
+                                      <div className="px-2 py-2 text-[11px] text-slate-500 italic bg-white">
+                                        Press <span className="font-bold text-black">Alt+C</span> to create "{products[index].colour}"
+                                      </div>
+                                    );
+                                  }
+                                  return null;
+                                })()}
+                              </div>
+                            )}
                           </td>
                         )}
                         {invoiceData.showSize && (
@@ -1590,12 +1890,40 @@ export default function PurchaseInvoice() {
                             <input id={`row-${index}-size`} type="text" value={item.size} onChange={e => updateProduct(index, 'size', e.target.value)} onKeyDown={(e) => handleKeyDown(e, index, 'size')} className="w-full bg-transparent focus:bg-[#ffffe0] focus:outline-none px-1 font-bold text-center" />
                           </td>
                         )}
+                        {invoiceData.showCutSize && (
+                          <>
+                            <td className="border-r border-slate-300 px-1 py-[2px]">
+                              <input list={`cuts-list`} id={`row-${index}-cut_size`} type="number" step="0.01" value={item.cut_size} onChange={e => {
+                                const cutSize = e.target.value;
+                                const qty = parseFloat(item.qty) || 0;
+                                const pieces = (cutSize && qty) ? Math.floor(qty / parseFloat(cutSize)) : '';
+                                setProducts(prev => {
+                                  const newP = [...prev];
+                                  newP[index] = { ...newP[index], cut_size: cutSize, pieces: pieces };
+                                  return newP;
+                                });
+                              }} onKeyDown={(e) => handleKeyDown(e, index, 'cut_size')} className="w-full bg-transparent focus:bg-[#ffffe0] focus:outline-none px-1 text-center" />
+                            </td>
+                            <td className="border-r border-slate-300 px-1 py-[2px] bg-slate-100">
+                              <input type="number" value={item.pieces} readOnly className="w-full bg-transparent outline-none px-1 text-center text-slate-500 font-bold" />
+                            </td>
+                          </>
+                        )}
                         <td className="border-r border-slate-300 px-1 py-[2px]">
                           <input 
                             id={`row-${index}-qty`} 
                             type="number" 
                             value={item.qty} 
-                            onChange={e => updateProduct(index, 'qty', e.target.value)} 
+                            onChange={e => {
+                                const qty = e.target.value;
+                                const cutSize = parseFloat(item.cut_size);
+                                const pieces = (cutSize && qty) ? Math.floor(parseFloat(qty) / cutSize) : '';
+                                setProducts(prev => {
+                                  const newP = [...prev];
+                                  newP[index] = { ...newP[index], qty: qty, pieces: pieces };
+                                  return newP;
+                                });
+                            }} 
                             onKeyDown={(e) => {
                               if (e.altKey && e.code === 'KeyX') {
                                 e.preventDefault();
@@ -1631,7 +1959,7 @@ export default function PurchaseInvoice() {
                           />
                         </td>
                         <td className="border-r border-slate-300 px-1 py-[2px]">
-                          <input id={`row-${index}-rate`} type="number" value={item.rate} onChange={e => updateProduct(index, 'rate', e.target.value)} onKeyDown={(e) => handleKeyDown(e, index, 'rate')} className="w-full bg-transparent focus:bg-[#ffffe0] focus:outline-none px-1 text-right font-bold" />
+                          <input id={`row-${index}-rate`} type="number" value={item.rate} onChange={e => updateProduct(index, 'rate', e.target.value)} onKeyDown={(e) => handleKeyDown(e, index, 'rate')} className={`w-full bg-transparent focus:bg-[#ffffe0] focus:outline-none px-1 text-right font-bold ${item.last_rate ? (parseFloat(item.rate) > item.last_rate ? 'text-red-600 bg-red-50' : parseFloat(item.rate) < item.last_rate ? 'text-green-600 bg-green-50' : '') : ''}`} title={item.last_rate ? `Last Rate: ₹${item.last_rate}` : ''} />
                         </td>
                         {invoiceData.showPurchaseDiscount && (
                           <td className="border-r border-slate-300 px-1 py-[2px]">
@@ -1907,7 +2235,7 @@ export default function PurchaseInvoice() {
             updateProduct(activeSizeMatrixRow, 'matrixData', allocatedSizes);
             
             if (activeSizeMatrixRow === products.length - 1) {
-               setProducts([...products, { id: Date.now(), item: '', brand: '', qty: '', rate: '', disc: 0, gst: 0, design: '', colour: '', size: '', mrp: 0 }]);
+               setProducts([...products, { id: Date.now(), item: '', brand: '', qty: '', cut_size: '', pieces: '', rate: '', last_rate: null, disc: 0, gst: 0, design: '', colour: '', size: '', mrp: 0 }]);
             }
           }
           setActiveSizeMatrixRow(null);
@@ -1964,7 +2292,7 @@ export default function PurchaseInvoice() {
            console.log(`Created new master of type ${type}:`, data);
            if (masterModal) {
              const { type: savedType, rowIndex } = masterModal;
-             const fieldMap: any = { hsn: 'hsn', brand: 'brand', item: 'item', size: 'size' };
+             const fieldMap: any = { hsn: 'hsn', brand: 'brand', item: 'item', size: 'size', design: 'design', colour: 'colour' };
              const field = fieldMap[savedType];
              if (savedType === 'item') {
                setAvailableItems(prev => [...prev, { id: data.id, name: data.name, item_name: data.name, brand: data.brand, brand_id: data.brand_id || null }]);
@@ -2001,6 +2329,26 @@ export default function PurchaseInvoice() {
                  };
                  return newP;
                });
+             } else if (savedType === 'design') {
+               setAvailableDesigns(prev => [...prev, { id: data.id || Date.now(), name: data.name }]);
+               setProducts(prev => {
+                 const newP = [...prev];
+                 newP[rowIndex] = {
+                   ...newP[rowIndex],
+                   design: data.name
+                 };
+                 return newP;
+               });
+             } else if (savedType === 'colour') {
+               setAvailableColours(prev => [...prev, { id: data.id || Date.now(), name: data.name }]);
+               setProducts(prev => {
+                 const newP = [...prev];
+                 newP[rowIndex] = {
+                   ...newP[rowIndex],
+                   colour: data.name
+                 };
+                 return newP;
+               });
              } else if (field) {
                updateProduct(rowIndex, field, data.name);
              }
@@ -2019,6 +2367,11 @@ export default function PurchaseInvoice() {
            // In a real implementation, we would POST to the backend and then set the local input value
         }}
       />
+      <datalist id="cuts-list">
+        {cuts.map(cut => (
+          <option key={cut.id} value={cut.cut_size}>{cut.cut_name}</option>
+        ))}
+      </datalist>
     </>
   );
 }

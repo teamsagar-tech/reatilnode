@@ -15,11 +15,15 @@ router.use(tenantMiddleware);
 router.get('/', requirePermission('purchaseInvoice', 'view'), purchaseInvoiceController.getAll);
 router.post('/check-bulk', requirePermission('purchaseInvoice', 'view'), purchaseInvoiceController.checkBulk);
 router.get('/check-lr', requirePermission('purchaseInvoice', 'view'), purchaseInvoiceController.checkLR);
+router.get('/last-rate', requirePermission('purchaseInvoice', 'view'), purchaseInvoiceController.getLastRate);
 router.get('/:id', requirePermission('purchaseInvoice', 'view'), purchaseInvoiceController.getById);
 router.post('/', requirePermission('purchaseInvoice', 'create'), purchaseInvoiceController.create);
 router.put('/:id', requirePermission('purchaseInvoice', 'edit'), purchaseInvoiceController.update);
 router.delete('/:id', requirePermission('purchaseInvoice', 'delete'), purchaseInvoiceController.delete);
 
+const ocrController = require('../controllers/ocrController');
+
 router.post('/preview-import', requirePermission('purchaseInvoice', 'create'), upload.single('file'), importController.importPreview);
+router.post('/ocr-test', requirePermission('purchaseInvoice', 'create'), upload.single('file'), ocrController.scanImage);
 
 module.exports = router;

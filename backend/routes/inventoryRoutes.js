@@ -19,6 +19,12 @@ const mockInventoryItem = {
   profit_margin: '60%'     // Sensitive
 };
 
+const priceListController = require('../controllers/priceListController');
+const multer = require('multer');
+
+// Configure multer for temp file upload
+const upload = multer({ dest: 'uploads/' });
+
 // GET /api/inventory/test
 router.get('/test', requirePermission('inventory', 'read'), (req, res) => {
   // In a real app, we fetch from DB where firm_id = req.firm_id
@@ -39,5 +45,8 @@ router.get('/test', requirePermission('inventory', 'read'), (req, res) => {
     data: safeData
   });
 });
+
+// POST /api/inventory/import-pricelist
+router.post('/import-pricelist', requirePermission('inventory', 'write'), upload.single('file'), priceListController.importPriceList);
 
 module.exports = router;

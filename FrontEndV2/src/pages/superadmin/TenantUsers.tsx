@@ -27,6 +27,8 @@ const AVAILABLE_MODULES = [
         pages: [
           { id: 'itemMaster', label: 'Item Master' },
           { id: 'brandMaster', label: 'Brand Master' },
+          { id: 'taxonomyMaster', label: 'Taxonomy Master' },
+          { id: 'cutMaster', label: 'Cut Master' },
           { id: 'categoryMaster', label: 'Category Master' },
           { id: 'subCategory', label: 'SubCategory' },
           { id: 'department', label: 'Department' },
@@ -78,7 +80,10 @@ const AVAILABLE_MODULES = [
         id: 'advance',
         label: 'Advanced',
         pages: [
-          { id: 'purchaseInvoice', label: 'Purchase Invoice' }
+          { id: 'stockTransfer', label: 'Stock Transfer' },
+          { id: 'purchaseInvoice', label: 'Purchase Invoice' },
+          { id: 'priceListImport', label: 'Price List Import' },
+          { id: 'ocrTest', label: 'OCR Prototype' }
         ]
       }
     ]

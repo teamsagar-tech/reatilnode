@@ -305,3 +305,25 @@ These refinements transform the CSV import from a basic shell to a highly reliab
 - **Architecture State**: The frontend components are strictly unified around accessibility patterns. Generic masters share standard components (`ConfirmModal`), and specialized visual layouts (like `SizeMaster`) fall back to standardized 2-column input blocks when entering 'create' mode.
 - **Minor Update**: Fixed a focus loss bug in `SizeMaster.tsx`'s Create Mode by moving `InputRow` and `SectionTitle` component definitions outside the main component. Added a `Size Scale` dropdown in the first position to explicitly classify single sizes.
 - **Database Seeded**: Populated the production `Sizes` and `SizeGroups` tables with CM, INCH, and SIZE matrices so `SizeSetMaster` has exact sizes for allocation.
+
+## 2026-09-11: Cut Master & Purchase Invoice Automation
+- **Backend**: Created `CutMaster` table and `/api/masters/cut` CRUD APIs.
+- **Frontend**: Added `CutMaster.tsx` for managing standard cut sizes.
+- **Frontend (Purchase Invoice)**: Added dynamic column toggling for Suiting/Shirting vs Readymade vendors. Added `Cut Size` and `Pieces` columns with auto-calculation (`Pieces = Qty / Cut Size`). Implemented last rate fetching and color coding on the Rate field (Red if higher, Green if lower).
+
+## 2026-09-11: Price List PDF Importer Module
+**Action:** Created a Tally-style module for users to upload and parse tabular PDF Price Lists.
+**Details:**
+- **Frontend:** Built `PriceListImport.tsx` featuring an `availableBrands` autocomplete selector, `Alt+I` import shortcut, and a live statistics panel tracking newly inserted Items, Designs, and Colors.
+- **Backend Parsing Strategy:** Standard Node.js parsers (e.g. `pdf-parse`) mangle tabular PDF formats. To preserve layout integrity, I deployed a Python script (`parse_pdf.py`) utilizing `pdfplumber` to accurately extract columns into JSON.
+- **Backend Ingestion:** Created `POST /api/inventory/import-pricelist`. It executes the Python script via `child_process`, receives the JSON, and opens a MySQL transaction. It performs a mass `INSERT` across the `Items`, `Designs`, and `Colors` tables, while dynamically updating prices (`cost_price`, `selling_price`) for existing items.
+- **Routing & RBAC:** Added `priceListImport` to `TenantUsers.tsx` (`AVAILABLE_MODULES`) ensuring proper RBAC constraints.
+**State:** The module perfectly parses complex multi-shade PDF lists and bulk-loads the resulting data into the backend.
+
+## 2026-09-11: Digital Bill OCR (Tesseract Prototype)
+**Action:** Created an experimental standalone module to test extracting invoice tables from JPEG images using Tesseract OCR.
+**Details:**
+- **Backend:** Created `ocr_image.py` to run `pytesseract.image_to_string()` and perform a naive table-line heuristic extraction. Created `ocrController.js` and exposed `POST /api/purchase/ocr-test`.
+- **Frontend:** Created a standalone `OCRTest.tsx` UI under `Inventory > Advanced > OCR Prototype` allowing users to upload an image and compare raw Tesseract text against the heuristically parsed table.
+- **Live Server:** Installed `tesseract-ocr`, `pytesseract`, and `Pillow` via apt/pip on the production server to enable the Python subprocess.
+**State:** Currently testing viability of local OCR for complex tabular extraction.

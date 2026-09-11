@@ -4,14 +4,13 @@ import { Helmet } from 'react-helmet-async';
 import ConfirmModal from '../../../components/ui/ConfirmModal';
 import { useGlobalKeyboard } from '../../../hooks/useGlobalKeyboard';
 import SearchableDropdown from '../../../components/SearchableDropdown';
+import CutAllocationModal from '../../../components/inventory/CutAllocationModal';
 
 const SectionTitle = ({ children }: { children: React.ReactNode }) => (
     <div className="font-bold text-[#1b5e58] text-[12px] border-b border-[#a3c3be] mb-2 mt-2 pb-1 uppercase tracking-wider bg-[#eef5ed] px-1">
       {children}
     </div>
-  );
-
-
+);
 
 const InputRow = ({ id, label, value, onChange, width = 'flex-1', type = 'text', placeholder = '' }: any) => (
   <div className="flex items-center mb-[2px]">
@@ -29,27 +28,6 @@ const InputRow = ({ id, label, value, onChange, width = 'flex-1', type = 'text',
   </div>
 );
 
-const SelectRow = ({ label, value, onChange, onKeyDown, options, width = 'flex-1', id = '' }: any) => (
-  <div className={`flex items-center mb-[2px] ${width}`}>
-    <div className="w-[110px] text-slate-800 font-bold text-[11px] text-right pr-2 leading-tight">
-      {label}
-    </div>
-    <div className="flex-1 flex">
-      <SearchableDropdown
-        id={id}
-        value={value}
-        onChange={onChange}
-        onKeyDown={onKeyDown}
-        options={options}
-        placeholder="Select..."
-        className="w-full bg-white border border-slate-400 px-1 py-[2px] text-[12px] font-bold text-black focus:bg-[#ffffe0] focus:outline-none focus:border-slate-800"
-        width="100%"
-      />
-    </div>
-  </div>
-);
-
-
 export default function CategoryMaster() {
   const navigate = useNavigate();
   const [showResetConfirm, setShowResetConfirm] = useState(false);
@@ -61,6 +39,9 @@ export default function CategoryMaster() {
   const [departments, setDepartments] = useState<any[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [editId, setEditId] = useState<number | null>(null);
+
+  const [isCutModalOpen, setIsCutModalOpen] = useState(false);
+  const [selectedCategoryForCuts, setSelectedCategoryForCuts] = useState<any>(null);
 
   const fetchCategories = () => {
     fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/category`, {
@@ -150,7 +131,7 @@ export default function CategoryMaster() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (showResetConfirm || showDeleteConfirm) return;
+      if (showResetConfirm || showDeleteConfirm || isCutModalOpen) return;
 
       if (e.key === 'Escape') {
         e.preventDefault();
@@ -180,6 +161,12 @@ export default function CategoryMaster() {
             setDeleteId(categories[selectedIndex].id);
             setShowDeleteConfirm(true);
           }
+        } else if (e.key === 'F6') {
+          e.preventDefault();
+          if (categories[selectedIndex]) {
+            setSelectedCategoryForCuts(categories[selectedIndex]);
+            setIsCutModalOpen(true);
+          }
         } else if (e.key === 'Enter') {
           e.preventDefault();
           if (categories[selectedIndex]) {
@@ -197,20 +184,7 @@ export default function CategoryMaster() {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [navigate, mode, formData, categories, selectedIndex, showResetConfirm, showDeleteConfirm]);
-
-  const handleFieldKeyDown = (e: React.KeyboardEvent, nextFieldId: string) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      const nextField = document.getElementById(nextFieldId);
-      if (nextField) {
-        nextField.focus();
-      } else {
-        // End of form, simulate save
-        setMode('list');
-      }
-    }
-  };
+  }, [navigate, mode, formData, categories, selectedIndex, showResetConfirm, showDeleteConfirm, isCutModalOpen]);
 
   return (
     <>
@@ -220,7 +194,6 @@ export default function CategoryMaster() {
       
       <div className='flex flex-col h-screen font-sans text-[13px] selection:bg-transparent overflow-hidden bg-[#e0efeb] w-full'>
         
-
         <div className='flex flex-1 p-1 gap-1 overflow-hidden h-full'>
           {/* Main Container */}
           <div className='flex-1 bg-[#fcfaf2] border-2 border-[#81a09d] flex flex-col overflow-hidden shadow-inner relative'>
@@ -242,7 +215,11 @@ export default function CategoryMaster() {
                   <table className='w-full text-left border-collapse border border-slate-400'>
                     <thead className='bg-[#eef5ed]'>
                       <tr className='border-b-2 border-slate-400 text-slate-900 font-bold text-[12px]'>
-                        <th className="px-2 py-1 border-r border-slate-300">ID</th><th className="px-2 py-1 border-r border-slate-300">Department</th><th className="px-2 py-1 border-r border-slate-300">Category Name</th><th className="px-2 py-1 border-r border-slate-300">Description</th>
+                        <th className="px-2 py-1 border-r border-slate-300 w-12">ID</th>
+                        <th className="px-2 py-1 border-r border-slate-300 w-40">Department</th>
+                        <th className="px-2 py-1 border-r border-slate-300">Category Name</th>
+                        <th className="px-2 py-1 border-r border-slate-300">Mapped Cuts</th>
+                        <th className="px-2 py-1 border-r border-slate-300">Description</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -264,7 +241,15 @@ export default function CategoryMaster() {
                           >
                             <td className="px-2 py-1 border-r border-slate-300 font-medium text-slate-700">{row.id}</td>
                             <td className="px-2 py-1 border-r border-slate-300 font-medium text-slate-700">{row.department_name || '-'}</td>
-                            <td className="px-2 py-1 border-r border-slate-300 font-medium text-slate-700">{row.name}</td>
+                            <td className="px-2 py-1 border-r border-slate-300 font-bold text-slate-800">{row.name}</td>
+                            <td className="px-2 py-1 border-r border-slate-300 font-bold text-[#1b5e58] text-[10px]">
+                              {(() => {
+                                try {
+                                  const parsed = typeof row.cuts === 'string' ? JSON.parse(row.cuts) : (row.cuts || []);
+                                  return parsed.length > 0 ? parsed.map((x:any)=>x.cut_name).join(', ') : '-';
+                                } catch(e) { return '-'; }
+                              })()}
+                            </td>
                             <td className="px-2 py-1 border-r border-slate-300 font-medium text-slate-700">{row.description || '-'}</td>
                           </tr>
                         );
@@ -367,9 +352,16 @@ export default function CategoryMaster() {
                { key: 'F3', label: 'Company' },
                { key: 'F4', label: 'Edit' },
                { key: 'F5', label: 'Delete' },
+               { key: 'F6', label: 'Map Cuts' },
              ].map((f) => (
                <button 
-                 key={f.key} 
+                 key={f.key}
+                 onClick={() => {
+                   if (f.key === 'F6' && categories[selectedIndex]) {
+                     setSelectedCategoryForCuts(categories[selectedIndex]);
+                     setIsCutModalOpen(true);
+                   }
+                 }} 
                  className='flex flex-row items-center px-2 py-1 bg-[#e0efeb] border border-[#a3c3be] hover:bg-[#c9e1dd] hover:border-[#81a09d] text-left transition-all shadow-[inset_1px_1px_0_rgba(255,255,255,0.8)]'
                >
                  <span className='font-bold text-black text-[11px] w-[25px]'>{f.key}</span>
@@ -404,6 +396,37 @@ export default function CategoryMaster() {
           <div className='font-medium tracking-wide'>Category Master</div>
         </div>
       
+      <CutAllocationModal 
+        isOpen={isCutModalOpen}
+        onClose={() => setIsCutModalOpen(false)}
+        categoryName={selectedCategoryForCuts?.name || ''}
+        initialCuts={
+          (typeof selectedCategoryForCuts?.cuts === 'string' 
+            ? JSON.parse(selectedCategoryForCuts.cuts) 
+            : selectedCategoryForCuts?.cuts) || []
+        }
+        onSave={async (allocatedCuts) => {
+          try {
+            const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/category/${selectedCategoryForCuts.id}/cuts`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+              },
+              body: JSON.stringify({ cuts: allocatedCuts })
+            });
+            if (res.ok) {
+              setIsCutModalOpen(false);
+              fetchCategories();
+            } else {
+              alert('Failed to save cuts');
+            }
+          } catch(e) {
+            console.error(e);
+            alert('Error saving cuts');
+          }
+        }}
+      />
       
       <ConfirmModal 
         isOpen={showResetConfirm}

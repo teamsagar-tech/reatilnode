@@ -57,6 +57,8 @@ import LabelPrintPage from "./pages/inventory/LabelPrintPage";
 import BulkLabelPrint from "./pages/inventory/BulkLabelPrintPage";
 import BarcodedProducts from "./pages/inventory/Barcodes/BarcodedProducts";
 import BarcodesSearch from "./pages/inventory/Barcodes/BarcodesSearch";
+import PriceListImport from "./pages/inventory/PriceListImport";
+import OCRTest from "./pages/inventory/OCRTest";
 import AttendanceEntry from "./pages/hr/Attendance/AttendanceEntry";
 import TicketDashboard from "./pages/support/TicketDashboard";
 import TicketDetail from "./pages/support/TicketDetail";
@@ -100,6 +102,9 @@ import SizeSetMaster from "./pages/masters/inventory/SizeSetMaster"
 import ColorMaster from "./pages/masters/inventory/ColorMaster"
 import MaterialMaster from "./pages/masters/inventory/MaterialMaster"
 import HSNSACMaster from "./pages/masters/inventory/HSNSACMaster"
+import SizeGroupMaster from "./pages/masters/inventory/SizeGroupMaster"
+import TaxonomyMaster from "./pages/masters/inventory/TaxonomyMaster"
+import CutMaster from "./pages/masters/inventory/CutMaster"
 import PartyMaster from "./pages/masters/accounting/PartyMaster"
 import CustomerMaster from "./pages/masters/accounting/CustomerMaster"
 import TransporterMaster from "./pages/masters/accounting/TransporterMaster"
@@ -137,6 +142,8 @@ function App() {
           <Route path="/purchase-order" element={<PurchaseOrder />} />
 
           <Route path="/purchase-invoice" element={<PurchaseInvoice />} />
+          <Route path="/inventory/price-list-import" element={<PriceListImport />} />
+          <Route path="/inventory/ocr-test" element={<OCRTest />} />
           <Route path="/lrs" element={<LRList />} />
           <Route path="/lrs2" element={<LRList2 />} />
           <Route path="/manage-receivable" element={<ManageReceivable />} />
@@ -230,7 +237,10 @@ function App() {
             <Route path="tickets/:id" element={<TicketDetail />} />
           </Route>
           <Route path="/masters/size" element={<SizeMaster />} />
-          <Route path="/masters/sizeset" element={<SizeSetMaster />} />
+          <Route path="/masters/department" element={<DepartmentMaster />} />
+          <Route path="/masters/taxonomy" element={<TaxonomyMaster />} />
+          <Route path="/masters/cut" element={<CutMaster />} />
+          
           <Route path="/masters/color" element={<ColorMaster />} />
           <Route path="/masters/material" element={<MaterialMaster />} />
           <Route path="/masters/hsnsac" element={<HSNSACMaster />} />

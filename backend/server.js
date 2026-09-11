@@ -25,6 +25,7 @@ const labelPrintRoutes = require('./routes/labelPrintRoutes');
 const salesRoutes = require('./routes/salesRoutes');
 const manageReceivableRoutes = require('./routes/manageReceivableRoutes');
 const returnsRoutes = require('./routes/returnsRoutes');
+const cutRoutes = require('./routes/cutRoutes');
 
 const app = express();
 
@@ -96,6 +97,7 @@ app.use(auditMiddleware);
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/firms', firmRoutes);
+app.use('/api/masters/cut', cutRoutes);
 app.use('/api/masters/brand', brandRoutes);
 app.use('/api/masters/size-groups', sizeGroupRoutes);
 app.use('/api/masters/category', categoryRoutes);
