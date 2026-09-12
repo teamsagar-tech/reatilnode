@@ -7,11 +7,11 @@ exports.scanImage = async (req, res) => {
     return res.status(400).json({ error: 'No image uploaded' });
   }
 
+  const engine = req.body.engine || 'openai'; // default to openai if not provided
   const filePath = req.file.path;
-  const scriptPath = path.join(__dirname, '../scripts/ocr_image.py');
+  const scriptPath = path.join(__dirname, '../scripts/ocr_vision.py');
 
-  // Assuming python3 and pytesseract are available
-  execFile('python3', [scriptPath, filePath], { maxBuffer: 1024 * 1024 * 10 }, async (error, stdout, stderr) => {
+  execFile('python3', [scriptPath, engine, filePath], { maxBuffer: 1024 * 1024 * 10 }, async (error, stdout, stderr) => {
     // Clean up uploaded image
     fs.unlink(filePath, (err) => { if (err) console.error("Failed to delete temp file:", err); });
 
@@ -28,13 +28,13 @@ exports.scanImage = async (req, res) => {
       
       res.json({
         message: 'Image OCR completed',
-        raw_text: output.raw_text,
+        engine: output.engine,
         items: output.parsed_items
       });
     } catch (parseError) {
       console.error('JSON Parse Error:', parseError);
       console.error('Raw stdout:', stdout);
-      res.status(500).json({ error: 'Invalid response from OCR script', details: parseError.message });
+      res.status(500).json({ error: 'Invalid response from AI script', details: parseError.message });
     }
   });
 };

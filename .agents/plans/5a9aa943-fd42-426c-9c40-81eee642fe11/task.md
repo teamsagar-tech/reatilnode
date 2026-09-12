@@ -1,8 +1,7 @@
-# Digital Bill OCR (Tesseract Prototype)
+# AI Vision OCR Integration
 
-- [x] Create Python script `backend/scripts/ocr_image.py` using `pytesseract`.
-- [x] Create `backend/controllers/ocrController.js`.
-- [x] Add `POST /api/purchase/ocr-test` route.
-- [x] Create frontend prototype page `FrontEndV2/src/pages/inventory/OCRTest.tsx`.
-- [x] Add route to `App.tsx` (standalone, not inside PurchaseInvoice).
-- [x] Add to `AVAILABLE_MODULES` in `TenantUsers.tsx`.
+- [ ] Write Python script `backend/scripts/ocr_vision.py` supporting OpenAI and Gemini.
+- [ ] Install `openai` and `google-generativeai` on the production server.
+- [ ] Update `backend/controllers/ocrController.js` to route requests to the new script and accept the `engine` parameter.
+- [ ] Update `FrontEndV2/src/pages/inventory/OCRTest.tsx` to include an AI Engine selector (OpenAI vs Gemini) and render the structured JSON output.
+- [ ] Deploy changes to the live server.

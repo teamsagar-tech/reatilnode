@@ -3,6 +3,7 @@ import { Upload, FileImage, Loader2 } from 'lucide-react';
 
 export default function OCRTest() {
   const [file, setFile] = useState<File | null>(null);
+  const [engine, setEngine] = useState<'gemini' | 'openai'>('gemini');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
@@ -23,6 +24,7 @@ export default function OCRTest() {
 
     const formData = new FormData();
     formData.append('file', file);
+    formData.append('engine', engine);
 
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/purchase-invoices/ocr-test`, {
@@ -52,7 +54,16 @@ export default function OCRTest() {
 
       <div className="bg-white rounded-lg shadow p-6 mb-8 border border-slate-200">
         <h2 className="text-lg font-semibold mb-4 text-slate-700">Upload Invoice Image (JPEG/PNG)</h2>
-        <div className="flex items-center gap-4">
+        <div className="flex flex-col sm:flex-row items-center gap-4">
+          <select 
+            value={engine} 
+            onChange={(e) => setEngine(e.target.value as 'gemini' | 'openai')}
+            className="border-slate-300 rounded-md shadow-sm focus:border-primary focus:ring focus:ring-primary focus:ring-opacity-50 text-sm font-medium p-2"
+          >
+            <option value="gemini">Google Gemini 1.5 Pro</option>
+            <option value="openai">OpenAI GPT-4o</option>
+          </select>
+
           <input 
             type="file" 
             accept="image/*" 
@@ -71,7 +82,7 @@ export default function OCRTest() {
               ${!file || loading ? 'bg-slate-300 cursor-not-allowed' : 'bg-primary hover:bg-primary/90'}`}
           >
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-            Run Tesseract OCR
+            Scan with AI Vision
           </button>
         </div>
         {error && <div className="mt-4 p-3 bg-red-50 text-red-600 rounded-lg text-sm border border-red-200">{error}</div>}
@@ -80,23 +91,25 @@ export default function OCRTest() {
       {result && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="bg-white rounded-lg shadow p-6 border border-slate-200">
-            <h2 className="text-lg font-semibold mb-4 text-slate-700">Raw Tesseract Output</h2>
+            <h2 className="text-lg font-semibold mb-4 text-slate-700">Raw AI JSON Output</h2>
             <pre className="bg-slate-50 p-4 rounded text-sm text-slate-600 overflow-x-auto whitespace-pre-wrap border border-slate-200 max-h-[500px] overflow-y-auto">
-              {result.raw_text}
+              {JSON.stringify(result.items, null, 2)}
             </pre>
           </div>
 
           <div className="bg-white rounded-lg shadow p-6 border border-slate-200">
-            <h2 className="text-lg font-semibold mb-4 text-slate-700">Heuristically Extracted Items</h2>
+            <h2 className="text-lg font-semibold mb-4 text-slate-700">Structured AI Output</h2>
             {result.items && result.items.length > 0 ? (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm text-left">
                   <thead className="text-xs text-slate-500 uppercase bg-slate-50">
                     <tr>
-                      <th className="px-4 py-2 font-medium">Item Name (Guessed)</th>
+                      <th className="px-4 py-2 font-medium">Item Name</th>
                       <th className="px-4 py-2 font-medium">Qty</th>
                       <th className="px-4 py-2 font-medium">Price</th>
-                      <th className="px-4 py-2 font-medium">Raw Line matched</th>
+                      <th className="px-4 py-2 font-medium">HSN</th>
+                      <th className="px-4 py-2 font-medium">Design</th>
+                      <th className="px-4 py-2 font-medium">Color</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -105,7 +118,9 @@ export default function OCRTest() {
                         <td className="px-4 py-3 font-medium text-slate-900">{item.item_name}</td>
                         <td className="px-4 py-3 text-slate-500">{item.qty}</td>
                         <td className="px-4 py-3 text-slate-500">{item.price}</td>
-                        <td className="px-4 py-3 text-slate-400 text-xs truncate max-w-[200px]" title={item.raw_line}>{item.raw_line}</td>
+                        <td className="px-4 py-3 text-slate-500">{item.hsn}</td>
+                        <td className="px-4 py-3 text-slate-500">{item.design_no}</td>
+                        <td className="px-4 py-3 text-slate-500">{item.color}</td>
                       </tr>
                     ))}
                   </tbody>
