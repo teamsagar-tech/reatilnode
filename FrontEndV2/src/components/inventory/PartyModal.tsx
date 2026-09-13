@@ -7,6 +7,8 @@ interface PartyModalProps {
   onClose: () => void;
   onSave: (newParty: any) => void;
   initialPartyName?: string;
+  editPartyData?: any;
+  availableBrands?: any[];
 }
 
 // Reusable components matching PartyMaster.tsx style
@@ -29,7 +31,7 @@ const InputRow = ({ label, value, onChange, placeholder = "", width = "flex-1" }
   </div>
 );
 
-export default function PartyModal({ isOpen, onClose, onSave, initialPartyName = '' }: PartyModalProps) {
+export default function PartyModal({ isOpen, onClose, onSave, initialPartyName = '', editPartyData, availableBrands: initialAvailableBrands }: PartyModalProps) {
   const [formData, setFormData] = useState({
     // Basic Party Info
     partyName: initialPartyName,
@@ -138,7 +140,7 @@ export default function PartyModal({ isOpen, onClose, onSave, initialPartyName =
   const [brands, setBrands] = useState<{name: string}[]>([]);
   const [brandType, setBrandType] = useState<'Single' | 'Multi'>('Multi');
   const [tempBrand, setTempBrand] = useState('');
-  const [availableBrands, setAvailableBrands] = useState<any[]>([]);
+  const [availableBrands, setAvailableBrands] = useState<any[]>(initialAvailableBrands || []);
   const [showBrandSuggestions, setShowBrandSuggestions] = useState(false);
   const [focusedBrandIndex, setFocusedBrandIndex] = useState(-1);
 
@@ -182,34 +184,81 @@ export default function PartyModal({ isOpen, onClose, onSave, initialPartyName =
 
   useEffect(() => {
     if (isOpen) {
-      setFormData({
-        partyName: initialPartyName || '',
-        shortName: '',
-        type: 'Sundry Creditor (Vendor)',
-        openingBalance: 0,
-        gstin: '',
-        panNumber: '',
-        state: '',
-        stateCode: '',
-        addressLine1: '',
-        addressLine2: '',
-        city: '',
-        taluka: '',
-        pincode: '',
-        mobileNumber: '',
-        email: '',
-        contactPerson: '',
-        designation: '',
-        bankName: '',
-        branch: '',
-        accountNumber: '',
-        ifscCode: '',
-        swiftCode: '',
-        gstRawData: null
-      });
+      if (editPartyData) {
+        setFormData({
+          partyName: editPartyData.party_name || editPartyData.name || initialPartyName || '',
+          shortName: editPartyData.short_name || '',
+          type: editPartyData.party_type || 'Sundry Creditor (Vendor)',
+          openingBalance: editPartyData.opening_balance || 0,
+          gstin: editPartyData.gstin || '',
+          panNumber: editPartyData.pan_number || '',
+          state: editPartyData.state || 'Maharashtra',
+          stateCode: editPartyData.state_code || '27',
+          addressLine1: editPartyData.line1 || '',
+          addressLine2: editPartyData.line2 || '',
+          addressLine3: editPartyData.line3 || '',
+          pincode: editPartyData.pincode || '',
+          city: editPartyData.city || '',
+          taluka: editPartyData.taluka || '',
+          district: editPartyData.district || '',
+          contactPerson: editPartyData.contact_person || '',
+          mobileNumber: editPartyData.mobile_number1 || '',
+          email: editPartyData.email || '',
+          contactPerson2: editPartyData.contact_person2 || '',
+          mobileNumber2: editPartyData.mobile_number2 || '',
+          contactPerson3: editPartyData.contact_person3 || '',
+          mobileNumber3: editPartyData.mobile_number3 || '',
+          accountName: editPartyData.account_name || '',
+          bankName: editPartyData.bank_name || '',
+          accountNumber: editPartyData.account_number || '',
+          ifscCode: editPartyData.ifsc || '',
+          branch: editPartyData.branch || '',
+          accountType: editPartyData.bank_account_type || 'Savings',
+          gstRawData: editPartyData.gst_raw_data ? (typeof editPartyData.gst_raw_data === 'object' ? editPartyData.gst_raw_data : (typeof editPartyData.gst_raw_data === 'string' && editPartyData.gst_raw_data.trim().startsWith('{') ? JSON.parse(editPartyData.gst_raw_data) : null)) : null
+        });
+        setCategories(editPartyData.categories ? (typeof editPartyData.categories === 'string' ? JSON.parse(editPartyData.categories) : editPartyData.categories) : []);
+        setBrands(editPartyData.brands ? (typeof editPartyData.brands === 'string' ? JSON.parse(editPartyData.brands) : editPartyData.brands) : []);
+        setBrandType(editPartyData.brand_type || 'Multi');
+      } else {
+        setFormData({
+          partyName: initialPartyName || '',
+          shortName: '',
+          type: 'Sundry Creditor (Vendor)',
+          openingBalance: 0,
+          gstin: '',
+          panNumber: '',
+          state: '',
+          stateCode: '',
+          addressLine1: '',
+          addressLine2: '',
+          addressLine3: '',
+          pincode: '',
+          city: '',
+          taluka: '',
+          district: '',
+          contactPerson: '',
+          mobileNumber: '',
+          email: '',
+          contactPerson2: '',
+          mobileNumber2: '',
+          contactPerson3: '',
+          mobileNumber3: '',
+          accountName: '',
+          bankName: '',
+          accountNumber: '',
+          ifscCode: '',
+          branch: '',
+          accountType: 'Savings',
+          gstRawData: null
+        });
+        setCategories([]);
+        setBrands([]);
+        setBrandType('Multi');
+      }
       setGstStatusError(null);
+      setTimeout(() => document.getElementById('input-gstin')?.focus(), 100);
     }
-  }, [isOpen, initialPartyName]);
+  }, [isOpen, initialPartyName, editPartyData]);
 
   useEffect(() => {
     if (formData.pincode && formData.pincode.length === 6) {
@@ -220,9 +269,9 @@ export default function PartyModal({ isOpen, onClose, onSave, initialPartyName =
             const po = data[0].PostOffice[0];
             setFormData(prev => ({
               ...prev,
-              city: prev.city || po.District,
-              taluka: prev.taluka || po.Block || po.Division,
-              district: prev.district || po.District
+              city: po.District,
+              taluka: po.Block || po.Division,
+              district: po.District
             }));
           }
         })
@@ -238,8 +287,8 @@ export default function PartyModal({ isOpen, onClose, onSave, initialPartyName =
           if (data && data.BANK) {
             setFormData(prev => ({
               ...prev,
-              bankName: prev.bankName || data.BANK,
-              branch: prev.branch || data.BRANCH
+              bankName: data.BANK,
+              branch: data.BRANCH
             }));
           }
         })
@@ -483,9 +532,14 @@ export default function PartyModal({ isOpen, onClose, onSave, initialPartyName =
         brandType: brandType
       };
 
-      const url = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/party`;
+      const isEdit = !!editPartyData;
+      const url = isEdit 
+        ? `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/party/${editPartyData.id}` 
+        : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/party`;
+      const method = isEdit ? 'PUT' : 'POST';
+      
       const res = await fetch(url, {
-        method: 'POST',
+        method,
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -495,7 +549,7 @@ export default function PartyModal({ isOpen, onClose, onSave, initialPartyName =
       
       const data = await res.json();
       if (res.ok) {
-        onSave({ id: data.partyId, ...payload, name: payload.partyName, brand_type: payload.brandType });
+        onSave({ id: isEdit ? editPartyData.id : data.partyId, ...payload, name: payload.partyName, brand_type: payload.brandType });
         setFormData({
           partyName: '', shortName: '', type: 'Sundry Creditor (Vendor)', openingBalance: 0,
           gstin: '', panNumber: '', state: '', stateCode: '',
@@ -528,7 +582,7 @@ export default function PartyModal({ isOpen, onClose, onSave, initialPartyName =
         {/* Header */}
         <div className="bg-[#1b5e58] text-white px-4 py-2 flex justify-between items-center border-b-2 border-black">
           <h2 className="font-bold tracking-wide">Party Master (Ledger Creation)</h2>
-          <button onClick={onClose} className="hover:bg-red-500 rounded p-1 transition-colors">
+          <button onClick={onClose} tabIndex={-1} className="hover:bg-red-500 rounded p-1 transition-colors">
             <X size={18} />
           </button>
         </div>
@@ -625,14 +679,14 @@ export default function PartyModal({ isOpen, onClose, onSave, initialPartyName =
               <InputRow label="Account Name" value={formData.accountName} onChange={(v) => setFormData({...formData, accountName: v})} />
               <InputRow label="Bank Name" value={formData.bankName} onChange={(v) => setFormData({...formData, bankName: v})} />
               <InputRow label="Account No" value={formData.accountNumber} onChange={(v) => setFormData({...formData, accountNumber: v})} />
-              <InputRow label="IFSC Code" value={formData.ifsc} onChange={(v) => setFormData({...formData, ifsc: v.toUpperCase()})} />
+              <InputRow label="IFSC Code" value={formData.ifscCode} onChange={(v) => setFormData({...formData, ifscCode: v.toUpperCase()})} />
               <InputRow label="Branch" value={formData.branch} onChange={(v) => setFormData({...formData, branch: v})} />
               
               <div className="flex items-center mb-[2px]">
                 <div className="w-[110px] text-slate-800 font-bold text-[11px] text-right pr-2 leading-tight">Account Type</div>
                 <select 
                   className="flex-1 bg-white border border-slate-400 px-1 py-[2px] text-[12px] font-bold text-black focus:bg-[#ffffe0] focus:outline-none focus:border-slate-800"
-                  value={formData.bankAccountType} onChange={e => setFormData({...formData, bankAccountType: e.target.value})}
+                  value={formData.accountType} onChange={e => setFormData({...formData, accountType: e.target.value})}
                 >
                   <option>Savings</option>
                   <option>Current</option>
@@ -664,6 +718,7 @@ export default function PartyModal({ isOpen, onClose, onSave, initialPartyName =
                     <div className="flex items-center">
                        <div className="w-[110px] text-slate-800 font-bold text-[11px] text-right pr-2 leading-tight">Type</div>
                        <select 
+                         id={`contact-type-${index}`}
                          className="flex-1 bg-white border border-slate-400 px-1 py-[2px] text-[12px] font-bold text-black focus:bg-[#ffffe0] focus:outline-none focus:border-slate-800"
                          value={contact.type}
                          onChange={e => {
@@ -722,7 +777,11 @@ export default function PartyModal({ isOpen, onClose, onSave, initialPartyName =
                 <div className="pl-[110px] mb-2">
                   <button 
                     type="button"
-                    onClick={() => setFormData({...formData, contacts: [...(formData.contacts || []), { type: 'Office', name: '', mobile: '' }]})}
+                    onClick={() => {
+                      const currentLength = (formData.contacts || []).length;
+                      setFormData({...formData, contacts: [...(formData.contacts || []), { type: 'Office', name: '', mobile: '' }]});
+                      setTimeout(() => document.getElementById(`contact-type-${currentLength}`)?.focus(), 50);
+                    }}
                     className="bg-[#1b5e58] border border-[#0d2d2a] px-2 py-1 text-[10px] font-bold text-white shadow-[1px_1px_0_rgba(0,0,0,0.5)] hover:bg-[#12423d]"
                   >
                     + Add Contact
@@ -986,7 +1045,7 @@ export default function PartyModal({ isOpen, onClose, onSave, initialPartyName =
                 {/* Footer */}
         <div className="border-t-2 border-black p-3 bg-white flex justify-end gap-2 shadow-[inset_0_4px_6px_-1px_rgba(0,0,0,0.1)]">
           <button 
-            onClick={onClose}
+            onClick={onClose} tabIndex={-1}
             className="px-6 py-2 bg-white border border-slate-400 font-bold hover:bg-slate-100 transition-colors text-sm shadow-[1px_1px_0_rgba(0,0,0,0.5)]"
           >
             Reset

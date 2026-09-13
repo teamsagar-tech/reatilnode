@@ -26,8 +26,9 @@ const InputRow = ({ label, value, onChange, placeholder = "", width = "flex-1", 
           e.preventDefault();
           const form = e.currentTarget.closest('form');
           if (form) {
-            const inputs = Array.from(form.querySelectorAll('input, button'));
-            const index = inputs.indexOf(e.currentTarget);
+            // Select all inputs, and specifically the submit button (skip cancel)
+            const inputs = Array.from(form.querySelectorAll('input, button[type="submit"]'));
+            const index = inputs.indexOf(e.currentTarget as any);
             if (index > -1 && index < inputs.length - 1) {
               (inputs[index + 1] as HTMLElement).focus();
             }
@@ -43,6 +44,7 @@ export default function MasterCreationModal({ isOpen, onClose, onSave, masterTyp
   const [extra1, setExtra1] = useState('');
   const [extra2, setExtra2] = useState('');
   const [extra3, setExtra3] = useState('');
+  const [sizeScale, setSizeScale] = useState('Inch');
   
   // Auto-suggest state for HSN
   const [hsnSuggestions, setHsnSuggestions] = useState<any[]>([]);
@@ -60,6 +62,8 @@ export default function MasterCreationModal({ isOpen, onClose, onSave, masterTyp
       }
     }
   }, [focusedIndex]);
+
+  // Window Escape listener moved to parent (PurchaseInvoice.tsx) to prevent event bubbling conflicts
 
   useEffect(() => {
     if (isOpen) {
@@ -122,10 +126,13 @@ export default function MasterCreationModal({ isOpen, onClose, onSave, masterTyp
           setTimeout(() => {
             const form = document.querySelector('form');
             if (form) {
-              const inputs = Array.from(form.querySelectorAll('input, button'));
-              const index = inputs.indexOf(e.currentTarget);
-              if (index > -1 && index < inputs.length - 1) {
-                (inputs[index + 1] as HTMLElement).focus();
+              const inputs = Array.from(form.querySelectorAll('input, button[type="submit"]'));
+              const activeInput = document.getElementById('hsn-input');
+              if (activeInput) {
+                const index = inputs.indexOf(activeInput);
+                if (index > -1 && index < inputs.length - 1) {
+                  (inputs[index + 1] as HTMLElement).focus();
+                }
               }
             }
           }, 10);
@@ -139,8 +146,8 @@ export default function MasterCreationModal({ isOpen, onClose, onSave, masterTyp
         e.preventDefault();
         const form = e.currentTarget.closest('form');
         if (form) {
-          const inputs = Array.from(form.querySelectorAll('input, button'));
-          const index = inputs.indexOf(e.currentTarget);
+          const inputs = Array.from(form.querySelectorAll('input, button[type="submit"]'));
+          const index = inputs.indexOf(e.currentTarget as any);
           if (index > -1 && index < inputs.length - 1) {
             (inputs[index + 1] as HTMLElement).focus();
           }
@@ -157,7 +164,7 @@ export default function MasterCreationModal({ isOpen, onClose, onSave, masterTyp
     
     if (masterType === 'item') {
       const finalBrandId = extra1 === initialBrand ? initialBrandId : null;
-      data = { name, brand: extra1, brand_id: finalBrandId, hsn: extra2 };
+      data = { name, brand: extra1, brand_id: finalBrandId, hsn_code: extra2, tax_percent: extra3 ? parseFloat(extra3) : 0 };
       endpoint = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/items`;
     } else if (masterType === 'hsn') {
       data = { name, description: extra1, tax_percent: extra3 ? parseFloat(extra3) : 0 };
@@ -165,14 +172,57 @@ export default function MasterCreationModal({ isOpen, onClose, onSave, masterTyp
     } else if (masterType === 'brand') {
       endpoint = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/brand`;
     } else if (masterType === 'size') {
-      endpoint = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/generic/sizes`;
+      if (name.includes('-')) {
+        let sizesArray = [];
+        const parts = name.split('-');
+        if (parts.length === 2) {
+          const start = parseInt(parts[0], 10);
+          const end = parseInt(parts[1], 10);
+          if (!isNaN(start) && !isNaN(end) && start < end) {
+            let step = (end - start) % 2 === 0 ? 2 : 1;
+            for (let i = start; i <= end; i += step) {
+              sizesArray.push(i.toString());
+            }
+          }
+        }
+        data = { name, size_scale: sizeScale, sizes_list: sizesArray };
+        endpoint = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/generic/sizesets`;
+      } else {
+        endpoint = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/generic/sizes`;
+      }
     } else if (masterType === 'sizeset') {
-      const sizesArray = (extra1 || '').split(',').map(s => s.trim()).filter(Boolean);
-      data = { name: name, size_scale: 'Other', sizes_list: sizesArray };
+      let sizesArray = (extra1 || '').split(',').map(s => s.trim()).filter(Boolean);
+      if (sizesArray.length === 0 && name.includes('-')) {
+        const parts = name.split('-');
+        if (parts.length === 2) {
+          const start = parseInt(parts[0], 10);
+          const end = parseInt(parts[1], 10);
+          if (!isNaN(start) && !isNaN(end) && start < end) {
+            let step = (end - start) % 2 === 0 ? 2 : 1;
+            for (let i = start; i <= end; i += step) {
+              sizesArray.push(i.toString());
+            }
+          }
+        }
+      }
+      data = { name: name, size_scale: sizeScale, sizes_list: sizesArray };
       endpoint = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/generic/sizesets`;
     } else if (masterType === 'sizegroup') {
-      const sizesArray = (extra1 || '').split(',').map(s => s.trim()).filter(Boolean);
-      data = { groupName: name, sizes: sizesArray };
+      let sizesArray = (extra1 || '').split(',').map(s => s.trim()).filter(Boolean);
+      if (sizesArray.length === 0 && name.includes('-')) {
+        const parts = name.split('-');
+        if (parts.length === 2) {
+          const start = parseInt(parts[0], 10);
+          const end = parseInt(parts[1], 10);
+          if (!isNaN(start) && !isNaN(end) && start < end) {
+            let step = (end - start) % 2 === 0 ? 2 : 1;
+            for (let i = start; i <= end; i += step) {
+              sizesArray.push(i.toString());
+            }
+          }
+        }
+      }
+      data = { groupName: name, size_scale: sizeScale, sizes: sizesArray };
       endpoint = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/size-groups`;
     } else if (masterType === 'partycategory') {
       data = { name, parent_id: null };
@@ -221,7 +271,12 @@ export default function MasterCreationModal({ isOpen, onClose, onSave, masterTyp
       return;
     }
 
-    onSave(masterType || '', data);
+    let actualSavedType = masterType || '';
+    if (actualSavedType === 'size' && name.includes('-')) {
+      actualSavedType = 'sizeset';
+    }
+
+    onSave(actualSavedType, data);
   };
 
   if (!isOpen || !masterType) return null;
@@ -243,13 +298,13 @@ export default function MasterCreationModal({ isOpen, onClose, onSave, masterTyp
   };
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm">
+    <div id="master-creation-modal" className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm">
       <div className="bg-[#e0efeb] border-2 border-[#1b5e58] shadow-[4px_4px_0px_rgba(0,0,0,0.2)] w-[500px] flex flex-col overflow-visible">
         
         {/* Header */}
         <div className="bg-[#1b5e58] text-white px-2 py-1 flex justify-between items-center shrink-0 border-b border-[#1b5e58]">
           <h2 className="text-[13px] font-bold tracking-tight">{getTitle()}</h2>
-          <button onClick={onClose} className="p-0.5 hover:bg-[#12423d] transition-colors" tabIndex={-1}>
+          <button onClick={onClose} tabIndex={-1} className="p-0.5 hover:bg-[#12423d] transition-colors" tabIndex={-1}>
             <X className="w-4 h-4 text-white" />
           </button>
         </div>
@@ -270,7 +325,7 @@ export default function MasterCreationModal({ isOpen, onClose, onSave, masterTyp
                   e.preventDefault();
                   const form = e.currentTarget.closest('form');
                   if (form) {
-                    const inputs = Array.from(form.querySelectorAll('input, button'));
+                    const inputs = Array.from(form.querySelectorAll('input, button[type="submit"]'));
                     const index = inputs.indexOf(e.currentTarget);
                     if (index > -1 && index < inputs.length - 1) {
                       (inputs[index + 1] as HTMLElement).focus();
@@ -285,7 +340,7 @@ export default function MasterCreationModal({ isOpen, onClose, onSave, masterTyp
             <>
               <InputRow label="Brand Name" value={extra1} onChange={setExtra1} />
               <div className="relative">
-                <InputRow label="HSN/SAC" value={extra2} onChange={handleHsnChange} onKeyDown={handleHsnKeyDown} />
+                <InputRow id="hsn-input" label="HSN/SAC" value={extra2} onChange={handleHsnChange} onKeyDown={handleHsnKeyDown} />
                 {hsnSuggestions.length > 0 && (
                   <div ref={suggestionListRef} className="absolute left-[118px] top-[100%] z-50 w-[450px] bg-white border border-slate-400 shadow-xl max-h-[250px] overflow-y-auto">
                     {hsnSuggestions.map((s, idx) => (
@@ -294,8 +349,22 @@ export default function MasterCreationModal({ isOpen, onClose, onSave, masterTyp
                         className={`px-2 py-1.5 text-[11px] cursor-pointer border-b border-slate-200 flex gap-2 items-start ${focusedIndex === idx ? 'bg-[#ffffe0]' : 'hover:bg-slate-50'}`}
                         onClick={() => {
                           setExtra2(s.code);
+                          setExtra3(s.tax_percent !== undefined ? String(s.tax_percent) : '');
                           setHsnSuggestions([]);
                           setFocusedIndex(-1);
+                          setTimeout(() => {
+                             const form = document.querySelector('form');
+                             if (form) {
+                               const inputs = Array.from(form.querySelectorAll('input, button[type="submit"]'));
+                               const gstInput = document.getElementById('gst-input');
+                               if (gstInput) {
+                                 const index = inputs.indexOf(gstInput);
+                                 if (index > -1 && index < inputs.length - 1) {
+                                   (inputs[index + 1] as HTMLElement).focus(); // focus save button!
+                                 }
+                               }
+                             }
+                          }, 10);
                         }}
                       >
                         <span className="w-[60px] font-bold text-[#1b5e58] shrink-0">{s.code}</span>
@@ -306,6 +375,7 @@ export default function MasterCreationModal({ isOpen, onClose, onSave, masterTyp
                   </div>
                 )}
               </div>
+              <InputRow id="gst-input" label="GST %" value={extra3} onChange={setExtra3} placeholder="e.g. 5, 12, 18" />
             </>
           )}
 
@@ -316,13 +386,41 @@ export default function MasterCreationModal({ isOpen, onClose, onSave, masterTyp
             </>
           )}
 
-          {masterType === 'sizegroup' && (
-            <InputRow label="Sizes (Comma separated)" value={extra1} onChange={setExtra1} placeholder="e.g. 28, 30, 32" />
+          {['size', 'sizeset', 'sizegroup'].includes(masterType) && (
+            <>
+              <div className="flex items-center mb-[2px]">
+                <div className="w-[110px] text-slate-800 font-bold text-[11px] text-right pr-2 leading-tight">Scale</div>
+                <select
+                  className="flex-1 bg-white border border-slate-400 px-1 py-[2px] text-[12px] font-bold text-black focus:bg-[#ffffe0] focus:outline-none focus:border-slate-800"
+                  value={sizeScale}
+                  onChange={(e) => setSizeScale(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      const form = e.currentTarget.closest('form');
+                      if (form) {
+                        const inputs = Array.from(form.querySelectorAll('input, select, button[type="submit"]'));
+                        const index = inputs.indexOf(e.currentTarget);
+                        if (index > -1 && index < inputs.length - 1) {
+                          (inputs[index + 1] as HTMLElement).focus();
+                        }
+                      }
+                    }
+                  }}
+                >
+                  <option value="Inch">Inch</option>
+                  <option value="CM">CM</option>
+                  <option value="Size">Size (S,M,L)</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              <InputRow label="Sizes (Optional, Comma separated)" value={extra1} onChange={setExtra1} placeholder="e.g. 28, 30, 32" />
+            </>
           )}
 
           <div className="flex justify-end gap-2 mt-4 pt-2 border-t border-[#a3c3be]">
             <button 
-              onClick={onClose}
+              onClick={onClose} tabIndex={-1}
               className="px-3 py-1 bg-white border border-slate-400 text-black font-bold text-[11px] hover:bg-slate-100"
               type="button"
             >

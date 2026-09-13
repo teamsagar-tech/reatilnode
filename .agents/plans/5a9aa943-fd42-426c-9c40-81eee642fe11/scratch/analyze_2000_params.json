@@ -1,0 +1,855 @@
+[
+  {
+    "category": "Saree & Silk",
+    "totalItemsChecked": 4837,
+    "meaningfulParameters": {
+      "GRN": {
+        "utilizationPercent": "100.0%",
+        "samples": [
+          "125674",
+          "124742",
+          "124740",
+          "124739",
+          "124738"
+        ]
+      },
+      "CategoryCode": {
+        "utilizationPercent": "100.0%",
+        "samples": [
+          "19",
+          "6",
+          "5",
+          "231"
+        ]
+      },
+      "BrandCode": {
+        "utilizationPercent": "100.0%",
+        "samples": [
+          "3807",
+          "2801",
+          "2485",
+          "5262",
+          "1498"
+        ]
+      },
+      "ItemCode": {
+        "utilizationPercent": "100.0%",
+        "samples": [
+          "5021",
+          "134124",
+          "134416",
+          "134108",
+          "126312"
+        ]
+      },
+      "PRate": {
+        "utilizationPercent": "100.0%",
+        "samples": [
+          "330",
+          "1050",
+          "1225",
+          "1275",
+          "750"
+        ]
+      },
+      "Disc": {
+        "utilizationPercent": "0.3%",
+        "samples": [
+          "15",
+          "5"
+        ]
+      },
+      "GST": {
+        "utilizationPercent": "40.1%",
+        "samples": [
+          "5",
+          "12"
+        ]
+      },
+      "GSTAmt": {
+        "utilizationPercent": "40.1%",
+        "samples": [
+          "16.5",
+          "52.5",
+          "61.25",
+          "63.75",
+          "37.5"
+        ]
+      },
+      "HSNCode": {
+        "utilizationPercent": "100.0%",
+        "samples": [
+          "540754",
+          "54054",
+          "540745",
+          "540810",
+          "50079010"
+        ]
+      },
+      "PurchaseRate": {
+        "utilizationPercent": "100.0%",
+        "samples": [
+          "330",
+          "1050",
+          "1225",
+          "1275",
+          "750"
+        ]
+      },
+      "RateCode": {
+        "utilizationPercent": "89.5%",
+        "samples": [
+          "83",
+          "119",
+          "146",
+          "78",
+          "157"
+        ]
+      },
+      "MRP": {
+        "utilizationPercent": "95.2%",
+        "samples": [
+          "1780",
+          "2050",
+          "2150",
+          "1350",
+          "880"
+        ]
+      },
+      "RecvQty": {
+        "utilizationPercent": "99.8%",
+        "samples": [
+          "72",
+          "10",
+          "9",
+          "6",
+          "12"
+        ]
+      },
+      "BarCodeID": {
+        "utilizationPercent": "86.7%",
+        "samples": [
+          "7424",
+          "7419",
+          "7418",
+          "7422",
+          "7421"
+        ]
+      },
+      "ShortItem": {
+        "utilizationPercent": "0.0%",
+        "samples": [
+          "1"
+        ]
+      },
+      "LbPrintStat": {
+        "utilizationPercent": "100.0%",
+        "samples": [
+          "True"
+        ]
+      },
+      "SrNo": {
+        "utilizationPercent": "100.0%",
+        "samples": [
+          "1",
+          "2",
+          "5",
+          "3",
+          "7"
+        ]
+      },
+      "Sorted": {
+        "utilizationPercent": "13.1%",
+        "samples": [
+          "True"
+        ]
+      },
+      "SaleQty": {
+        "utilizationPercent": "17.5%",
+        "samples": [
+          "7",
+          "5",
+          "30",
+          "1",
+          "12"
+        ]
+      },
+      "StockQty": {
+        "utilizationPercent": "13.6%",
+        "samples": [
+          "3",
+          "5",
+          "7",
+          "2",
+          "4"
+        ]
+      },
+      "LbPrintDate": {
+        "utilizationPercent": "89.4%",
+        "samples": [
+          "10/8/2025 12:00:00 AM",
+          "10/7/2025 12:00:00 AM",
+          "11/3/2025 12:00:00 AM",
+          "10/27/2025 12:00:00 AM",
+          "10/14/2025 12:00:00 AM"
+        ]
+      },
+      "OldPurchaseRate": {
+        "utilizationPercent": "34.4%",
+        "samples": [
+          "455",
+          "595",
+          "6600",
+          "2875",
+          "3375"
+        ]
+      },
+      "SaleRate": {
+        "utilizationPercent": "0.0%",
+        "samples": [
+          "270"
+        ]
+      },
+      "SubStyle2Code": {
+        "utilizationPercent": "0.1%",
+        "samples": [
+          "164",
+          "1881",
+          "1987",
+          "1690"
+        ]
+      }
+    }
+  },
+  {
+    "category": "Readywear",
+    "totalItemsChecked": 901,
+    "meaningfulParameters": {
+      "GRN": {
+        "utilizationPercent": "100.0%",
+        "samples": [
+          "120894",
+          "120661",
+          "120657",
+          "120548",
+          "119451"
+        ]
+      },
+      "CategoryCode": {
+        "utilizationPercent": "100.0%",
+        "samples": [
+          "195"
+        ]
+      },
+      "BrandCode": {
+        "utilizationPercent": "100.0%",
+        "samples": [
+          "5505",
+          "5508",
+          "4418",
+          "4455",
+          "3975"
+        ]
+      },
+      "ItemCode": {
+        "utilizationPercent": "100.0%",
+        "samples": [
+          "63277",
+          "98107",
+          "130143",
+          "130144",
+          "123664"
+        ]
+      },
+      "PRate": {
+        "utilizationPercent": "100.0%",
+        "samples": [
+          "1645",
+          "695",
+          "1095",
+          "2260",
+          "2875"
+        ]
+      },
+      "GST": {
+        "utilizationPercent": "75.5%",
+        "samples": [
+          "12",
+          "5"
+        ]
+      },
+      "GSTAmt": {
+        "utilizationPercent": "75.5%",
+        "samples": [
+          "167.4",
+          "203.4",
+          "155.4",
+          "191.4",
+          "49.75"
+        ]
+      },
+      "HSNCode": {
+        "utilizationPercent": "100.0%",
+        "samples": [
+          "62041200",
+          "621142",
+          "620412",
+          "620419",
+          "630790"
+        ]
+      },
+      "PurchaseRate": {
+        "utilizationPercent": "100.0%",
+        "samples": [
+          "1645",
+          "695",
+          "1095",
+          "2260",
+          "2875"
+        ]
+      },
+      "RateCode": {
+        "utilizationPercent": "100.0%",
+        "samples": [
+          "259",
+          "104",
+          "164",
+          "380",
+          "483"
+        ]
+      },
+      "MRP": {
+        "utilizationPercent": "11.8%",
+        "samples": [
+          "4700",
+          "4810",
+          "9740",
+          "3650",
+          "8560"
+        ]
+      },
+      "RecvQty": {
+        "utilizationPercent": "100.0%",
+        "samples": [
+          "6",
+          "24",
+          "5",
+          "4",
+          "2"
+        ]
+      },
+      "BarCodeID": {
+        "utilizationPercent": "11.5%",
+        "samples": [
+          "158362",
+          "158361",
+          "144090",
+          "144092",
+          "144078"
+        ]
+      },
+      "LbPrintStat": {
+        "utilizationPercent": "97.4%",
+        "samples": [
+          "True"
+        ]
+      },
+      "SrNo": {
+        "utilizationPercent": "100.0%",
+        "samples": [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5"
+        ]
+      },
+      "SaleQty": {
+        "utilizationPercent": "11.9%",
+        "samples": [
+          "2",
+          "1"
+        ]
+      },
+      "StockQty": {
+        "utilizationPercent": "6.1%",
+        "samples": [
+          "19",
+          "4",
+          "2",
+          "3",
+          "5"
+        ]
+      },
+      "LbPrintDate": {
+        "utilizationPercent": "97.4%",
+        "samples": [
+          "10/28/2025 12:00:00 AM",
+          "9/27/2025 12:00:00 AM",
+          "11/11/2025 12:00:00 AM",
+          "10/16/2025 12:00:00 AM",
+          "9/20/2025 12:00:00 AM"
+        ]
+      },
+      "OldPurchaseRate": {
+        "utilizationPercent": "11.8%",
+        "samples": [
+          "2195",
+          "2350",
+          "595",
+          "1350",
+          "1750"
+        ]
+      },
+      "SaleRate": {
+        "utilizationPercent": "0.2%",
+        "samples": [
+          "1205",
+          "1630"
+        ]
+      },
+      "SubStyle2Code": {
+        "utilizationPercent": "24.4%",
+        "samples": [
+          "2712",
+          "263",
+          "2713",
+          "2714",
+          "606"
+        ]
+      }
+    }
+  },
+  {
+    "category": "Innerwear",
+    "totalItemsChecked": 323,
+    "meaningfulParameters": {
+      "GRN": {
+        "utilizationPercent": "100.0%",
+        "samples": [
+          "124665",
+          "124657",
+          "124655",
+          "124652",
+          "124651"
+        ]
+      },
+      "CategoryCode": {
+        "utilizationPercent": "100.0%",
+        "samples": [
+          "190"
+        ]
+      },
+      "BrandCode": {
+        "utilizationPercent": "100.0%",
+        "samples": [
+          "1498",
+          "2370",
+          "2397",
+          "5399",
+          "5346"
+        ]
+      },
+      "ItemCode": {
+        "utilizationPercent": "100.0%",
+        "samples": [
+          "66740",
+          "38609",
+          "3070",
+          "9207",
+          "128591"
+        ]
+      },
+      "PRate": {
+        "utilizationPercent": "100.0%",
+        "samples": [
+          "699",
+          "495",
+          "595",
+          "745",
+          "545"
+        ]
+      },
+      "GST": {
+        "utilizationPercent": "36.8%",
+        "samples": [
+          "5"
+        ]
+      },
+      "GSTAmt": {
+        "utilizationPercent": "36.8%",
+        "samples": [
+          "34.95",
+          "24.75",
+          "29.75",
+          "37.25",
+          "27.25"
+        ]
+      },
+      "HSNCode": {
+        "utilizationPercent": "100.0%",
+        "samples": [
+          "540754",
+          "551511",
+          "520821",
+          "540752"
+        ]
+      },
+      "PurchaseRate": {
+        "utilizationPercent": "100.0%",
+        "samples": [
+          "699",
+          "495",
+          "595",
+          "745",
+          "545"
+        ]
+      },
+      "RateCode": {
+        "utilizationPercent": "100.0%",
+        "samples": [
+          "105",
+          "74",
+          "89",
+          "112",
+          "82"
+        ]
+      },
+      "MRP": {
+        "utilizationPercent": "100.0%",
+        "samples": [
+          "1250",
+          "880",
+          "1030",
+          "980",
+          "1350"
+        ]
+      },
+      "RecvQty": {
+        "utilizationPercent": "99.1%",
+        "samples": [
+          "20",
+          "12",
+          "17",
+          "11",
+          "29"
+        ]
+      },
+      "BarCodeID": {
+        "utilizationPercent": "100.0%",
+        "samples": [
+          "6664",
+          "6666",
+          "6665",
+          "6935",
+          "6934"
+        ]
+      },
+      "LbPrintStat": {
+        "utilizationPercent": "100.0%",
+        "samples": [
+          "True"
+        ]
+      },
+      "SrNo": {
+        "utilizationPercent": "100.0%",
+        "samples": [
+          "3",
+          "5",
+          "4",
+          "2",
+          "1"
+        ]
+      },
+      "SaleQty": {
+        "utilizationPercent": "32.5%",
+        "samples": [
+          "5",
+          "4",
+          "10",
+          "12",
+          "34"
+        ]
+      },
+      "StockQty": {
+        "utilizationPercent": "23.8%",
+        "samples": [
+          "21",
+          "8",
+          "20",
+          "23",
+          "29"
+        ]
+      },
+      "LbPrintDate": {
+        "utilizationPercent": "95.7%",
+        "samples": [
+          "10/8/2025 12:00:00 AM",
+          "11/3/2025 12:00:00 AM",
+          "10/10/2025 12:00:00 AM",
+          "10/13/2025 12:00:00 AM",
+          "11/1/2025 12:00:00 AM"
+        ]
+      },
+      "OldPurchaseRate": {
+        "utilizationPercent": "27.9%",
+        "samples": [
+          "990",
+          "809",
+          "1058",
+          "787",
+          "555"
+        ]
+      }
+    }
+  },
+  {
+    "category": "Others",
+    "totalItemsChecked": 2698,
+    "meaningfulParameters": {
+      "GRN": {
+        "utilizationPercent": "100.0%",
+        "samples": [
+          "124744",
+          "124743",
+          "124741",
+          "124732",
+          "124735"
+        ]
+      },
+      "CategoryCode": {
+        "utilizationPercent": "100.0%",
+        "samples": [
+          "4",
+          "244",
+          "151",
+          "125",
+          "18"
+        ]
+      },
+      "BrandCode": {
+        "utilizationPercent": "100.0%",
+        "samples": [
+          "5608",
+          "2397",
+          "1800",
+          "2817",
+          "5403"
+        ]
+      },
+      "SizeGroupID": {
+        "utilizationPercent": "2.5%",
+        "samples": [
+          "1"
+        ]
+      },
+      "ItemCode": {
+        "utilizationPercent": "100.0%",
+        "samples": [
+          "2289",
+          "127180",
+          "55928",
+          "8680",
+          "72841"
+        ]
+      },
+      "PRate": {
+        "utilizationPercent": "100.0%",
+        "samples": [
+          "223",
+          "667",
+          "480",
+          "458",
+          "435"
+        ]
+      },
+      "Disc": {
+        "utilizationPercent": "1.7%",
+        "samples": [
+          "38",
+          "5"
+        ]
+      },
+      "GST": {
+        "utilizationPercent": "37.8%",
+        "samples": [
+          "5",
+          "12",
+          "1"
+        ]
+      },
+      "GSTAmt": {
+        "utilizationPercent": "37.8%",
+        "samples": [
+          "11.15",
+          "33.35",
+          "24",
+          "22.9",
+          "21.75"
+        ]
+      },
+      "HSNCode": {
+        "utilizationPercent": "100.0%",
+        "samples": [
+          "540754",
+          "570110",
+          "630790",
+          "620419",
+          "520411"
+        ]
+      },
+      "PurchaseRate": {
+        "utilizationPercent": "100.0%",
+        "samples": [
+          "223",
+          "667",
+          "480",
+          "458",
+          "435"
+        ]
+      },
+      "RateCode": {
+        "utilizationPercent": "88.0%",
+        "samples": [
+          "33",
+          "37",
+          "35",
+          "59",
+          "34"
+        ]
+      },
+      "MRP": {
+        "utilizationPercent": "96.5%",
+        "samples": [
+          "395",
+          "1110",
+          "800",
+          "780",
+          "750"
+        ]
+      },
+      "RecvQty": {
+        "utilizationPercent": "99.6%",
+        "samples": [
+          "144",
+          "4",
+          "28",
+          "11",
+          "32"
+        ]
+      },
+      "BarCodeID": {
+        "utilizationPercent": "91.3%",
+        "samples": [
+          "8342",
+          "8084",
+          "8081",
+          "8083",
+          "8082"
+        ]
+      },
+      "ShortItem": {
+        "utilizationPercent": "0.1%",
+        "samples": [
+          "2",
+          "32",
+          "1"
+        ]
+      },
+      "LbPrintStat": {
+        "utilizationPercent": "98.9%",
+        "samples": [
+          "True"
+        ]
+      },
+      "SrNo": {
+        "utilizationPercent": "100.0%",
+        "samples": [
+          "1",
+          "4",
+          "3",
+          "2",
+          "5"
+        ]
+      },
+      "Sorted": {
+        "utilizationPercent": "1.9%",
+        "samples": [
+          "True"
+        ]
+      },
+      "SaleQty": {
+        "utilizationPercent": "16.6%",
+        "samples": [
+          "39",
+          "48",
+          "2",
+          "10",
+          "3"
+        ]
+      },
+      "StockQty": {
+        "utilizationPercent": "12.3%",
+        "samples": [
+          "3",
+          "2",
+          "70",
+          "24",
+          "14"
+        ]
+      },
+      "UnitID": {
+        "utilizationPercent": "8.7%",
+        "samples": [
+          "1"
+        ]
+      },
+      "LbPrintDate": {
+        "utilizationPercent": "86.0%",
+        "samples": [
+          "11/1/2025 12:00:00 AM",
+          "10/8/2025 12:00:00 AM",
+          "10/10/2025 12:00:00 AM",
+          "10/12/2025 12:00:00 AM",
+          "10/5/2025 12:00:00 AM"
+        ]
+      },
+      "OldPurchaseRate": {
+        "utilizationPercent": "34.6%",
+        "samples": [
+          "265",
+          "275",
+          "360",
+          "300",
+          "78"
+        ]
+      },
+      "SaleRate": {
+        "utilizationPercent": "5.2%",
+        "samples": [
+          "900",
+          "950",
+          "1185",
+          "1235",
+          "1140"
+        ]
+      },
+      "SLDisc": {
+        "utilizationPercent": "1.7%",
+        "samples": [
+          "5"
+        ]
+      },
+      "SubStyle2Code": {
+        "utilizationPercent": "3.9%",
+        "samples": [
+          "2719",
+          "2720",
+          "2718",
+          "2722",
+          "2721"
+        ]
+      }
+    }
+  }
+]

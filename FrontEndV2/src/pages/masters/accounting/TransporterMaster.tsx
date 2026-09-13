@@ -135,7 +135,7 @@ export default function TransporterMaster() {
                         transporters.map((row, idx) => (
                           <tr key={row.id} className={'text-[12px] border-b border-slate-300 ' + (idx % 2 === 0 ? 'bg-white' : 'bg-[#fcfaf2]') + ' hover:bg-[#ffffe0] cursor-pointer'}>
                             <td className="px-2 py-1 border-r border-slate-300 font-medium text-slate-700">{row.id}</td>
-                            <td className="px-2 py-1 border-r border-slate-300 font-medium text-slate-700">{row.transporter_name}</td>
+                            <td className="px-2 py-1 border-r border-slate-300 font-medium text-slate-700">{row.name || row.transporter_name}</td>
                             <td className="px-2 py-1 border-r border-slate-300 font-medium text-slate-700">{row.mobile || '-'}</td>
                             <td className="px-2 py-1 border-r border-slate-300 font-medium text-slate-700">{row.email || '-'}</td>
                           </tr>

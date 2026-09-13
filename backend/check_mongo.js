@@ -4,15 +4,16 @@ async function check() {
   const client = new MongoClient('mongodb://127.0.0.1:27017');
   try {
     await client.connect();
-    console.log("Connected to local Mongo!");
-    const dbs = await client.db().admin().listDatabases();
-    console.log("Databases:", dbs.databases.map(d => d.name));
+    const db = client.db('RsDB_Archive');
     
-    if (dbs.databases.find(d => d.name === 'rsdb_archive')) {
-      console.log("\nFound rsdb_archive. Collections:");
-      const cols = await client.db('rsdb_archive').listCollections().toArray();
-      console.log(cols.map(c => c.name));
-    }
+    console.log("--- GR Sample ---");
+    const gr = await db.collection('GR').findOne({});
+    console.log(JSON.stringify(gr, null, 2));
+
+    console.log("\n--- GRDetails Sample ---");
+    const grDetails = await db.collection('GRDetails').findOne({});
+    console.log(JSON.stringify(grDetails, null, 2));
+
   } catch (err) {
     console.error(err);
   } finally {

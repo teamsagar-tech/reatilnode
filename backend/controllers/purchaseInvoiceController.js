@@ -156,7 +156,7 @@ async function generateGRN(conn, firm_id) {
 }
 
 exports.create = async (req, res) => {
-  const { vendor_id, bill_no, bill_date, receive_date, total_amount, gst_amount, net_amount, discount_percent, discount_amount, commission_percent, commission_amount, narration, items, lr_no, transporter, bales } = req.body;
+  const { vendor_id, bill_no, bill_date, receive_date, total_amount, gst_amount, net_amount, discount_percent, discount_amount, commission_percent, commission_amount, narration, items, lr_no, transporter, bales, freight, insurance, packing_charges } = req.body;
   
   if (!vendor_id) return res.status(400).json({ error: 'Vendor is required' });
   if (!items || !Array.isArray(items) || items.length === 0) {
@@ -188,9 +188,9 @@ exports.create = async (req, res) => {
     // 2. Insert Header
     const [invoiceResult] = await conn.execute(
       `INSERT INTO PurchaseInvoices 
-       (firm_id, grn_no, vendor_id, bill_no, bill_date, receive_date, discount_percent, discount_amount, commission_percent, commission_amount, total_amount, gst_amount, net_amount, narration, lr_status, purchase_order_id, lr_no, transporter, bales, created_by, ip_address) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [req.firm_id, grn_no, vendor_id, bill_no || null, bill_date || null, receive_date || new Date(), discount_percent || 0, discount_amount || 0, commission_percent || 0, commission_amount || 0, total_amount || 0, gst_amount || 0, net_amount || 0, narration || null, lr_status, req.body.purchase_order_id || null, lr_no || null, transporter || null, bales || null, created_by, ip_address]
+       (firm_id, grn_no, vendor_id, bill_no, bill_date, receive_date, discount_percent, discount_amount, commission_percent, commission_amount, total_amount, gst_amount, net_amount, narration, lr_status, purchase_order_id, lr_no, transporter, bales, freight, insurance, packing_charges, created_by, ip_address) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [req.firm_id, grn_no, vendor_id, bill_no || null, bill_date || null, receive_date || new Date(), discount_percent || 0, discount_amount || 0, commission_percent || 0, commission_amount || 0, total_amount || 0, gst_amount || 0, net_amount || 0, narration || null, lr_status, req.body.purchase_order_id || null, lr_no || null, transporter || null, bales || null, freight || 0, insurance || 0, packing_charges || 0, created_by, ip_address]
     );
     const invoiceId = invoiceResult.insertId;
 
@@ -223,9 +223,9 @@ exports.create = async (req, res) => {
     for (let item of items) {
       const [itemResult] = await conn.execute(
         `INSERT INTO PurchaseInvoiceItems 
-         (invoice_id, item_id, category_id, brand_id, purchase_rate, mrp, total_qty, gst_percent, gst_amount, total_amount) 
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [invoiceId, item.item_id, item.category_id || null, item.brand_id || null, item.purchase_rate || 0, item.mrp || 0, item.total_qty || 0, item.gst_percent || 0, item.gst_amount || 0, item.total_amount || 0]
+         (invoice_id, item_id, category_id, brand_id, purchase_rate, mrp, total_qty, gst_percent, gst_amount, total_amount, size_group_id) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [invoiceId, item.item_id, item.category_id || null, item.brand_id || null, item.purchase_rate || 0, item.mrp || 0, item.total_qty || 0, item.gst_percent || 0, item.gst_amount || 0, item.total_amount || 0, item.size_group_id || null]
       );
       const itemId = itemResult.insertId;
 
@@ -246,12 +246,19 @@ exports.create = async (req, res) => {
         // Handle Size Matrix Data
         for (let matrixRow of item.matrixData) {
           let barcode = `${invoiceId}-${itemId}-${Date.now() % 100000}`;
+          
+          let sizeId = null;
+          if (matrixRow.size) {
+            const [sizeRows] = await conn.execute('SELECT id FROM Sizes WHERE firm_id = ? AND name = ?', [req.firm_id, matrixRow.size.trim()]);
+            if (sizeRows.length > 0) sizeId = sizeRows[0].id;
+          }
+
           // matrixRow contains { size, qty, rate, mrp }
           await conn.execute(
             `INSERT INTO PurchaseInvoiceItemAttributes 
              (invoice_item_id, size_id, qty, barcode, purchase_rate, mrp) 
              VALUES (?, ?, ?, ?, ?, ?)`,
-            [itemId, matrixRow.size || null, matrixRow.qty || 0, barcode, matrixRow.rate || null, matrixRow.mrp || null]
+            [itemId, sizeId, matrixRow.qty || 0, barcode, matrixRow.rate || null, matrixRow.mrp || null]
           );
         }
       }
@@ -316,6 +323,7 @@ exports.update = async (req, res) => {
       return res.status(404).json({ error: 'Invoice not found' });
     }
     const oldInvoice = existingInvoiceRows[0];
+    const { freight, insurance, packing_charges } = req.body;
 
     if (bill_no) {
       const [existingBill] = await conn.execute(
@@ -352,9 +360,9 @@ exports.update = async (req, res) => {
     // Update Header
     await conn.execute(
       `UPDATE PurchaseInvoices 
-       SET vendor_id=?, bill_no=?, bill_date=?, receive_date=?, discount_percent=?, discount_amount=?, commission_percent=?, commission_amount=?, total_amount=?, gst_amount=?, net_amount=?, narration=?, purchase_order_id=?, lr_no=?, transporter=?, bales=?, ip_address=?
+       SET vendor_id=?, bill_no=?, bill_date=?, receive_date=?, discount_percent=?, discount_amount=?, commission_percent=?, commission_amount=?, total_amount=?, gst_amount=?, net_amount=?, narration=?, purchase_order_id=?, lr_no=?, transporter=?, bales=?, freight=?, insurance=?, packing_charges=?, ip_address=?
        WHERE id=? AND firm_id=?`,
-      [vendor_id, bill_no || null, bill_date || null, receive_date || new Date(), discount_percent || 0, discount_amount || 0, commission_percent || 0, commission_amount || 0, total_amount || 0, gst_amount || 0, net_amount || 0, narration || null, req.body.purchase_order_id || null, lr_no || null, transporter || null, bales || null, req.headers['x-forwarded-for'] || req.socket.remoteAddress || null, id, req.firm_id]
+      [vendor_id, bill_no || null, bill_date || null, receive_date || new Date(), discount_percent || 0, discount_amount || 0, commission_percent || 0, commission_amount || 0, total_amount || 0, gst_amount || 0, net_amount || 0, narration || null, req.body.purchase_order_id || null, lr_no || null, transporter || null, bales || null, freight || 0, insurance || 0, packing_charges || 0, req.headers['x-forwarded-for'] || req.socket.remoteAddress || null, id, req.firm_id]
     );
 
     // Delete old items (attributes will cascade if set, otherwise we should manually delete attributes first)
@@ -369,9 +377,9 @@ exports.update = async (req, res) => {
     for (let item of items) {
       const [itemResult] = await conn.execute(
         `INSERT INTO PurchaseInvoiceItems 
-         (invoice_id, item_id, category_id, brand_id, purchase_rate, mrp, total_qty, gst_percent, gst_amount, total_amount) 
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [id, item.item_id, item.category_id || null, item.brand_id || null, item.purchase_rate || 0, item.mrp || 0, item.total_qty || 0, item.gst_percent || 0, item.gst_amount || 0, item.total_amount || 0]
+         (invoice_id, item_id, category_id, brand_id, purchase_rate, mrp, total_qty, gst_percent, gst_amount, total_amount, size_group_id) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [id, item.item_id, item.category_id || null, item.brand_id || null, item.purchase_rate || 0, item.mrp || 0, item.total_qty || 0, item.gst_percent || 0, item.gst_amount || 0, item.total_amount || 0, item.size_group_id || null]
       );
       const itemId = itemResult.insertId;
 
@@ -388,11 +396,18 @@ exports.update = async (req, res) => {
       } else if (item.matrixData && Array.isArray(item.matrixData) && item.matrixData.length > 0) {
         for (let matrixRow of item.matrixData) {
           let barcode = `${id}-${itemId}-${Date.now() % 100000}`;
+          
+          let sizeId = null;
+          if (matrixRow.size) {
+            const [sizeRows] = await conn.execute('SELECT id FROM Sizes WHERE firm_id = ? AND name = ?', [req.firm_id, matrixRow.size.trim()]);
+            if (sizeRows.length > 0) sizeId = sizeRows[0].id;
+          }
+
           await conn.execute(
             `INSERT INTO PurchaseInvoiceItemAttributes 
              (invoice_item_id, size_id, qty, barcode, purchase_rate, mrp) 
              VALUES (?, ?, ?, ?, ?, ?)`,
-            [itemId, matrixRow.size || null, matrixRow.qty || 0, barcode, matrixRow.rate || null, matrixRow.mrp || null]
+            [itemId, sizeId, matrixRow.qty || 0, barcode, matrixRow.rate || null, matrixRow.mrp || null]
           );
         }
       }
@@ -419,12 +434,12 @@ exports.checkLR = async (req, res) => {
 
   try {
     const [rows] = await db.execute(
-      'SELECT id, invoice_number FROM PurchaseInvoices WHERE firm_id = ? AND transporter_id = ? AND lr_no = ? AND is_active = 1',
+      'SELECT id, bill_no FROM PurchaseInvoices WHERE firm_id = ? AND transporter_id = ? AND lr_no = ?',
       [firm_id, transporter_id, lr_no]
     );
 
     if (rows.length > 0) {
-      res.json({ exists: true, invoice_number: rows[0].invoice_number });
+      res.json({ exists: true, invoice_number: rows[0].bill_no });
     } else {
       res.json({ exists: false });
     }

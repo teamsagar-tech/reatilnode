@@ -44,7 +44,7 @@ export function useGlobalKeyboard() {
       const isShiftTab = keyString === 'Shift+Tab';
       const isBackspace = keyString === 'Backspace';
 
-      if (isEnter || isShiftTab || isBackspace) {
+      if (isEnter || isShiftTab) {
         const active = document.activeElement as HTMLElement;
         
         // Only intercept if we are on an input/select
@@ -55,32 +55,33 @@ export function useGlobalKeyboard() {
             return; 
           }
 
-          // For Backspace, only reverse if the input is completely empty
-          if (isBackspace) {
-            const inputEl = active as HTMLInputElement;
-            // If it has a value, or it's a type that doesn't support value well, let normal backspace happen
-            if (inputEl.value !== undefined && inputEl.value !== '') {
-              return;
-            }
-          }
-
           e.preventDefault();
 
+          // Scope to the nearest modal if we are inside one, otherwise use document
+          const modalWrapper = active.closest('.fixed.inset-0, [role="dialog"], .modal, dialog');
+          const rootNode = modalWrapper || document;
+
           // Collect focusable elements
-          // Prioritize explicitly marked .tally-input fields if they exist in this form, otherwise fallback
-          const hasTallyInputs = document.querySelectorAll('.tally-input').length > 0;
+          // Prioritize explicitly marked .tally-input fields if they exist in this scope, otherwise fallback
+          const hasTallyInputs = rootNode.querySelectorAll('.tally-input').length > 0;
           const focusableStr = hasTallyInputs 
             ? '.tally-input' 
             : 'button, [href], input, select, textarea, [tabindex]';
 
-          const focusableElements = Array.from(document.querySelectorAll(focusableStr)).filter((el) => {
+          const focusableElements = Array.from(rootNode.querySelectorAll(focusableStr)).filter((el) => {
             const htmlEl = el as HTMLElement;
             const inputEl = el as HTMLInputElement;
+            
+            const text = (htmlEl.innerText || htmlEl.textContent || '').trim().toLowerCase();
+            const isDestructiveButton = htmlEl.tagName === 'BUTTON' && 
+              (text === 'cancel' || text === 'quit' || text === 'reset');
+
             return (
               !inputEl.disabled && 
               !inputEl.readOnly && 
               htmlEl.offsetParent !== null && 
-              htmlEl.tabIndex !== -1
+              htmlEl.tabIndex !== -1 &&
+              !isDestructiveButton
             );
           });
 

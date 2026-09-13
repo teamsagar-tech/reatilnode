@@ -9,9 +9,11 @@ interface SizeAllocationModalProps {
   onSave: (allocatedSizes: any[], summaryInfo: any) => void;
   itemName: string;
   brandId?: string | number;
+  initialSizeSet?: string;
+  expectedTotalQty?: number | null;
 }
 
-export default function SizeAllocationModal({ isOpen, onClose, onSave, itemName, brandId }: SizeAllocationModalProps) {
+export default function SizeAllocationModal({ isOpen, onClose, onSave, itemName, brandId, initialSizeSet, expectedTotalQty }: SizeAllocationModalProps) {
   const [sizeGroups, setSizeGroups] = useState<any[]>([]);
   const [selectedGroupId, setSelectedGroupId] = useState('');
   const [baseRate, setBaseRate] = useState('');
@@ -32,7 +34,20 @@ export default function SizeAllocationModal({ isOpen, onClose, onSave, itemName,
       });
       if (response.ok) {
         const data = await response.json();
-        setSizeGroups(Array.isArray(data) ? data : []);
+        const arr = Array.isArray(data) ? data : [];
+        setSizeGroups(arr);
+        
+        if (initialSizeSet) {
+          const match = arr.find((g: any) => g.name && g.name.toLowerCase() === initialSizeSet.toLowerCase());
+          if (match) {
+            setSelectedGroupId(match.id.toString());
+            setSearchText(match.name);
+            // Need a slight timeout to ensure state is set if generateGrid uses state (but it doesn't anymore)
+            setTimeout(() => {
+              generateGrid(match, '', '0', '', '0', 'base-rate');
+            }, 0);
+          }
+        }
       }
     } catch (err) {
       console.error('Failed to fetch size sets', err);
@@ -42,8 +57,6 @@ export default function SizeAllocationModal({ isOpen, onClose, onSave, itemName,
   // Fetch Size Groups
   useEffect(() => {
     if (isOpen) {
-      fetchSizeGroups();
-      
       // Reset state
       setSelectedGroupId('');
       setSearchText('');
@@ -52,8 +65,75 @@ export default function SizeAllocationModal({ isOpen, onClose, onSave, itemName,
       setBaseMrp('');
       setMrpStep('0');
       setMatrixData([]);
+
+      fetchSizeGroups();
     }
-  }, [isOpen, brandId]);
+  }, [isOpen, brandId, initialSizeSet]);
+
+  const generateGrid = (group: any, bRate = baseRate, rStep = rateStep, bMrp = baseMrp, mStep = mrpStep, focusTarget: 'none' | 'base-rate' | 'first-qty' = 'none') => {
+    let sizesArray: any[] = [];
+    const sizesData = group.sizes_list || group.sizes || [];
+    
+    if (typeof sizesData === 'string') {
+        try { sizesArray = JSON.parse(sizesData); } catch(e) { sizesArray = sizesData.split(','); }
+    } else {
+        sizesArray = sizesData;
+    }
+
+    if (!sizesArray || sizesArray.length === 0) {
+      const groupName = group.name || group.groupName || group.group_name || '';
+      if (groupName.includes('-')) {
+        const parts = groupName.split('-');
+        if (parts.length === 2) {
+          const start = parseInt(parts[0], 10);
+          const end = parseInt(parts[1], 10);
+          if (!isNaN(start) && !isNaN(end) && start < end) {
+            let step = (end - start) % 2 === 0 ? 2 : 1;
+            sizesArray = [];
+            for (let i = start; i <= end; i += step) {
+              sizesArray.push(i.toString());
+            }
+          }
+        }
+      }
+    }
+
+    const baseR = parseFloat(bRate) || 0;
+    const rateS = parseFloat(rStep) || 0;
+    const baseM = parseFloat(bMrp) || 0;
+    const mrpS = parseFloat(mStep) || 0;
+
+    setMatrixData(prev => {
+      return sizesArray.map((size: string, index: number) => {
+        const existing = prev?.find(m => m.size === size.trim());
+        return {
+          size: size.trim(),
+          qty: existing ? existing.qty : '',
+          rate: baseR + (rateS * index),
+          mrp: baseM + (mrpS * index),
+        };
+      });
+    });
+    
+    if (focusTarget !== 'none') {
+      setTimeout(() => {
+        if (focusTarget === 'base-rate') {
+          document.getElementById('base-rate-input')?.focus();
+        } else if (focusTarget === 'first-qty') {
+          firstInputRef.current?.focus();
+        }
+      }, 100);
+    }
+  };
+
+  useEffect(() => {
+    if (selectedGroupId && sizeGroups.length > 0) {
+      const group = sizeGroups.find(g => g.id.toString() === selectedGroupId.toString());
+      if (group && (group.sizes_list || group.sizes)) {
+        generateGrid(group, baseRate, rateStep, baseMrp, mrpStep, 'none');
+      }
+    }
+  }, [baseRate, rateStep, baseMrp, mrpStep, selectedGroupId]);
 
   const handleGenerateGrid = () => {
     if (!selectedGroupId) {
@@ -66,33 +146,9 @@ export default function SizeAllocationModal({ isOpen, onClose, onSave, itemName,
     }
     
     const group = sizeGroups.find(g => g.id.toString() === selectedGroupId.toString());
-    if (!group || !group.sizes) return;
+    if (!group || (!group.sizes_list && !group.sizes)) return;
 
-    let sizesArray = [];
-    if (typeof group.sizes === 'string') {
-        try { sizesArray = JSON.parse(group.sizes); } catch(e) { sizesArray = group.sizes.split(','); }
-    } else {
-        sizesArray = group.sizes;
-    }
-
-    const bRate = parseFloat(baseRate) || 0;
-    const rStep = parseFloat(rateStep) || 0;
-    const bMrp = parseFloat(baseMrp) || 0;
-    const mStep = parseFloat(mrpStep) || 0;
-
-    const newMatrix = sizesArray.map((size: string, index: number) => ({
-      size: size.trim(),
-      qty: '', // Empty initially
-      rate: bRate + (rStep * index),
-      mrp: bMrp + (mStep * index),
-    }));
-
-    setMatrixData(newMatrix);
-    
-    // Auto focus the first quantity input after generation
-    setTimeout(() => {
-      firstInputRef.current?.focus();
-    }, 100);
+    generateGrid(group, baseRate, rateStep, baseMrp, mrpStep, 'first-qty');
   };
 
   const handleQtyChange = (index: number, value: string) => {
@@ -171,21 +227,32 @@ export default function SizeAllocationModal({ isOpen, onClose, onSave, itemName,
 
     let totalQty = 0;
     let totalAmount = 0;
+    let totalMrpAmount = 0;
     finalAllocations.forEach(row => {
       const q = parseFloat(row.qty) || 0;
       const r = parseFloat(row.rate) || 0;
+      const m = parseFloat(row.mrp) || 0;
       totalQty += q;
       totalAmount += (q * r);
+      totalMrpAmount += (q * m);
     });
 
+    if (expectedTotalQty && totalQty !== expectedTotalQty) {
+      alert(`Validation Error: The total quantity in the matrix (${totalQty}) does not match the quantity entered in the main row (${expectedTotalQty}). Please correct it.`);
+      return;
+    }
+
     const avgRate = totalQty > 0 ? (totalAmount / totalQty) : 0;
+    const avgMrp = totalQty > 0 ? (totalMrpAmount / totalQty) : 0;
 
     const summaryInfo = {
       totalQty,
       avgRate,
+      avgMrp,
       totalAmount,
       isMatrixSummary: true,
-      sizeDisplay: searchText
+      sizeDisplay: searchText,
+      size_group_id: selectedGroupId
     };
 
     onSave(finalAllocations, summaryInfo);
@@ -258,7 +325,7 @@ export default function SizeAllocationModal({ isOpen, onClose, onSave, itemName,
             </div>
             <div className="w-[100px]">
               <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Base Rate</label>
-              <input type="number" value={baseRate} onChange={e => setBaseRate(e.target.value)} className="w-full bg-slate-50 border border-slate-200 px-2 py-1.5 text-xs font-bold text-slate-800 rounded-md focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 text-right" />
+              <input id="base-rate-input" type="number" value={baseRate} onChange={e => setBaseRate(e.target.value)} className="w-full bg-slate-50 border border-slate-200 px-2 py-1.5 text-xs font-bold text-slate-800 rounded-md focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 text-right" />
             </div>
             <div className="w-[100px]">
               <label className="block text-[10px] font-bold text-emerald-600 uppercase tracking-wider mb-1">Step (+₹)</label>
@@ -390,11 +457,43 @@ export default function SizeAllocationModal({ isOpen, onClose, onSave, itemName,
 
         {/* Footer Actions */}
         <div className="bg-white rounded-b-xl border-t border-slate-200 px-4 py-3 flex justify-between items-center shrink-0">
-          <div className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
-            <kbd className="bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded mr-1">TAB</kbd> to move right, <kbd className="bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded mr-1">↓↑</kbd> to move vertical
+          <div className="flex items-center gap-4">
+            <div className="text-[10px] text-slate-400 font-bold uppercase tracking-widest hidden sm:block">
+              <kbd className="bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded mr-1">TAB</kbd> to move right, <kbd className="bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded mr-1">↓↑</kbd> to move vertical
+            </div>
+            
+            {expectedTotalQty !== null && expectedTotalQty !== undefined && (
+              <div className="flex items-center gap-3 border-l border-slate-200 pl-4 h-6">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Matrix Total:</span>
+                  <span className={`text-xs font-black px-1.5 py-0.5 rounded ${
+                    matrixData.reduce((acc, curr) => acc + (parseFloat(curr.qty) || 0), 0) === expectedTotalQty 
+                      ? 'bg-emerald-100 text-emerald-700' 
+                      : 'bg-amber-100 text-amber-700'
+                  }`}>
+                    {matrixData.reduce((acc, curr) => acc + (parseFloat(curr.qty) || 0), 0)}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Required:</span>
+                  <span className="text-xs font-black bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded border border-slate-200">
+                    {expectedTotalQty}
+                  </span>
+                </div>
+                {matrixData.reduce((acc, curr) => acc + (parseFloat(curr.qty) || 0), 0) !== expectedTotalQty && (
+                  <div className="flex items-center gap-1.5 ml-1">
+                    <span className="text-[10px] text-amber-500 font-bold uppercase tracking-wider">Diff:</span>
+                    <span className="text-xs font-black text-amber-600">
+                      {expectedTotalQty - matrixData.reduce((acc, curr) => acc + (parseFloat(curr.qty) || 0), 0)}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
+
           <div className="flex gap-2">
-            <button onClick={onClose} className="px-4 py-1.5 border border-slate-200 text-slate-600 rounded text-xs font-bold hover:bg-slate-50">Cancel</button>
+            <button onClick={onClose} tabIndex={-1} className="px-4 py-1.5 border border-slate-200 text-slate-600 rounded text-xs font-bold hover:bg-slate-50">Cancel</button>
             <button 
               id="save-matrix-btn"
               onClick={processSave}

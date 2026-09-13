@@ -6,6 +6,7 @@ interface TransporterModalProps {
   onClose: () => void;
   onSave: (newTransporter: any) => void;
   initialTransporterName?: string;
+  editTransporterData?: any;
 }
 
 const SectionTitle = ({ children }: { children: React.ReactNode }) => (
@@ -14,10 +15,11 @@ const SectionTitle = ({ children }: { children: React.ReactNode }) => (
   </div>
 );
 
-const InputRow = ({ label, value, onChange, placeholder = "", width = "flex-1" }: any) => (
+const InputRow = ({ label, value, onChange, placeholder = "", width = "flex-1", id }: any) => (
   <div className="flex items-center mb-[2px]">
     <div className="w-[110px] text-slate-800 font-bold text-[11px] text-right pr-2 leading-tight">{label}</div>
     <input 
+      id={id}
       className={`${width} bg-white border border-slate-400 px-1 py-[2px] text-[12px] font-bold text-black focus:bg-[#ffffe0] focus:outline-none focus:border-slate-800`}
       value={value} 
       onChange={(e) => onChange(e.target.value)} 
@@ -27,7 +29,7 @@ const InputRow = ({ label, value, onChange, placeholder = "", width = "flex-1" }
   </div>
 );
 
-export default function TransporterModal({ isOpen, onClose, onSave, initialTransporterName = '' }: TransporterModalProps) {
+export default function TransporterModal({ isOpen, onClose, onSave, initialTransporterName = '', editTransporterData }: TransporterModalProps) {
   const [formData, setFormData] = useState({
     transporter_name: initialTransporterName,
     mobile: '',
@@ -38,13 +40,22 @@ export default function TransporterModal({ isOpen, onClose, onSave, initialTrans
 
   useEffect(() => {
     if (isOpen) {
-      setFormData({
-        transporter_name: initialTransporterName || '',
-        mobile: '',
-        email: ''
-      });
+      if (editTransporterData) {
+        setFormData({
+          transporter_name: editTransporterData.name || editTransporterData.transporter_name || '',
+          mobile: editTransporterData.mobile || '',
+          email: editTransporterData.email || ''
+        });
+      } else {
+        setFormData({
+          transporter_name: initialTransporterName || '',
+          mobile: '',
+          email: ''
+        });
+      }
+      setTimeout(() => document.getElementById('input-transporterName')?.focus(), 100);
     }
-  }, [isOpen, initialTransporterName]);
+  }, [isOpen, initialTransporterName, editTransporterData]);
 
   const handleSave = async () => {
     if (!formData.transporter_name) {
@@ -55,8 +66,15 @@ export default function TransporterModal({ isOpen, onClose, onSave, initialTrans
     setLoading(true);
     try {
       const token = sessionStorage.getItem('token') || localStorage.getItem('token');
-      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/logistics/transporters`, {
-        method: 'POST',
+      
+      const isEdit = !!editTransporterData;
+      const url = isEdit
+        ? `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/logistics/transporters/${editTransporterData.id}`
+        : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/logistics/transporters`;
+      const method = isEdit ? 'PUT' : 'POST';
+
+      const res = await fetch(url, {
+        method,
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
@@ -68,8 +86,9 @@ export default function TransporterModal({ isOpen, onClose, onSave, initialTrans
       if (data.success) {
         // Return the newly created item or constructed item
         onSave({
-          id: data.insertId || data.id || Math.random(),
+          id: isEdit ? editTransporterData.id : (data.insertId || data.id || Math.random()),
           transporter_name: formData.transporter_name,
+          name: formData.transporter_name,
           mobile: formData.mobile,
           email: formData.email
         });
@@ -101,7 +120,7 @@ export default function TransporterModal({ isOpen, onClose, onSave, initialTrans
         <div className="p-2 bg-[#f4f7f4] flex-1">
           <SectionTitle>Basic Info</SectionTitle>
           <div className="bg-white border border-[#a3c3be] p-2 mb-2 shadow-sm">
-            <InputRow label="Transporter Name" value={formData.transporter_name} onChange={(v: string) => setFormData({...formData, transporter_name: v})} />
+            <InputRow id="input-transporterName" label="Transporter Name" value={formData.transporter_name} onChange={(v: string) => setFormData({...formData, transporter_name: v})} />
             <InputRow label="Mobile" value={formData.mobile} onChange={(v: string) => setFormData({...formData, mobile: v})} />
             <InputRow label="Email" value={formData.email} onChange={(v: string) => setFormData({...formData, email: v})} />
           </div>
@@ -109,7 +128,7 @@ export default function TransporterModal({ isOpen, onClose, onSave, initialTrans
 
         {/* Footer */}
         <div className="bg-[#eef5ed] border-t border-[#a3c3be] px-2 py-1 flex justify-end gap-2">
-          <button onClick={onClose} className="bg-slate-200 border border-slate-400 px-4 py-1 text-xs font-bold text-slate-700 hover:bg-slate-300">
+          <button onClick={onClose} tabIndex={-1} className="bg-slate-200 border border-slate-400 px-4 py-1 text-xs font-bold text-slate-700 hover:bg-slate-300">
             Cancel
           </button>
           <button onClick={handleSave} disabled={loading} className="bg-[#1b5e58] border border-[#12423d] px-4 py-1 text-xs font-bold text-white hover:bg-[#12423d] disabled:opacity-50">

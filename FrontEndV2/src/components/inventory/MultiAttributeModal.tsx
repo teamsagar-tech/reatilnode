@@ -180,7 +180,7 @@ export default function MultiAttributeModal({ isOpen, onClose, onSave, item, sho
             <h2 className="text-[13px] font-bold tracking-tight">Size-Color Breakdown</h2>
             <p className="text-[11px] text-[#a4d4cc] font-medium">- {item?.item || 'Unknown Item'}</p>
           </div>
-          <button onClick={onClose} className="p-0.5 hover:bg-[#12423d] transition-colors">
+          <button onClick={onClose} tabIndex={-1} className="p-0.5 hover:bg-[#12423d] transition-colors">
             <X className="w-4 h-4 text-white" />
           </button>
         </div>
@@ -272,7 +272,7 @@ export default function MultiAttributeModal({ isOpen, onClose, onSave, item, sho
           </div>
           <div className="flex gap-2">
             <button 
-              onClick={onClose}
+              onClick={onClose} tabIndex={-1}
               className="px-3 py-1 bg-white border border-slate-400 text-black font-bold text-[11px] hover:bg-slate-100"
               type="button"
             >

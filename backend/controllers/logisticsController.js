@@ -36,6 +36,36 @@ exports.createTransporter = async (req, res) => {
   }
 };
 
+exports.updateTransporter = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const name = req.body.transporter_name || req.body.name;
+    const description = req.body.description || null;
+    const firmId = req.firm_id;
+
+    if (!name) {
+      return res.status(400).json({ success: false, message: 'Transporter name is required' });
+    }
+
+    const [result] = await db.query(
+      'UPDATE Transporters SET name = ?, description = ? WHERE id = ? AND firm_id = ?',
+      [name, description, id, firmId]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ success: false, message: 'Transporter not found' });
+    }
+
+    res.json({ success: true, message: 'Transporter updated successfully' });
+  } catch (error) {
+    if (error.code === 'ER_DUP_ENTRY') {
+      return res.status(400).json({ success: false, message: 'Transporter name already exists' });
+    }
+    console.error('Error updating transporter:', error);
+    res.status(500).json({ success: false, message: 'Server Error' });
+  }
+};
+
 exports.getHundekaris = async (req, res) => {
   try {
     const firmId = req.firm_id;

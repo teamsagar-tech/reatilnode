@@ -1,23 +1,37 @@
-# Switching to AI Vision OCR
+# Optimize Purchase Invoice Data Entry 
 
-As you have now seen in the prototype, traditional, free OCR (`Tesseract`) is simply not capable of understanding complex invoice tables from photos. It jumbles the text and completely misses the structure, making it impossible to reliably extract Item Names, Quantities, and Prices.
+Based on our analysis of 2,000 invoices across `RsDB_Archive`, we have proven that the data requirements drastically shift depending on the clothing category (e.g., Sarees need zero MRPs and zero Barcodes; Innerwear needs 100% Barcodes and MRPs; Suiting needs Cuts/Fractions).
 
-To get the **item or product data properly**, we must pivot to **Option 1** from our original discussion: **AI Vision Models**. 
+Currently, `PurchaseInvoice.tsx` uses global manual toggles (`Alt+X`, `Alt+M`, `Alt+V`) or crude Supplier-level category matching to show/hide columns. This is not flawless and requires high user effort.
 
-## Proposed Architecture: Gemini Pro Vision / GPT-4o
+## Proposed Changes
 
-Instead of running local Tesseract OCR, the Python script will send the image securely to an AI Vision API (like Google Gemini or OpenAI) along with a strict JSON schema:
+### 1. Item-Level Category Awareness (Dynamic Grid Rows)
+Instead of forcing the entire grid to show/hide the `MRP`, `Barcode`, `GST`, and `Discount` columns, the grid will react intelligently to the **selected item**.
+- When an item mapped to **Innerwear** is selected, the row will strictly require `MRP` and `Barcode`.
+- When an item mapped to **Saree** is selected, the `MRP` and `Barcode` fields will grey out (disable) and skip over during `Enter` key navigation, speeding up data entry.
+- When an item mapped to **Suiting** is selected, the `Qty` field will auto-switch to a fractional input and prompt for `Cut Size`.
 
-```json
-[
-  { "item_name": "String", "qty": "Number", "price": "Number", "hsn": "String" }
-]
-```
-The AI will perfectly "read" the image, understand the grid structure, and return a flawless JSON array that we can drop straight into the Purchase Invoice.
+### 2. Keyboard Navigation Refinement (Tally Style)
+We will rewrite the `onKeyDown` handlers inside the grid to ensure flawless "Tally-style" data entry:
+- Hitting `Enter` will move to the next logical cell.
+- If a cell is disabled (e.g., MRP for Sarees), `Enter` will automatically skip it.
+- Hitting `Enter` on the last cell (Amount) will automatically spawn a new row and focus the Item Name input.
 
-### Open Question / Action Required
-To implement this, you will need to provide an API key for either **Google Gemini** or **OpenAI**. 
-If you agree to this approach, please do the following:
-1. Click **Proceed** to approve this plan.
-2. Tell me whether you want to use **Google Gemini** or **OpenAI**.
-3. Create an API key on their respective developer console and provide it to me so I can configure the server's `.env` file and write the script.
+### 3. Smart Matrix Popups (MultiAttributeModal)
+Currently, users have to manually trigger `MultiAttributeModal`. We will change this so that if an item belongs to **Readywear** or **Innerwear** (which use Sizes and Colors), the matrix modal will **auto-open** the moment the user selects the item.
+For **Sarees**, it will not open, keeping the flow purely linear.
+
+### 4. Remove Clunky Global Toggles
+We will clean up the UI by removing the manual `Alt+M` (Show Markdown/MRP) and `Alt+V` (Show Discount) toggles. The UI will automatically render these headers if at least one item in the grid requires them, keeping the interface clean but perfectly contextual.
+
+## User Review Required
+
+> [!IMPORTANT]
+> The biggest change here is moving from "Global Invoice Settings" to "Item-Specific Row Behavior". This means the user must select the **Item Name** first before typing the Quantity/Rate, so the system knows what fields to enable/disable. Does this match your intended workflow?
+
+## Verification Plan
+- [ ] Open Purchase Invoice UI.
+- [ ] Select a Saree item -> Verify MRP is skipped on `Enter`.
+- [ ] Select an Innerwear item -> Verify MRP is required and Matrix auto-opens.
+- [ ] Ensure `Alt+S` saves without errors and respects the new payload structure.

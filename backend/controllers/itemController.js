@@ -44,6 +44,29 @@ exports.create = async (req, res) => {
   if (!name) return res.status(400).json({ error: 'Name is required' });
 
   try {
+    const [existing] = await db.execute(
+      `SELECT id FROM Items WHERE firm_id = ? AND name = ? AND (brand_id = ? OR (? IS NULL AND brand_id IS NULL))`,
+      [req.firm_id, name, brand_id || null, brand_id || null]
+    );
+
+    if (existing.length > 0) {
+      return res.status(200).json({ message: 'Item already exists', id: existing[0].id });
+    }
+
+    if (hsn_code && tax_percent !== undefined) {
+      // Auto-register HSN if it doesn't exist to prevent prompting user later
+      const [existingHsn] = await db.execute(
+        `SELECT id FROM HSNSACs WHERE firm_id = ? AND name = ?`,
+        [req.firm_id, hsn_code]
+      );
+      if (existingHsn.length === 0) {
+        await db.execute(
+          `INSERT INTO HSNSACs (firm_id, name, tax_percent) VALUES (?, ?, ?)`,
+          [req.firm_id, hsn_code, tax_percent]
+        );
+      }
+    }
+
     const [result] = await db.execute(
       `INSERT INTO Items (firm_id, name, sku, barcode, category_id, brand_id, hsn_code, tax_percent, cost_price, selling_price, mrp, batch_tracking, min_stock_level) 
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -59,6 +82,13 @@ exports.create = async (req, res) => {
 exports.update = async (req, res) => {
   const { name, sku, barcode, category_id, brand_id, hsn_code, tax_percent, cost_price, selling_price, mrp, batch_tracking, min_stock_level } = req.body;
   try {
+    if (hsn_code && tax_percent !== undefined) {
+      await db.execute(
+        `INSERT IGNORE INTO HSNSACs (firm_id, name, tax_percent) VALUES (?, ?, ?)`,
+        [req.firm_id, hsn_code, tax_percent]
+      );
+    }
+
     const [result] = await db.execute(
       `UPDATE Items SET name=?, sku=?, barcode=?, category_id=?, brand_id=?, hsn_code=?, tax_percent=?, cost_price=?, selling_price=?, mrp=?, batch_tracking=?, min_stock_level=? 
        WHERE id=? AND firm_id=?`,

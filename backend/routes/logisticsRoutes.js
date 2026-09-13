@@ -11,6 +11,7 @@ router.use(tenantMiddleware);
 // Transporters
 router.get('/transporters', requirePermission('masters', 'read'), logisticsController.getTransporters);
 router.post('/transporters', requirePermission('masters', 'write'), logisticsController.createTransporter);
+router.put('/transporters/:id', requirePermission('masters', 'write'), logisticsController.updateTransporter);
 
 // Hundekaris
 router.get('/hundekari', requirePermission('masters', 'read'), logisticsController.getHundekaris);

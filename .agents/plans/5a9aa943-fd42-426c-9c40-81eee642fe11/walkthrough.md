@@ -1,34 +1,19 @@
-# Price List PDF Import Module
+# Purchase Invoice Architecture Upgrade
 
-I have successfully built and integrated the new Tally-style Price List Importer into the RetailNode system. 
+I have completed the refactoring of the `PurchaseInvoice.tsx` grid based on the data analysis from `RsDB_Archive`. 
 
-## What Was Implemented
+## 1. Category-Aware Intelligent Grid
+The data entry grid is now contextually aware of the **Category** of the item you select.
+- When you type and select an item, the grid instantly analyzes its master category (`Innerwear`, `Readywear`, `Suiting`, `Saree`).
+- It automatically builds a customized Tally-style `Enter` key navigation path just for that specific row.
+- **Example:** Hitting `Enter` on a Saree item will instantly skip the `MRP`, `Discount`, and `Size` fields and drop you straight into `Amount/Next Row`. Hitting `Enter` on an Innerwear item will strictly require `MRP`.
 
-### 1. Price List Import Page (Frontend)
-- **Location:** Inventory -> Advanced -> Price List Import (`/inventory/price-list-import`).
-- **Layout:** Strictly follows the RetailNode Tally guidelines (Green headers, 3-column split, absolute footer).
-- **Features:**
-  - Auto-complete `Brand` selector to target specific brands.
-  - File upload input restricted to `.pdf`.
-  - **Alt+I** keyboard shortcut to quickly trigger the import.
-  - Live Statistics Panel that displays:
-    - New Items Created
-    - Items Updated (Price synchronized)
-    - New Designs Registered
-    - New Colors/Shades Registered
+## 2. Auto-Trigger Matrix Modal
+For `Readywear` and `Innerwear` items, the moment you select the item from the dropdown, the `MultiAttributeModal` (Size/Colour/Barcode matrix) will **automatically pop up**. You no longer need to manually press `Alt+X` to invoke it.
 
-### 2. Backend & Python Integration
-- Created `POST /api/inventory/import-pricelist` to receive the PDF.
-- Integrated a new Python script (`backend/scripts/parse_pdf.py`) utilizing `pdfplumber` to execute the exact mapping rules we built earlier.
-- The backend parses the data inside a robust MySQL transaction and performs `INSERT IGNORE` (and `ON DUPLICATE KEY UPDATE` for item prices) across the `Items`, `Designs`, and `Colors` masters concurrently.
+## 3. Clean Interface (No Manual Global Toggles)
+I have stripped out the confusing manual column toggles (`Alt+M` for Markdown, `Alt+V` for Discount). 
+The grid headers now evaluate the items present in the bill. If *any* item in the bill is Innerwear/Readywear, the MRP column automatically appears. If it's a pure Saree bill, the MRP column completely disappears, keeping the screen clean.
 
-### 3. Application Routing & Security
-- Registered the new endpoint in `inventoryRoutes.js` protected by `authMiddleware` and `tenantMiddleware` (strict tenant isolation).
-- Added `priceListImport` to `TenantUsers.tsx` under `AVAILABLE_MODULES`, allowing superadmins to control access to this page via the RBAC system.
-- Hooked up `App.tsx` routing.
-
-## Verification
-The feature is now live on your local environment. You can navigate to the page and test it with the `WS26 PRICE LIST.pdf` file!
-
-> [!IMPORTANT]
-> Since this feature utilizes a Python child process, you must ensure that your production server has `python3`, `pandas`, and `pdfplumber` installed before deploying this to `162.19.81.108`.
+### What's Next?
+The code is saved directly to your local `RetailNodeV2` codebase. You can test it out by firing up `npm run dev` and creating a new Purchase Invoice. Try selecting an item from the "Saree" category and another from "Innerwear" to see how the row behaves!

@@ -1,9 +1,9 @@
 exports.normalizeMasterName = (name) => {
-    if (!name) return '';
-    let str = name.toLowerCase();
+    if (name === undefined || name === null) return '';
+    let str = String(name).toLowerCase();
     
-    // Strip all non-alphabetic characters (spaces, dashes, underscores, numbers)
-    str = str.replace(/[^a-z]/g, '');
+    // Strip all non-alphanumeric characters (spaces, dashes, underscores)
+    str = str.replace(/[^a-z0-9]/g, '');
     
     // Strip trailing 's' to handle simple plurals (ignores 'ss' for words like 'dress')
     if (str.endsWith('s') && !str.endsWith('ss')) {

@@ -1,0 +1,6 @@
+{
+  "summary": "Implementation plan for backend schema modifications and frontend payload mapping for Purchase Invoices to properly store Size Matrix data and Pre-Tax charges.",
+  "updatedAt": "2026-09-13T06:47:44.409942Z",
+  "requestFeedback": true,
+  "userFacing": true
+}

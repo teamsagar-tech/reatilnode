@@ -1,0 +1,162 @@
+[
+  {
+    "invoiceNumber": 9050013605,
+    "supplier": "SIYARAM SILK MILLS LTD-NOT MSME",
+    "date": "9/9/2025 12:00:00 AM",
+    "totalAmount": 23325,
+    "items": [
+      {
+        "itemName": "ELEGON-1.60",
+        "brand": "J.HAMPSTEAD",
+        "category": "SUITING SHIRTING",
+        "qty": 9.6,
+        "rate": 379,
+        "hsn": 55151190
+      },
+      {
+        "itemName": "ELEGON-1.60",
+        "brand": "J.HAMPSTEAD",
+        "category": "SUITING SHIRTING",
+        "qty": 9.6,
+        "rate": 379,
+        "hsn": 55151190
+      },
+      {
+        "itemName": "BOSTAN-1.30",
+        "brand": "J.HAMPSTEAD",
+        "category": "SUITING SHIRTING",
+        "qty": 13,
+        "rate": 375,
+        "hsn": 55151190
+      },
+      {
+        "itemName": "BOSTAN-1.30",
+        "brand": "J.HAMPSTEAD",
+        "category": "SUITING SHIRTING",
+        "qty": 13,
+        "rate": 375,
+        "hsn": 55151190
+      },
+      {
+        "itemName": "BOSTAN-1.30",
+        "brand": "J.HAMPSTEAD",
+        "category": "SUITING SHIRTING",
+        "qty": 13,
+        "rate": 399,
+        "hsn": 55151190
+      }
+    ]
+  },
+  {
+    "invoiceNumber": 3099,
+    "supplier": "MANIBHADRA TRADELINK",
+    "date": "9/9/2025 12:00:00 AM",
+    "totalAmount": 123890,
+    "items": [
+      {
+        "itemName": 16712,
+        "brand": "SRT-YASH CREATION",
+        "category": "WORK SAREE",
+        "qty": 5,
+        "rate": 2750,
+        "hsn": 540754
+      },
+      {
+        "itemName": 16605,
+        "brand": "SRT-YASH CREATION",
+        "category": "WORK SAREE",
+        "qty": 6,
+        "rate": 4495,
+        "hsn": 540754
+      },
+      {
+        "itemName": 15925,
+        "brand": "SRT-YASH CREATION",
+        "category": "WORK SAREE",
+        "qty": 4,
+        "rate": 1495,
+        "hsn": 540754
+      },
+      {
+        "itemName": 16471,
+        "brand": "SRT-YASH CREATION",
+        "category": "WORK SAREE",
+        "qty": 4,
+        "rate": 1295,
+        "hsn": 540754
+      },
+      {
+        "itemName": 16772,
+        "brand": "SRT-YASH CREATION",
+        "category": "WORK SAREE",
+        "qty": 4,
+        "rate": 4295,
+        "hsn": 540754
+      },
+      {
+        "itemName": 16591,
+        "brand": "SRT-YASH CREATION",
+        "category": "WORK SAREE",
+        "qty": 4,
+        "rate": 3995,
+        "hsn": 540754
+      },
+      {
+        "itemName": 16411,
+        "brand": "SRT-YASH CREATION",
+        "category": "WORK SAREE",
+        "qty": 5,
+        "rate": 1595,
+        "hsn": 540754
+      },
+      {
+        "itemName": 16484,
+        "brand": "SRT-YASH CREATION",
+        "category": "WORK SAREE",
+        "qty": 3,
+        "rate": 1350,
+        "hsn": 540754
+      },
+      {
+        "itemName": 15661,
+        "brand": "SRT-YASH CREATION",
+        "category": "WORK SAREE",
+        "qty": 5,
+        "rate": 1975,
+        "hsn": 540754
+      },
+      {
+        "itemName": 15634,
+        "brand": "SRT-YASH CREATION",
+        "category": "WORK SAREE",
+        "qty": 5,
+        "rate": 2695,
+        "hsn": 540754
+      }
+    ]
+  },
+  {
+    "invoiceNumber": 77662,
+    "supplier": "MEENAKSHI SILK KENDRA-(TRADING-28-02-2024)",
+    "date": "9/9/2025 12:00:00 AM",
+    "totalAmount": 19367,
+    "items": [
+      {
+        "itemName": "AARTI",
+        "brand": "BLOR-MEENAKSHI SILK KENDRA",
+        "category": "JARI BORDER",
+        "qty": 9,
+        "rate": 595,
+        "hsn": 540730
+      },
+      {
+        "itemName": "AARTI",
+        "brand": "BLOR-MEENAKSHI SILK KENDRA",
+        "category": "JARI BORDER",
+        "qty": 22,
+        "rate": 595,
+        "hsn": 540730
+      }
+    ]
+  }
+]

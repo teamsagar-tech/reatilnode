@@ -49,12 +49,39 @@ export default function PartyMaster() {
   const [tempCat, setTempCat] = useState('');
   const [tempSub, setTempSub] = useState('');
 
-  const addCategory = () => {
-    if (tempCat.trim() || tempSub.trim()) {
-      setCategories([...categories, { cat: tempCat.trim(), sub: tempSub.trim() }]);
+  const handleAddCategory = () => {
+    if (!tempCat.trim()) return;
+
+    const catMatch = availableCategories.find(c => c.name.toLowerCase() === tempCat.trim().toLowerCase());
+    if (!catMatch) {
+      setMasterModal({ type: 'partycategory', initialValue: tempCat.trim() });
+      return;
+    }
+
+    if (tempSub.trim()) {
+      const subMatch = availableSubcategories.find(s => s.name.toLowerCase() === tempSub.trim().toLowerCase());
+      if (!subMatch) {
+        setMasterModal({ type: 'partysubcategory', initialValue: tempSub.trim(), parentId: catMatch.id });
+        return;
+      }
+    }
+
+    const exists = categories.find(c => c.cat.toLowerCase() === catMatch.name.toLowerCase() && c.sub.toLowerCase() === tempSub.trim().toLowerCase());
+    if (exists) {
       setTempCat('');
       setTempSub('');
+      setSelectedCatId(null);
+      setShowCatSuggestions(false);
+      setShowSubSuggestions(false);
+      return;
     }
+
+    setCategories([...categories, { cat: catMatch.name, sub: tempSub.trim() }]);
+    setTempCat('');
+    setTempSub('');
+    setSelectedCatId(null);
+    setShowCatSuggestions(false);
+    setShowSubSuggestions(false);
   };
 
   const removeCategory = (idx: number) => {
@@ -100,6 +127,7 @@ export default function PartyMaster() {
   }, [selectedCatId]);
 
   const [brands, setBrands] = useState<{name: string}[]>([]);
+  const [brandType, setBrandType] = useState<'Single' | 'Multi'>('Multi');
   const [tempBrand, setTempBrand] = useState('');
   const [availableBrands, setAvailableBrands] = useState<any[]>([]);
   const [showBrandSuggestions, setShowBrandSuggestions] = useState(false);
@@ -117,7 +145,11 @@ export default function PartyMaster() {
 
   const addBrand = (name: string) => {
     if (name && !brands.some(b => b.name === name)) {
-      setBrands([...brands, { name }]);
+      if (brandType === 'Single') {
+        setBrands([{ name }]);
+      } else {
+        setBrands([...brands, { name }]);
+      }
     }
     setTempBrand('');
     setShowBrandSuggestions(false);
@@ -384,7 +416,7 @@ export default function PartyMaster() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
-        body: JSON.stringify({...formData, categories, brands})
+        body: JSON.stringify({...formData, categories, brands, brandType})
       });
       if (res.ok) {
         setFormData({
@@ -399,6 +431,7 @@ export default function PartyMaster() {
         });
         setCategories([]);
         setBrands([]);
+        setBrandType('Multi');
         setGstStatusError(null);
         setEditId(null);
         setMode('list');
@@ -423,6 +456,7 @@ export default function PartyMaster() {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
+        if (masterModal) return;
         e.preventDefault();
         if (mode === 'create') {
           setFormData({
@@ -437,6 +471,7 @@ export default function PartyMaster() {
           });
           setCategories([]);
           setBrands([]);
+          setBrandType('Multi');
           setGstStatusError(null);
           setEditId(null);
           setMode('list');
@@ -467,11 +502,12 @@ export default function PartyMaster() {
               contactPerson: row.contact_person || '', mobileNumber: row.mobile_number1 || '', email: row.email || '',
               contactNumber2: row.contact_number2 || '', mobileNumber2: row.mobile_number2 || '', contactNumber3: row.contact_number3 || '', mobileNumber3: row.mobile_number3 || '',
               accountName: row.account_name || '', bankName: row.bank_name || '', accountNumber: row.account_number || '', ifsc: row.ifsc || '', branch: row.branch || '', bankAccountType: row.bank_account_type || 'Savings',
-              gstRawData: row.gst_raw_data && typeof row.gst_raw_data === 'string' && row.gst_raw_data.trim().startsWith('{') ? JSON.parse(row.gst_raw_data) : null,
+              gstRawData: row.gst_raw_data ? (typeof row.gst_raw_data === 'object' ? row.gst_raw_data : (typeof row.gst_raw_data === 'string' && row.gst_raw_data.trim().startsWith('{') ? JSON.parse(row.gst_raw_data) : null)) : null,
               contacts: []
             });
             setCategories(row.categories ? (typeof row.categories === 'string' ? JSON.parse(row.categories) : row.categories) : []);
             setBrands(row.brands ? (typeof row.brands === 'string' ? JSON.parse(row.brands) : row.brands) : []);
+            setBrandType(row.brand_type || 'Multi');
             setEditId(row.id);
             setMode('create');
           }
@@ -480,7 +516,7 @@ export default function PartyMaster() {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [navigate, mode, formData, parties, selectedIndex]);
+  }, [navigate, mode, formData, parties, selectedIndex, masterModal]);
 
   return (
     <>
@@ -534,10 +570,11 @@ export default function PartyMaster() {
                               contactPerson: row.contact_person || '', mobileNumber: row.mobile_number1 || '', email: row.email || '',
                               contactNumber2: row.contact_number2 || '', mobileNumber2: row.mobile_number2 || '', contactNumber3: row.contact_number3 || '', mobileNumber3: row.mobile_number3 || '',
                               accountName: row.account_name || '', bankName: row.bank_name || '', accountNumber: row.account_number || '', ifsc: row.ifsc || '', branch: row.branch || '', bankAccountType: row.bank_account_type || 'Savings',
-                              gstRawData: row.gst_raw_data && typeof row.gst_raw_data === 'string' && row.gst_raw_data.trim().startsWith('{') ? JSON.parse(row.gst_raw_data) : null
+                              gstRawData: row.gst_raw_data ? (typeof row.gst_raw_data === 'object' ? row.gst_raw_data : (typeof row.gst_raw_data === 'string' && row.gst_raw_data.trim().startsWith('{') ? JSON.parse(row.gst_raw_data) : null)) : null
                             });
                             setCategories(row.categories ? (typeof row.categories === 'string' ? JSON.parse(row.categories) : row.categories) : []);
                             setBrands(row.brands ? (typeof row.brands === 'string' ? JSON.parse(row.brands) : row.brands) : []);
+                            setBrandType(row.brand_type || 'Multi');
                             setEditId(row.id);
                             setMode('create');
                             setSelectedIndex(idx);
@@ -937,7 +974,13 @@ export default function PartyMaster() {
                           <select 
                             className="bg-white border border-slate-400 px-1 py-[2px] text-[12px] font-bold text-black focus:bg-[#ffffe0] focus:outline-none"
                             value={brandType}
-                            onChange={(e) => setBrandType(e.target.value as 'Single' | 'Multi')}
+                            onChange={(e) => {
+                              const val = e.target.value as 'Single' | 'Multi';
+                              setBrandType(val);
+                              if (val === 'Single' && brands.length > 1) {
+                                setBrands([brands[0]]);
+                              }
+                            }}
                           >
                             <option value="Multi">Multi Brand Party</option>
                             <option value="Single">Single Brand Party</option>
@@ -1110,6 +1153,7 @@ export default function PartyMaster() {
                         });
                         setCategories([]);
                         setBrands([]);
+                        setBrandType('Multi');
                         setGstStatusError(null);
                         setEditId(null);
                       };

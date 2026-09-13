@@ -56,6 +56,10 @@ export default function SearchableDropdown({
         e.preventDefault();
         setActiveIndex(prev => Math.max(prev - 1, 0));
         return;
+      } else if (e.shiftKey && e.key === 'Tab') {
+        setOpen(false);
+        // Do NOT prevent default so the browser naturally tabs backward
+        return;
       } else if ((e.key === 'Enter' || e.key === 'Tab' || e.key === 'ArrowRight') && filtered.length > 0) {
         e.preventDefault();
         const selected = filtered[activeIndex];

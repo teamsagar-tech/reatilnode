@@ -1,0 +1,179 @@
+{
+  "totalInvoices": 300,
+  "totalItems": 1712,
+  "totalValue": 35088722.2,
+  "uniqueSuppliers": 86,
+  "topSuppliers": [
+    [
+      "MANIBHADRA TEXTILE AGENCIES",
+      71
+    ],
+    [
+      "SRI PADMAVATI CREATION-NOT MSME",
+      48
+    ],
+    [
+      "MANIBHADRA TRADELINK",
+      33
+    ],
+    [
+      "MADAN EXCLUSIVES-(TRADING)",
+      11
+    ],
+    [
+      "MEENAKSHI SILK KENDRA-(TRADING-28-02-2024)",
+      10
+    ],
+    [
+      "PUROHIT SILK KENDRA- NOT MSME",
+      6
+    ],
+    [
+      "RUKMINI  SILK  &  SAREES-(TRADING-24.08.2021)",
+      6
+    ],
+    [
+      "PRABHA TRADERS & CREATIONS PVT.LTD- (MFG)",
+      5
+    ],
+    [
+      "YASH COTTON CORPORATION",
+      3
+    ],
+    [
+      "KESHAV KURTIS",
+      3
+    ]
+  ],
+  "topBrands": [
+    [
+      "SRT-YASH CREATION",
+      169
+    ],
+    [
+      "SRT-ZIRR",
+      81
+    ],
+    [
+      "JP-SAMPAT S S",
+      76
+    ],
+    [
+      "AMBRELI",
+      71
+    ],
+    [
+      "ADI-KASVI",
+      66
+    ],
+    [
+      "SRT-JAINAM CREATION",
+      63
+    ],
+    [
+      "BLOR-SRI PADMAVATI",
+      59
+    ],
+    [
+      "SRT-L.TEX (DM)",
+      57
+    ],
+    [
+      "BLOR-MADAN EXCLUSUVES",
+      55
+    ],
+    [
+      "SRT-HITESH NX",
+      47
+    ]
+  ],
+  "topCategories": [
+    [
+      "JARI BORDER",
+      362
+    ],
+    [
+      "WORK SAREE",
+      355
+    ],
+    [
+      "WR-READYWEAR (WOMEN)",
+      240
+    ],
+    [
+      "DRESS MATERIAL",
+      137
+    ],
+    [
+      "GHAGRA",
+      106
+    ],
+    [
+      "SYNTHETIC",
+      101
+    ],
+    [
+      "SILK",
+      89
+    ],
+    [
+      "ACCESSORIES",
+      71
+    ],
+    [
+      "SUITING SHIRTING",
+      56
+    ],
+    [
+      "NIGHT WEAR",
+      53
+    ]
+  ],
+  "invoiceTypes": {
+    "Standard": 111,
+    "Small Restock": 188,
+    "Bulk Order": 1
+  },
+  "hsnDistribution": [
+    [
+      "540752",
+      338
+    ],
+    [
+      "540754",
+      246
+    ],
+    [
+      "620419",
+      165
+    ],
+    [
+      "540730",
+      122
+    ],
+    [
+      "630790",
+      114
+    ],
+    [
+      "540710",
+      82
+    ],
+    [
+      "62143000",
+      71
+    ],
+    [
+      "500720",
+      58
+    ],
+    [
+      "620439",
+      57
+    ],
+    [
+      "6108310",
+      46
+    ]
+  ]
+}

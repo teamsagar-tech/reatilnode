@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import MultiAttributeModal from '../../components/inventory/MultiAttributeModal';
 import SizeAllocationModal from '../../components/inventory/SizeAllocationModal';
+import AdditionalChargesModal from '../../components/inventory/AdditionalChargesModal';
 import PartyModal from '../../components/inventory/PartyModal';
 import TransporterModal from '../../components/inventory/TransporterModal';
 import MasterCreationModal from '../../components/inventory/MasterCreationModal';
@@ -50,7 +51,7 @@ export default function PurchaseInvoice() {
     gstOn: 'items' as 'items' | 'bill',
     designNo: false,
     colourNo: false,
-    showSize: true,
+    showSize: false,
     showCutSize: false,
     showLocation: true,
     showPurchaseDiscount: false,
@@ -58,9 +59,12 @@ export default function PurchaseInvoice() {
   });
 
   const [products, setProducts] = useState<any[]>([
-    { id: 1, item_id: null, item: '', brand_id: null, brand: '', qty: '', cut_size: '', pieces: '', rate: '', last_rate: null, disc: 0, gst: 0, design: '', colour: '', size: '', mrp: 0, attributes: [] }
+    { id: 1, item_id: null, item: '', brand_id: null, brand: '', qty: '', cut_size: '', pieces: '', rate: '', last_rate: null, disc: 0, gst: 0, design: '', colour: '', size: '', mrp: 0, attributes: [], category: null }
   ]);
   const [cuts, setCuts] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
+  const [preTaxCharges, setPreTaxCharges] = useState({ freight: 0, insurance: 0, packing: 0 });
+  const [showAdditionalChargesModal, setShowAdditionalChargesModal] = useState(false);
 
   useEffect(() => {
     const id = location.state?.invoiceId;
@@ -160,6 +164,14 @@ export default function PurchaseInvoice() {
       return;
     }
 
+    try {
+      localStorage.setItem(`party_pref_${invoiceData.supplier}`, JSON.stringify({
+        designNo: invoiceData.designNo,
+        colourNo: invoiceData.colourNo,
+        showSize: invoiceData.showSize
+      }));
+    } catch(e) {}
+
     const subtotal = products.reduce((acc: any, p: any) => acc + ((p.qty || 0) * (p.rate || 0) * (1 - (p.disc || 0) / 100)), 0);
     const taxableAmount = subtotal;
     const calcDiscount = invoiceData.discountPercent > 0 
@@ -199,6 +211,9 @@ export default function PurchaseInvoice() {
       lr_no: invoiceData.lrNo || null,
       transporter: invoiceData.transporter || null,
       bales: Number(invoiceData.bale) || null,
+      freight: preTaxCharges.freight || 0,
+      insurance: preTaxCharges.insurance || 0,
+      packing_charges: preTaxCharges.packing || 0,
       narration: invoiceData.narration || '',
       items: products.filter((p: any) => p.item_id).map((p: any) => ({
         item_id: p.item_id,
@@ -210,7 +225,9 @@ export default function PurchaseInvoice() {
         gst_percent: Number(p.gst) || 0,
         gst_amount: 0,
         total_amount: (Number(p.rate) * Number(p.qty)) || 0,
-        attributes: p.attributes || []
+        attributes: p.attributes || [],
+        matrixData: p.matrixData || [],
+        size_group_id: p.size_group_id || null
       }))
     };
 
@@ -377,7 +394,7 @@ export default function PurchaseInvoice() {
 
         let brand_id = null;
         if (brand) {
-            const matchedBrand = availableBrands.find(b => (b.name || '').toLowerCase() === brand.toLowerCase());
+            const matchedBrand = availableBrands.find(b => (String(b.name) || '').toLowerCase() === brand.toLowerCase());
             if (matchedBrand) {
                 brand_id = matchedBrand.id;
             } else {
@@ -602,6 +619,10 @@ export default function PurchaseInvoice() {
   const [availableColours, setAvailableColours] = useState<any[]>([]);
   const [colourSuggestionIndex, setColourSuggestionIndex] = useState(0);
   const [activeColourRow, setActiveColourRow] = useState<number | null>(null);
+
+  const [availableSizes, setAvailableSizes] = useState<any[]>([]);
+  const [sizeSuggestionIndex, setSizeSuggestionIndex] = useState(0);
+  const [activeSizeRow, setActiveSizeRow] = useState<number | null>(null);
   
   const [locations, setLocations] = useState<any[]>([]);
   const [importQueue, setImportQueue] = useState<any[][]>([]);
@@ -618,6 +639,14 @@ export default function PurchaseInvoice() {
     .then(data => setAvailableItems(Array.isArray(data) ? data : []))
     .catch(console.error);
 
+    // Fetch Categories
+    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/category`, {
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    })
+    .then(res => res.json())
+    .then(data => setCategories(Array.isArray(data) ? data : []))
+    .catch(console.error);
+
     // Fetch Designs
     fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/generic/designs`, {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
@@ -632,6 +661,22 @@ export default function PurchaseInvoice() {
     })
     .then(res => res.json())
     .then(data => setAvailableColours(Array.isArray(data) ? data : []))
+    .catch(console.error);
+
+    // Fetch Sizes and Size Sets
+    Promise.all([
+      fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/generic/sizes`, {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      }).then(res => res.json()),
+      fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/generic/sizesets`, {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      }).then(res => res.json())
+    ])
+    .then(([sizes, sizeSets]) => {
+      const sizesArray = Array.isArray(sizes) ? sizes : [];
+      const sizeSetsArray = Array.isArray(sizeSets) ? sizeSets.map((s: any) => ({ ...s, isSizeSet: true })) : [];
+      setAvailableSizes([...sizesArray, ...sizeSetsArray]);
+    })
     .catch(console.error);
 
     // Fetch Brands
@@ -705,6 +750,10 @@ export default function PurchaseInvoice() {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.preventDefault();
+        if (masterModal) {
+          setMasterModal(null);
+          return;
+        }
         if (showPartyModal) setShowPartyModal(false);
         else if (showTransporterModal) setShowTransporterModal(false);
         else if (masterCreationState.isOpen) setMasterCreationState({ ...masterCreationState, isOpen: false });
@@ -712,6 +761,7 @@ export default function PurchaseInvoice() {
         else if (showPurchaserDropdown) setShowPurchaserDropdown(false);
         else if (activeSuggestionRow !== null) setActiveSuggestionRow(null);
         else if (activeHsnRow !== null) setActiveHsnRow(null);
+        else if (activeSizeMatrixRow !== null) setActiveSizeMatrixRow(null);
         else navigate(-1);
       }
       
@@ -725,24 +775,9 @@ export default function PurchaseInvoice() {
         } else if (e.code === 'KeyB') {
           e.preventDefault();
           setInvoiceData(prev => ({ ...prev, requireBoxPacking: !prev.requireBoxPacking }));
-        } else if (e.code === 'KeyZ') {
-          e.preventDefault();
-          setInvoiceData(prev => ({ ...prev, designNo: !prev.designNo }));
-        } else if (e.code === 'KeyX') {
-          e.preventDefault();
-          setInvoiceData(prev => ({ ...prev, showSize: !prev.showSize }));
-        } else if (e.code === 'KeyL') {
-          e.preventDefault();
-          setInvoiceData(prev => ({ ...prev, showLocation: !prev.showLocation }));
-        } else if (e.code === 'KeyV') {
-          e.preventDefault();
-          setInvoiceData(prev => ({ ...prev, showPurchaseDiscount: !prev.showPurchaseDiscount }));
         } else if (e.code === 'KeyI') {
           e.preventDefault();
           fileInputRef.current?.click();
-        } else if (e.code === 'KeyM') {
-          e.preventDefault();
-          setInvoiceData(prev => ({ ...prev, showMarkdown: !prev.showMarkdown }));
         }
       }
     };
@@ -752,28 +787,24 @@ export default function PurchaseInvoice() {
 
 
   const handleInvoiceChange = (field: string, value: any) => {
+    if (field === 'supplier') {
+      try {
+        const prefStr = localStorage.getItem(`party_pref_${value}`);
+        if (prefStr) {
+          const pref = JSON.parse(prefStr);
+          setInvoiceData(prev => ({
+            ...prev,
+            [field]: value,
+            designNo: pref.designNo ?? prev.designNo,
+            colourNo: pref.colourNo ?? prev.colourNo,
+            showSize: pref.showSize ?? prev.showSize
+          }));
+          return;
+        }
+      } catch (e) {}
+    }
     setInvoiceData(prev => {
       const next = { ...prev, [field]: value };
-      if (field === 'supplier') {
-        const matchedVendor = vendors.find(v => (v.name || '').toLowerCase() === (value || '').toLowerCase());
-        if (matchedVendor) {
-           let catString = '';
-           if (typeof matchedVendor.categories === 'string') {
-              catString = matchedVendor.categories.toLowerCase();
-           } else if (Array.isArray(matchedVendor.categories)) {
-              catString = JSON.stringify(matchedVendor.categories).toLowerCase();
-           }
-           if (catString.includes('suit') || catString.includes('shirt')) {
-              next.designNo = true;
-              next.colourNo = true;
-              next.showSize = false;
-              next.showCutSize = true;
-           } else if (catString.includes('ready')) {
-              next.showSize = true;
-              next.showCutSize = false;
-           }
-        }
-      }
       return next;
     });
   };
@@ -787,7 +818,17 @@ export default function PurchaseInvoice() {
   };
 
   const addProduct = () => {
-    setProducts([...products, { id: Date.now(), item: '', hsn: '', brand: '', qty: '', cut_size: '', pieces: '', rate: '', last_rate: null, disc: 0, gst: 0, design: '', colour: '', size: '', mrp: 0 }]);
+    setProducts(prev => {
+      const last = prev.length > 0 ? prev[prev.length - 1] : null;
+      return [...prev, { 
+        id: Date.now(), 
+        item: '', 
+        hsn: '', 
+        brand: last ? (last.brand || '') : '', 
+        brand_id: last ? (last.brand_id || null) : null,
+        qty: '', cut_size: '', pieces: '', rate: '', last_rate: null, disc: 0, gst: 0, design: '', colour: '', size: '', mrp: 0 
+      }];
+    });
   };
 
   const removeProduct = (index: number) => {
@@ -875,14 +916,50 @@ export default function PurchaseInvoice() {
   const lockedBrand = isSingleBrandVendor ? (products.find(p => p.brand)?.brand || null) : null;
 
 
+  // Determine Category Config Helper
+  const getCategoryConfig = (itemStr: string) => {
+    const matchedItem = availableItems.find(i => (i.name || i.item_name || '').toLowerCase() === (itemStr || '').toLowerCase());
+    if (!matchedItem) return { isReadywear: false, isInnerwear: false, isSuiting: false, isSaree: true };
+    const matchedCat = categories.find(c => c.id === matchedItem.category_id);
+    const catName = (matchedCat?.name || '').toLowerCase();
+    const isInnerwear = catName.includes('inner') || catName.includes('bra') || catName.includes('panty') || catName.includes('lingerie');
+    const isReadywear = catName.includes('ready') || catName.includes('shirt') || catName.includes('trouser') || catName.includes('jean');
+    const isSuiting = catName.includes('suit') || catName.includes('cut') || catName.includes('fabric');
+    return {
+      isReadywear,
+      isInnerwear,
+      isSuiting,
+      isSaree: !isReadywear && !isInnerwear && !isSuiting
+    };
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, index: number, field: string) => {
+    const p = products[index];
+    const catConfig = getCategoryConfig(p.item);
+
+    const isAnyRowSuiting = products.some(prod => prod.item && getCategoryConfig(prod.item).isSuiting);
+    const isAnyRowReadywear = products.some(prod => prod.item && getCategoryConfig(prod.item).isReadywear);
+    const isAnyRowInnerwear = products.some(prod => prod.item && getCategoryConfig(prod.item).isInnerwear);
+    const isAnyRowNotSaree = products.some(prod => prod.item && !getCategoryConfig(prod.item).isSaree);
+
+    const showDesignCol = isAnyRowSuiting || invoiceData.designNo; 
+    const showColourCol = isAnyRowSuiting || invoiceData.colourNo;
+    const showCutCol = isAnyRowSuiting || invoiceData.showCutSize;
+    const showSizeCol = isAnyRowReadywear || isAnyRowInnerwear || invoiceData.showSize;
+    const showMRPCol = isAnyRowReadywear || isAnyRowInnerwear || invoiceData.showMarkdown;
+    const showDiscCol = isAnyRowNotSaree || invoiceData.showPurchaseDiscount;
+
     const fields = ['brand', 'item', 'hsn'];
-    if (invoiceData.designNo) fields.push('design');
-    if (invoiceData.colourNo) fields.push('colour');
-    if (invoiceData.showSize) fields.push('size');
+    
+    if (showDesignCol) fields.push('design');
+    if (showColourCol) fields.push('colour');
+    if (showSizeCol) fields.push('size');
+    if (showCutCol) fields.push('cut_size');
+    
     fields.push('qty', 'rate');
-    if (invoiceData.showPurchaseDiscount) fields.push('disc');
-    if (invoiceData.showMarkdown) fields.push('mrp');
+    
+    if (showDiscCol) fields.push('disc');
+    if (showMRPCol) fields.push('mrp');
     if (invoiceData.gstOn === 'items') fields.push('gst');
 
     const currentFieldIndex = fields.indexOf(field);
@@ -892,10 +969,6 @@ export default function PurchaseInvoice() {
       if (['brand', 'size', 'item', 'gst', 'hsn', 'design', 'colour'].includes(field)) {
         if (field === 'brand' && vendorAllowedBrands !== null) {
           alert('This party has specific brands assigned. You cannot create a new brand on the fly.');
-          return;
-        }
-        if (field === 'item' && vendorAllowedBrands !== null) {
-          alert('This party has specific allowed brands. You cannot create a new item on the fly.');
           return;
         }
         setMasterModal({ 
@@ -913,12 +986,12 @@ export default function PurchaseInvoice() {
       const query = (products[index].brand || '').toLowerCase();
       let baseBrands = availableBrands;
       if (vendorAllowedBrands !== null) {
-        baseBrands = baseBrands.filter(b => vendorAllowedBrands.some(vb => vb.toLowerCase() === (b.name || '').toLowerCase()));
+        baseBrands = baseBrands.filter(b => vendorAllowedBrands.some(vb => vb.toLowerCase() === (String(b.name) || '').toLowerCase()));
       }
       if (isSingleBrandVendor && lockedBrand) {
         baseBrands = baseBrands.filter(b => b.name === lockedBrand);
       }
-      const filtered = baseBrands.filter(b => (b.name || '').toLowerCase().startsWith(query)).slice(0, 8);
+      const filtered = baseBrands.filter(b => (String(b.name) || '').toLowerCase().includes(query)).slice(0, 8);
       
       if (e.key === 'ArrowDown') {
         e.preventDefault();
@@ -952,7 +1025,7 @@ export default function PurchaseInvoice() {
 
     if (field === 'hsn' && activeHsnRow === index) {
       const query = (products[index].hsn || '').toLowerCase();
-      const filtered = availableHsns.filter(s => (s.name || '').toLowerCase().startsWith(query)).slice(0, 8);
+      const filtered = availableHsns.filter(s => (String(s.name) || '').toLowerCase().includes(query)).slice(0, 8);
       
       if (e.key === 'ArrowDown') {
         e.preventDefault();
@@ -992,8 +1065,8 @@ export default function PurchaseInvoice() {
     }
 
     if (field === 'design' && activeDesignRow === index) {
-      const query = (products[index].design || '').toLowerCase();
-      const filtered = availableDesigns.filter(s => (s.name || '').toLowerCase().startsWith(query)).slice(0, 8);
+      const query = (String(products[index].design || '')).toLowerCase();
+      const filtered = availableDesigns.filter(s => (String(s.name) || '').toLowerCase().includes(query)).slice(0, 8);
       
       if (e.key === 'ArrowDown') {
         e.preventDefault();
@@ -1032,8 +1105,8 @@ export default function PurchaseInvoice() {
     }
 
     if (field === 'colour' && activeColourRow === index) {
-      const query = (products[index].colour || '').toLowerCase();
-      const filtered = availableColours.filter(s => (s.name || '').toLowerCase().startsWith(query)).slice(0, 8);
+      const query = (String(products[index].colour || '')).toLowerCase();
+      const filtered = availableColours.filter(s => (String(s.name) || '').toLowerCase().includes(query)).slice(0, 8);
       
       if (e.key === 'ArrowDown') {
         e.preventDefault();
@@ -1063,6 +1136,50 @@ export default function PurchaseInvoice() {
           e.preventDefault();
           setMasterModal({ 
             type: 'colour',
+            initialValue: e.currentTarget.value || '',
+            rowIndex: index
+          });
+          return;
+        }
+      }
+    }
+
+    if (field === 'size' || field === 'qty') {
+      if (e.key === 'F2') {
+        e.preventDefault();
+        setActiveSizeMatrixRow(index);
+        return;
+      }
+    }
+
+    if (field === 'size' && activeSizeRow === index) {
+
+      const query = (String(products[index].size || '')).toLowerCase();
+      const filtered = availableSizes.filter(s => (String(s.name) || '').toLowerCase().includes(query)).slice(0, 8);
+      
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setSizeSuggestionIndex(prev => Math.min(prev + 1, filtered.length - 1));
+        return;
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setSizeSuggestionIndex(prev => Math.max(prev - 1, 0));
+        return;
+      } else if (e.key === 'Enter' || ((e.key === 'Tab' || e.key === 'ArrowRight') && query.trim() !== '')) {
+        if (filtered.length > 0) {
+          e.preventDefault();
+          const suggestion = filtered[sizeSuggestionIndex];
+          updateProduct(index, 'size', suggestion.name);
+          setActiveSizeRow(null);
+          const nextField = fields[fields.indexOf('size') + 1];
+          if (nextField) {
+            document.getElementById(`row-${index}-${nextField}`)?.focus();
+          }
+          return;
+        } else if (query.trim() !== '') {
+          e.preventDefault();
+          setMasterModal({ 
+            type: 'size',
             initialValue: e.currentTarget.value || '',
             rowIndex: index
           });
@@ -1106,21 +1223,28 @@ export default function PurchaseInvoice() {
             brand: selected.brand || newProducts[index].brand || '', 
             rate: selected.purchase_price || selected.rate || newProducts[index].rate || '',
             hsn: selected.hsn_code || selected.hsn || newProducts[index].hsn || '',
-            gst: selected.tax_percent !== undefined ? selected.tax_percent : (newProducts[index].gst || 0)
+            gst: selected.tax_percent !== undefined ? selected.tax_percent : (newProducts[index].gst || 0),
+            category: selected.category_id || null
           };
           setProducts(newProducts);
           setActiveSuggestionRow(null);
           
           fetchLastRate(selected.id, index);
           
-          const nextField = fields[fields.indexOf('item') + 1];
-          if (nextField) {
+          const newCatConfig = getCategoryConfig(selected.name || selected.item_name);
+          
+          if (newCatConfig.isInnerwear || newCatConfig.isReadywear) {
+            // Auto-open matrix modal!
+            setActiveModalRow(index);
+          } else {
+            // Move to next logical field for Sarees/Others
+            const nextField = newCatConfig.isSuiting ? 'hsn' : 'hsn'; // usually hsn after item
             setTimeout(() => {
               document.getElementById(`row-${index}-${nextField}`)?.focus();
             }, 10);
           }
           return;
-        } else if (query.trim() !== '' && vendorAllowedBrands === null) {
+        } else if (query.trim() !== '') {
           e.preventDefault();
           setMasterModal({ 
             type: 'item',
@@ -1136,6 +1260,18 @@ export default function PurchaseInvoice() {
 
     if (e.key === 'Enter' || e.key === 'ArrowRight') {
       e.preventDefault();
+      
+      if (field === 'qty' && e.key === 'Enter') {
+        const sizeVal = products[index].size;
+        if (sizeVal) {
+          const sizeObj = availableSizes.find(s => s.name === sizeVal);
+          if (sizeObj && sizeObj.isSizeSet && String(sizeVal).includes('-')) {
+             setActiveSizeMatrixRow(index);
+             return;
+          }
+        }
+      }
+
       if (currentFieldIndex < fields.length - 1 && document.getElementById(`row-${index}-${fields[currentFieldIndex + 1]}`)) {
         document.getElementById(`row-${index}-${fields[currentFieldIndex + 1]}`)?.focus();
       } else {
@@ -1288,7 +1424,9 @@ export default function PurchaseInvoice() {
   const subtotal = products.reduce((acc, p) => acc + ((p.qty || 0) * (p.rate || 0) * (1 - (p.disc || 0) / 100)), 0);
   const totalQty = products.reduce((acc, p) => acc + (parseFloat(p.qty) || 0), 0);
   
-  const taxableAmount = subtotal;
+  const totalPreTaxCharges = preTaxCharges.freight + preTaxCharges.insurance + preTaxCharges.packing;
+  
+  const taxableAmount = subtotal + totalPreTaxCharges;
   
   // Discount
   const calcDiscount = invoiceData.discountPercent > 0 
@@ -1305,10 +1443,34 @@ export default function PurchaseInvoice() {
   // Tax
   let tax = 0;
   if (invoiceData.gstOn === 'items') {
-    const ratio = subtotal > 0 ? (afterCommission / subtotal) : 1;
     tax = products.reduce((acc, p) => {
       const lineAmount = (p.qty || 0) * (p.rate || 0) * (1 - (p.disc || 0) / 100);
-      const lineTaxable = lineAmount * ratio;
+      
+      // Calculate row's share of discount
+      let rowDiscount = 0;
+      if (invoiceData.discountPercent > 0) {
+         rowDiscount = lineAmount * invoiceData.discountPercent / 100;
+      } else if (invoiceData.discountAmount > 0 && subtotal > 0) {
+         rowDiscount = (lineAmount / subtotal) * invoiceData.discountAmount;
+      }
+      const lineAfterDisc = lineAmount - rowDiscount;
+
+      // Calculate row's share of commission
+      let rowComm = 0;
+      if (invoiceData.commissionPercent > 0) {
+         rowComm = lineAfterDisc * invoiceData.commissionPercent / 100;
+      } else if (invoiceData.commissionAmount > 0 && subtotal > 0) {
+         rowComm = (lineAmount / subtotal) * invoiceData.commissionAmount;
+      }
+
+      // Add proportional pre-tax charges (apportioned by base amount)
+      let rowPreTaxCharges = 0;
+      if (totalPreTaxCharges > 0 && subtotal > 0) {
+         rowPreTaxCharges = (lineAmount / subtotal) * totalPreTaxCharges;
+      }
+
+      const lineTaxable = lineAfterDisc + rowComm + rowPreTaxCharges;
+      
       return acc + (lineTaxable * (p.gst || 0) / 100);
     }, 0);
   } else {
@@ -1343,7 +1505,17 @@ export default function PurchaseInvoice() {
        }
     }
   }, [priceAfterTax, invoiceData.charges, invoiceData.billAmount, invoiceData.roundOff]);
+  const isAnyRowSuiting = products.some(p => p.item && getCategoryConfig(p.item).isSuiting);
+  const isAnyRowInnerwear = products.some(p => p.item && getCategoryConfig(p.item).isInnerwear);
+  const isAnyRowReadywear = products.some(p => p.item && getCategoryConfig(p.item).isReadywear);
+  const isAnyRowNotSaree = products.some(p => p.item && !getCategoryConfig(p.item).isSaree);
 
+  const showDesignCol = isAnyRowSuiting || invoiceData.designNo; 
+  const showColourCol = isAnyRowSuiting || invoiceData.colourNo;
+  const showCutCol = isAnyRowSuiting || invoiceData.showCutSize;
+  const showSizeCol = isAnyRowReadywear || isAnyRowInnerwear || invoiceData.showSize;
+  const showMRPCol = isAnyRowReadywear || isAnyRowInnerwear || invoiceData.showMarkdown;
+  const showDiscCol = isAnyRowNotSaree || invoiceData.showPurchaseDiscount;
 
   return (
     <>
@@ -1502,7 +1674,7 @@ export default function PurchaseInvoice() {
                   </div>
 
                   <div className="flex items-center">
-                    {invoiceData.transporter.trim().toUpperCase() === 'HAND' ? (
+                    {(invoiceData.transporter || '').trim().toUpperCase() === 'HAND' ? (
                       <>
                         <span className="w-[100px] text-slate-800 font-bold mr-2">Receiver :</span>
                         <div className="relative flex-1">
@@ -1661,15 +1833,15 @@ export default function PurchaseInvoice() {
                       <th className="px-1 py-1 border-r border-slate-300 w-[100px] text-center">Brand</th>
                       <th className="px-1 py-1 border-r border-slate-300 w-[200px] text-center">Name of Item</th>
                       <th className="px-1 py-1 border-r border-slate-300 w-[80px] text-center">HSN/SAC</th>
-                      {invoiceData.designNo && <th className="px-1 py-1 border-r border-slate-300 w-[80px] text-center">Design</th>}
-                      {invoiceData.colourNo && <th className="px-1 py-1 border-r border-slate-300 w-[80px] text-center">Colour</th>}
-                      {invoiceData.showSize && <th className="px-1 py-1 border-r border-slate-300 w-[60px] text-center">Size</th>}
-                      {invoiceData.showCutSize && <th className="px-1 py-1 border-r border-slate-300 w-[70px] text-center">Cut Size</th>}
-                      {invoiceData.showCutSize && <th className="px-1 py-1 border-r border-slate-300 w-[60px] text-center">Pieces</th>}
+                      {showDesignCol && <th className="px-1 py-1 border-r border-slate-300 w-[80px] text-center">Design</th>}
+                      {showColourCol && <th className="px-1 py-1 border-r border-slate-300 w-[80px] text-center">Colour</th>}
+                      {showSizeCol && <th className="px-1 py-1 border-r border-slate-300 w-[60px] text-center">Size</th>}
+                      {showCutCol && <th className="px-1 py-1 border-r border-slate-300 w-[70px] text-center">Cut Size</th>}
+                      {showCutCol && <th className="px-1 py-1 border-r border-slate-300 w-[60px] text-center">Pieces</th>}
                       <th className="px-1 py-1 border-r border-slate-300 w-[70px] text-center">Quantity</th>
                       <th className="px-1 py-1 border-r border-slate-300 w-[80px] text-center">Rate</th>
-                      {invoiceData.showPurchaseDiscount && <th className="px-1 py-1 border-r border-slate-300 w-[60px] text-center">Disc%</th>}
-                      {invoiceData.showMarkdown && <th className="px-1 py-1 border-r border-slate-300 w-[70px] text-center">MRP</th>}
+                      {showDiscCol && <th className="px-1 py-1 border-r border-slate-300 w-[60px] text-center">Disc%</th>}
+                      {showMRPCol && <th className="px-1 py-1 border-r border-slate-300 w-[70px] text-center">MRP</th>}
                       {invoiceData.gstOn === 'items' && <th className="px-1 py-1 border-r border-slate-300 w-[60px] text-center">GST%</th>}
                       <th className="px-1 py-1 w-[100px] text-center">Amount</th>
                     </tr>
@@ -1688,13 +1860,13 @@ export default function PurchaseInvoice() {
                                 // Filter based on selected party
                                 let filteredBrands = availableBrands;
                                 if (vendorAllowedBrands !== null) {
-                                  filteredBrands = filteredBrands.filter(b => vendorAllowedBrands.some(vb => vb.toLowerCase() === (b.name || '').toLowerCase()));
+                                  filteredBrands = filteredBrands.filter(b => vendorAllowedBrands.some(vb => vb.toLowerCase() === (String(b.name) || '').toLowerCase()));
                                 }
                                 if (isSingleBrandVendor && lockedBrand) {
                                   filteredBrands = filteredBrands.filter(b => b.name === lockedBrand);
                                 }
 
-                                const filtered = filteredBrands.filter(b => (b.name || '').toLowerCase().startsWith(query)).slice(0, 8);
+                                const filtered = filteredBrands.filter(b => (String(b.name) || '').toLowerCase().includes(query)).slice(0, 8);
                                 if (filtered.length > 0) {
                                   return filtered.map((suggestion, sIdx) => (
                                     <div key={suggestion.id} className={`px-2 py-1 flex justify-between cursor-pointer ${sIdx === brandSuggestionIndex ? 'bg-[#ffe000] text-black font-bold' : 'hover:bg-slate-200'}`} onClick={() => {
@@ -1759,10 +1931,10 @@ export default function PurchaseInvoice() {
                                       <span className="text-slate-600">Stock: {suggestion.stock || 0}</span>
                                     </div>
                                   ));
-                                } else if (products[index].item && vendorAllowedBrands === null) {
+                                } else if (products[index].item) {
                                   return (
                                     <div className="px-2 py-2 text-[11px] text-slate-500 italic bg-white">
-                                      Press <span className="font-bold text-black">Alt+C</span> to create "{products[index].item}" in {products[index].brand || 'Brand'}
+                                      Press <span className="font-bold text-black">Alt+C</span> or <span className="font-bold text-black">Enter</span> to create "{products[index].item}" in {products[index].brand || 'Brand'}
                                     </div>
                                   );
                                 }
@@ -1777,7 +1949,7 @@ export default function PurchaseInvoice() {
                             <div className="absolute top-full left-0 mt-0 bg-white border-2 border-black z-50 w-[300px] shadow-md max-h-[150px] overflow-y-auto">
                               {(() => {
                                 const query = (products[index].hsn || '').toLowerCase();
-                                const filtered = availableHsns.filter(s => (s.name || '').toLowerCase().startsWith(query)).slice(0, 8);
+                                const filtered = availableHsns.filter(s => (String(s.name) || '').toLowerCase().includes(query)).slice(0, 8);
                                 if (filtered.length > 0) {
                                   return filtered.map((suggestion, sIdx) => (
                                     <div key={suggestion.id} className={`px-2 py-1 flex flex-col cursor-pointer ${sIdx === hsnSuggestionIndex ? 'bg-[#ffe000] text-black font-bold' : 'hover:bg-slate-200'}`} onClick={() => {
@@ -1812,14 +1984,14 @@ export default function PurchaseInvoice() {
                             </div>
                           )}
                         </td>
-                        {invoiceData.designNo && (
+                        {showDesignCol && (
                           <td className="border-r border-slate-300 px-1 py-[2px] relative">
                             <input id={`row-${index}-design`} type="text" value={item.design} onChange={e => { updateProduct(index, 'design', e.target.value); setDesignSuggestionIndex(0); }} onFocus={(e) => handleDesignFocus(e, index)} onBlur={handleDesignBlur} onKeyDown={(e) => handleKeyDown(e, index, 'design')} className="w-full bg-transparent focus:bg-[#ffffe0] focus:outline-none px-1" autoComplete="off" />
                             {activeDesignRow === index && (
                               <div className="absolute top-full left-0 mt-0 bg-white border-2 border-black z-50 w-[200px] shadow-md max-h-[150px] overflow-y-auto">
                                 {(() => {
-                                  const query = (products[index].design || '').toLowerCase();
-                                  const filtered = availableDesigns.filter(s => (s.name || '').toLowerCase().startsWith(query)).slice(0, 8);
+                                  const query = (String(products[index].design || '')).toLowerCase();
+                                  const filtered = availableDesigns.filter(s => (String(s.name) || '').toLowerCase().includes(query)).slice(0, 8);
                                   if (filtered.length > 0) {
                                     return filtered.map((suggestion, sIdx) => (
                                       <div key={suggestion.id} className={`px-2 py-1 cursor-pointer ${sIdx === designSuggestionIndex ? 'bg-[#ffe000] text-black font-bold' : 'hover:bg-slate-200'}`} onClick={() => {
@@ -1849,14 +2021,14 @@ export default function PurchaseInvoice() {
                             )}
                           </td>
                         )}
-                        {invoiceData.colourNo && (
+                        {showColourCol && (
                           <td className="border-r border-slate-300 px-1 py-[2px] relative">
                             <input id={`row-${index}-colour`} type="text" value={item.colour} onChange={e => { updateProduct(index, 'colour', e.target.value); setColourSuggestionIndex(0); }} onFocus={(e) => handleColourFocus(e, index)} onBlur={handleColourBlur} onKeyDown={(e) => handleKeyDown(e, index, 'colour')} className="w-full bg-transparent focus:bg-[#ffffe0] focus:outline-none px-1" autoComplete="off" />
                             {activeColourRow === index && (
                               <div className="absolute top-full left-0 mt-0 bg-white border-2 border-black z-50 w-[200px] shadow-md max-h-[150px] overflow-y-auto">
                                 {(() => {
-                                  const query = (products[index].colour || '').toLowerCase();
-                                  const filtered = availableColours.filter(s => (s.name || '').toLowerCase().startsWith(query)).slice(0, 8);
+                                  const query = (String(products[index].colour || '')).toLowerCase();
+                                  const filtered = availableColours.filter(s => (String(s.name) || '').toLowerCase().includes(query)).slice(0, 8);
                                   if (filtered.length > 0) {
                                     return filtered.map((suggestion, sIdx) => (
                                       <div key={suggestion.id} className={`px-2 py-1 cursor-pointer ${sIdx === colourSuggestionIndex ? 'bg-[#ffe000] text-black font-bold' : 'hover:bg-slate-200'}`} onClick={() => {
@@ -1885,12 +2057,57 @@ export default function PurchaseInvoice() {
                             )}
                           </td>
                         )}
-                        {invoiceData.showSize && (
-                          <td className="border-r border-slate-300 px-1 py-[2px]">
-                            <input id={`row-${index}-size`} type="text" value={item.size} onChange={e => updateProduct(index, 'size', e.target.value)} onKeyDown={(e) => handleKeyDown(e, index, 'size')} className="w-full bg-transparent focus:bg-[#ffffe0] focus:outline-none px-1 font-bold text-center" />
+                        {showSizeCol && (
+                          <td className="border-r border-slate-300 px-1 py-[2px] relative">
+                            <input id={`row-${index}-size`} type="text" value={item.size} onChange={e => { updateProduct(index, 'size', e.target.value); setActiveSizeRow(index); setSizeSuggestionIndex(0); }} onKeyDown={(e) => handleKeyDown(e, index, 'size')} onClick={() => { setActiveSizeRow(index); setSizeSuggestionIndex(0); }} className="w-full bg-transparent focus:bg-[#ffffe0] focus:outline-none px-1 font-bold text-center" autoComplete="off" />
+                            {activeSizeRow === index && (
+                              <div className="absolute top-full left-0 mt-0 bg-white border-2 border-black z-50 w-[250px] shadow-md max-h-[150px] overflow-y-auto">
+                                {(() => {
+                                  const query = (String(products[index].size || '')).toLowerCase();
+                                  const filtered = availableSizes.filter(s => (String(s.name) || '').toLowerCase().includes(query)).slice(0, 8);
+                                  if (filtered.length > 0) {
+                                    return filtered.map((suggestion, sIdx) => (
+                                      <div key={suggestion.id} className={`px-2 py-1 flex justify-between cursor-pointer ${sIdx === sizeSuggestionIndex ? 'bg-[#ffe000] text-black font-bold' : 'hover:bg-slate-200'}`} onClick={() => {
+                                        updateProduct(index, 'size', suggestion.name);
+                                        setActiveSizeRow(null);
+                                        const fields = ['brand', 'item', 'hsn'];
+                                        const isAnyRowSuiting = products.some(prod => prod.item && getCategoryConfig(prod.item).isSuiting);
+                                        const isAnyRowReadywear = products.some(prod => prod.item && getCategoryConfig(prod.item).isReadywear);
+                                        const isAnyRowInnerwear = products.some(prod => prod.item && getCategoryConfig(prod.item).isInnerwear);
+                                        if (isAnyRowSuiting || invoiceData.designNo) fields.push('design');
+                                        if (isAnyRowSuiting || invoiceData.colourNo) fields.push('colour');
+                                        if (isAnyRowReadywear || isAnyRowInnerwear || invoiceData.showSize) fields.push('size');
+                                        if (isAnyRowSuiting || invoiceData.showCutSize) fields.push('cut_size');
+                                        fields.push('qty', 'rate');
+                                        
+                                        const nextField = fields[fields.indexOf('size') + 1];
+                                        if (nextField) {
+                                          setTimeout(() => {
+                                            document.getElementById(`row-${index}-${nextField}`)?.focus();
+                                          }, 100);
+                                        }
+                                      }}>
+                                        <span>{suggestion.name}</span>
+                                        <div className="flex items-center gap-2">
+                                          {suggestion.size_group && <span className="text-slate-500 text-[10px]">{suggestion.size_group}</span>}
+                                          {suggestion.isSizeSet && <span className="text-[10px] px-1 bg-blue-100 text-blue-700 font-semibold rounded">Size Set</span>}
+                                        </div>
+                                      </div>
+                                    ));
+                                  } else if (query.trim() !== '') {
+                                    return (
+                                      <div className="px-2 py-1 text-slate-500 text-[11px] italic">
+                                        Press Enter to create new Size '{query}'
+                                      </div>
+                                    );
+                                  }
+                                  return null;
+                                })()}
+                              </div>
+                            )}
                           </td>
                         )}
-                        {invoiceData.showCutSize && (
+                        {showCutCol && (
                           <>
                             <td className="border-r border-slate-300 px-1 py-[2px]">
                               <input list={`cuts-list`} id={`row-${index}-cut_size`} type="number" step="0.01" value={item.cut_size} onChange={e => {
@@ -1944,13 +2161,13 @@ export default function PurchaseInvoice() {
                                 e.stopPropagation();
                                 setInvoiceData(prev => ({ ...prev, showLocation: true }));
                                 setActiveModalRow(index);
+                              } else if (e.altKey && e.code === 'KeyG') {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setActiveSizeMatrixRow(index);
                               } else if (e.key === 'Enter') {
                                 e.preventDefault();
-                                if (item.item) {
-                                  setActiveSizeMatrixRow(index);
-                                } else {
-                                  handleKeyDown(e, index, 'qty');
-                                }
+                                handleKeyDown(e, index, 'qty');
                               } else {
                                 handleKeyDown(e, index, 'qty');
                               }
@@ -1961,12 +2178,12 @@ export default function PurchaseInvoice() {
                         <td className="border-r border-slate-300 px-1 py-[2px]">
                           <input id={`row-${index}-rate`} type="number" value={item.rate} onChange={e => updateProduct(index, 'rate', e.target.value)} onKeyDown={(e) => handleKeyDown(e, index, 'rate')} className={`w-full bg-transparent focus:bg-[#ffffe0] focus:outline-none px-1 text-right font-bold ${item.last_rate ? (parseFloat(item.rate) > item.last_rate ? 'text-red-600 bg-red-50' : parseFloat(item.rate) < item.last_rate ? 'text-green-600 bg-green-50' : '') : ''}`} title={item.last_rate ? `Last Rate: ₹${item.last_rate}` : ''} />
                         </td>
-                        {invoiceData.showPurchaseDiscount && (
+                        {showDiscCol && (
                           <td className="border-r border-slate-300 px-1 py-[2px]">
                             <input id={`row-${index}-disc`} type="number" value={item.disc || ''} onChange={e => updateProduct(index, 'disc', parseFloat(e.target.value) || 0)} onKeyDown={(e) => handleKeyDown(e, index, 'disc')} className="w-full bg-transparent focus:bg-[#ffffe0] focus:outline-none px-1 text-right font-bold" />
                           </td>
                         )}
-                        {invoiceData.showMarkdown && (
+                        {showMRPCol && (
                           <td className="border-r border-slate-300 px-1 py-[2px]">
                             <input id={`row-${index}-mrp`} type="number" value={item.mrp || ''} onChange={e => updateProduct(index, 'mrp', parseFloat(e.target.value) || 0)} onKeyDown={(e) => handleKeyDown(e, index, 'mrp')} className="w-full bg-transparent focus:bg-[#ffffe0] focus:outline-none px-1 text-right font-bold" />
                           </td>
@@ -2094,10 +2311,27 @@ export default function PurchaseInvoice() {
 
                   {/* Other Charges */}
                   <div className="flex border-b border-slate-300 bg-white">
-                    <div className="w-[45%] border-r border-slate-300 px-1 py-0 bg-[#fcfaf2]">Other Charges</div>
-                    <div className="w-[20%] border-r border-slate-300 px-1 py-0 text-center text-blue-600 bg-[#fcfaf2]">—</div>
+                    <div className="w-[45%] border-r border-slate-300 px-1 py-0 bg-[#fcfaf2] flex items-center justify-between">
+                      <span>Other Charges</span>
+                      {totalPreTaxCharges > 0 && <span className="text-[10px] bg-emerald-100 text-emerald-700 px-1 rounded font-bold" title="Pre-Tax Additions (F2)">+{totalPreTaxCharges}</span>}
+                    </div>
+                    <div className="w-[20%] border-r border-slate-300 px-1 py-0 text-center text-blue-600 bg-[#fcfaf2]">
+                       <span className="border border-blue-200 text-blue-500 rounded px-1 bg-white text-[9px] font-bold shadow-sm" title="Press F2 to add Pre-Tax Charges">F2</span>
+                    </div>
                     <div className="w-[35%] px-0 py-0">
-                      <input type="number" value={invoiceData.charges || ''} onChange={e => handleInvoiceChange('charges', parseFloat(e.target.value) || 0)} className="w-full bg-transparent focus:bg-[#ffffe0] focus:outline-none px-1 text-right" />
+                      <input 
+                        type="number" 
+                        value={invoiceData.charges || ''} 
+                        onChange={e => handleInvoiceChange('charges', parseFloat(e.target.value) || 0)} 
+                        onKeyDown={e => {
+                          if (e.key === 'F2') {
+                            e.preventDefault();
+                            setShowAdditionalChargesModal(true);
+                          }
+                        }}
+                        title="Enter post-tax charges here, or press F2 for pre-tax charges (Freight/Insurance)"
+                        className="w-full bg-transparent focus:bg-[#ffffe0] focus:outline-none px-1 text-right" 
+                      />
                     </div>
                   </div>
 
@@ -2189,7 +2423,7 @@ export default function PurchaseInvoice() {
           <div className="font-medium tracking-wide flex gap-4">
             <span>Purchase Voucher</span>
             <span className="text-[#a4d4cc]">
-              Shortcuts: <strong>{modKey}+S</strong> (Save) | <strong>{modKey}+Z</strong> (Design) | <strong>{modKey}+C</strong> (Colour) | <strong>{modKey}+X</strong> (Size) | <strong>{modKey}+L</strong> (Location) | <strong>{modKey}+V</strong> (Discount) | <strong>{modKey}+M</strong> (Markdown)
+              Shortcuts: <strong>{modKey}+S</strong> (Save) | <strong>{modKey}+I</strong> (Import CSV) | <strong>{modKey}+L</strong> (Location) | <strong>{modKey}+G</strong> (Size Grid)
             </span>
           </div>
           <div className="flex gap-6">
@@ -2222,21 +2456,54 @@ export default function PurchaseInvoice() {
         }}
       />
 
+      <AdditionalChargesModal
+        isOpen={showAdditionalChargesModal}
+        onClose={() => setShowAdditionalChargesModal(false)}
+        initialCharges={preTaxCharges}
+        onApply={(charges) => {
+          setPreTaxCharges(charges);
+          // Auto focus save button after applying charges
+          setTimeout(() => {
+            document.getElementById('save-invoice-btn')?.focus();
+          }, 100);
+        }}
+      />
+
       <SizeAllocationModal
         isOpen={activeSizeMatrixRow !== null}
         onClose={() => setActiveSizeMatrixRow(null)}
         itemName={activeSizeMatrixRow !== null ? products[activeSizeMatrixRow].item : ''}
         brandId={activeSizeMatrixRow !== null ? products[activeSizeMatrixRow].brand_id : ''}
+        initialSizeSet={activeSizeMatrixRow !== null ? products[activeSizeMatrixRow].size : undefined}
+        expectedTotalQty={activeSizeMatrixRow !== null ? (parseFloat(String(products[activeSizeMatrixRow].qty)) || null) : null}
         onSave={(allocatedSizes, summaryInfo) => {
           if (activeSizeMatrixRow !== null) {
-            updateProduct(activeSizeMatrixRow, 'qty', summaryInfo.totalQty);
-            updateProduct(activeSizeMatrixRow, 'rate', summaryInfo.avgRate);
-            updateProduct(activeSizeMatrixRow, 'size', summaryInfo.sizeDisplay);
-            updateProduct(activeSizeMatrixRow, 'matrixData', allocatedSizes);
-            
-            if (activeSizeMatrixRow === products.length - 1) {
-               setProducts([...products, { id: Date.now(), item: '', brand: '', qty: '', cut_size: '', pieces: '', rate: '', last_rate: null, disc: 0, gst: 0, design: '', colour: '', size: '', mrp: 0 }]);
-            }
+            setProducts(prev => {
+              const newProducts = [...prev];
+              newProducts[activeSizeMatrixRow] = {
+                ...newProducts[activeSizeMatrixRow],
+                qty: summaryInfo.totalQty,
+                rate: summaryInfo.avgRate,
+                mrp: summaryInfo.avgMrp || 0,
+                size: summaryInfo.sizeDisplay,
+                matrixData: allocatedSizes,
+                size_group_id: summaryInfo.size_group_id
+              };
+              
+              if (activeSizeMatrixRow === prev.length - 1) {
+                const last = newProducts[activeSizeMatrixRow];
+                newProducts.push({ 
+                  id: Date.now(), 
+                  item_id: null,
+                  item: '', 
+                  hsn: '',
+                  brand: last ? (last.brand || '') : '', 
+                  brand_id: last ? (last.brand_id || null) : null,
+                  qty: '', cut_size: '', pieces: '', rate: '', last_rate: null, disc: 0, gst: 0, design: '', colour: '', size: '', mrp: 0 
+                });
+              }
+              return newProducts;
+            });
           }
           setActiveSizeMatrixRow(null);
         }}
@@ -2260,6 +2527,15 @@ export default function PurchaseInvoice() {
           });
           handleInvoiceChange('supplier', newParty.name);
           setShowPartyModal(false);
+          
+          // Refetch available brands in case the user created new ones inside the modal
+          fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/brand`, {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+          })
+          .then(res => res.json())
+          .then(data => setAvailableBrands(Array.isArray(data) ? data : []))
+          .catch(console.error);
+
           setImportErrors(prev => prev.filter(e => !(e.type === 'vendor' && (e.vendor || '').toLowerCase() === (newParty.name || '').toLowerCase())));
           setTimeout(() => {
             document.getElementById('input-billNo')?.focus();
@@ -2271,8 +2547,17 @@ export default function PurchaseInvoice() {
         isOpen={showTransporterModal}
         onClose={() => setShowTransporterModal(false)}
         initialTransporterName={invoiceData.transporter}
+        editTransporterData={transporters.find(t => (t.name || t.transporter_name)?.toLowerCase() === (invoiceData.transporter || '').toLowerCase())}
         onSave={(newTransporter) => {
-          setTransporters(prev => [...prev, newTransporter]);
+          setTransporters(prev => {
+            const existingIdx = prev.findIndex(p => p.id === newTransporter.id);
+            if (existingIdx >= 0) {
+              const updated = [...prev];
+              updated[existingIdx] = newTransporter;
+              return updated;
+            }
+            return [...prev, newTransporter];
+          });
           handleInvoiceChange('transporter', newTransporter.name);
           setShowTransporterModal(false);
           setTimeout(() => {
@@ -2291,11 +2576,20 @@ export default function PurchaseInvoice() {
         onSave={(type, data) => {
            console.log(`Created new master of type ${type}:`, data);
            if (masterModal) {
-             const { type: savedType, rowIndex } = masterModal;
-             const fieldMap: any = { hsn: 'hsn', brand: 'brand', item: 'item', size: 'size', design: 'design', colour: 'colour' };
+             const { rowIndex } = masterModal;
+             const savedType = type;
+             const fieldMap: any = { hsn: 'hsn', brand: 'brand', item: 'item', size: 'size', sizeset: 'size', design: 'design', colour: 'colour' };
              const field = fieldMap[savedType];
              if (savedType === 'item') {
-               setAvailableItems(prev => [...prev, { id: data.id, name: data.name, item_name: data.name, brand: data.brand, brand_id: data.brand_id || null }]);
+               setAvailableItems(prev => [...prev, { 
+                 id: data.id, 
+                 name: data.name, 
+                 item_name: data.name, 
+                 brand: data.brand, 
+                 brand_id: data.brand_id || null,
+                 hsn_code: data.hsn_code || data.hsn || '',
+                 tax_percent: data.tax_percent || 0
+               }]);
                setProducts(prev => {
                  const newP = [...prev];
                  newP[rowIndex] = { 
@@ -2303,10 +2597,22 @@ export default function PurchaseInvoice() {
                    item: data.name, 
                    item_id: data.id || newP[rowIndex].item_id, 
                    brand: data.brand || newP[rowIndex].brand, 
-                   hsn: data.hsn || newP[rowIndex].hsn 
+                   hsn: data.hsn_code || data.hsn || newP[rowIndex].hsn,
+                   gst: data.tax_percent !== undefined ? data.tax_percent : (newP[rowIndex].gst || 0)
                  };
                  return newP;
                });
+               
+               // If item creation included an HSN, add it to our local master list so it doesn't prompt again!
+               if (data.hsn_code || data.hsn) {
+                 const hCode = data.hsn_code || data.hsn;
+                 setAvailableHsns(prev => {
+                   if (!prev.find(h => h.name === hCode)) {
+                     return [...prev, { name: hCode, tax_percent: data.tax_percent || 0 }];
+                   }
+                   return prev;
+                 });
+               }
              } else if (savedType === 'hsn') {
                setAvailableHsns(prev => [...prev, { name: data.name, tax_percent: data.tax_percent }]);
                setProducts(prev => {
@@ -2349,11 +2655,55 @@ export default function PurchaseInvoice() {
                  };
                  return newP;
                });
+             } else if (savedType === 'size') {
+               setAvailableSizes(prev => [...prev, { id: data.id || Date.now(), name: data.name, size_group: data.size_group || '' }]);
+               setProducts(prev => {
+                 const newP = [...prev];
+                 newP[rowIndex] = {
+                   ...newP[rowIndex],
+                   size: data.name
+                 };
+                 return newP;
+               });
+             } else if (savedType === 'sizeset') {
+               setAvailableSizes(prev => [...prev, { id: data.id || Date.now(), name: data.name, isSizeSet: true }]);
+               setProducts(prev => {
+                 const newP = [...prev];
+                 newP[rowIndex] = {
+                   ...newP[rowIndex],
+                   size: data.name
+                 };
+                 return newP;
+               });
              } else if (field) {
                updateProduct(rowIndex, field, data.name);
              }
                // Move focus to next field
-               const fields = ['brand', 'item', 'hsn', 'qty', 'rate', 'disc', 'mrp'];
+               const isAnyRowSuiting = products.some(prod => prod.item && getCategoryConfig(prod.item).isSuiting);
+               const isAnyRowReadywear = products.some(prod => prod.item && getCategoryConfig(prod.item).isReadywear);
+               const isAnyRowInnerwear = products.some(prod => prod.item && getCategoryConfig(prod.item).isInnerwear);
+               const isAnyRowNotSaree = products.some(prod => prod.item && !getCategoryConfig(prod.item).isSaree);
+           
+               const showDesignCol = isAnyRowSuiting || invoiceData.designNo; 
+               const showColourCol = isAnyRowSuiting || invoiceData.colourNo;
+               const showCutCol = isAnyRowSuiting || invoiceData.showCutSize;
+               const showSizeCol = isAnyRowReadywear || isAnyRowInnerwear || invoiceData.showSize;
+               const showMRPCol = isAnyRowReadywear || isAnyRowInnerwear || invoiceData.showMarkdown;
+               const showDiscCol = isAnyRowNotSaree || invoiceData.showPurchaseDiscount;
+           
+               const fields = ['brand', 'item', 'hsn'];
+               
+               if (showDesignCol) fields.push('design');
+               if (showColourCol) fields.push('colour');
+               if (showSizeCol) fields.push('size');
+               if (showCutCol) fields.push('cut_size');
+               
+               fields.push('qty', 'rate');
+               
+               if (showDiscCol) fields.push('disc');
+               if (showMRPCol) fields.push('mrp');
+               if (invoiceData.gstOn === 'items') fields.push('gst');
+
                const currentFieldIndex = fields.indexOf(field);
                setTimeout(() => {
                  if (currentFieldIndex > -1 && currentFieldIndex < fields.length - 1) {
