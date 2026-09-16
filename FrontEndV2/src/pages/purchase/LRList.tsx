@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import SearchableDropdown from '../../components/SearchableDropdown';
+import HundekariModal from '../../components/inventory/HundekariModal';
 
 export default function LRList() {
   const navigate = useNavigate();
@@ -17,9 +18,14 @@ export default function LRList() {
   const [filterGRN, setFilterGRN] = useState('');
   const [filterParty, setFilterParty] = useState('');
 
-  const [formData, setFormData] = useState<any>({});
-  const [lrRows, setLrRows] = useState([{ id: 1, lr_no: '', received_bales: '', invoiced_bales: null as number | null, error: '' }]);
+  const [formData, setFormData] = useState<any>({ inward_at_location_id: localStorage.getItem('default_inward_location_id') || '' });
+  const [lrRows, setLrRows] = useState([{ id: 1, lr_no: '', received_bales: '', invoiced_bales: null as number | null, error: '', status: '', vendor_id: '' as string | number }]);
   const [initialData, setInitialData] = useState<any[]>([]);
+  const [vendors, setVendors] = useState<any[]>([]);
+  const [hundekaris, setHundekaris] = useState<any[]>([]);
+  const [transporters, setTransporters] = useState<any[]>([]);
+  const [locations, setLocations] = useState<any[]>([]);
+  const [showHundekariModal, setShowHundekariModal] = useState(false);
 
   useEffect(() => {
     fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/logistics/pending-lrs`, {
@@ -27,6 +33,47 @@ export default function LRList() {
     })
     .then(res => res.json())
     .then(data => setInitialData(Array.isArray(data) ? data : []))
+    .catch(console.error);
+
+    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/party`, {
+      headers: { 'Authorization': `Bearer ${sessionStorage.getItem('token') || localStorage.getItem('token')}` }
+    })
+    .then(res => res.json())
+    .then(data => {
+      const parties = Array.isArray(data) ? data : (data.data || []);
+      const mapped = parties.map((p: any) => ({ ...p, name: p.party_name || p.name }));
+      setVendors(mapped.filter((p: any) => p.party_type === 'Vendor'));
+    })
+    .catch(console.error);
+
+    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/logistics/hundekari`, {
+      headers: { 'Authorization': `Bearer ${sessionStorage.getItem('token') || localStorage.getItem('token')}` }
+    })
+    .then(res => res.json())
+    .then(data => {
+      const hData = Array.isArray(data) ? data : (data.data || []);
+      setHundekaris(hData.map((h: any) => ({ ...h, name: h.hundekari_name || h.name })));
+    })
+    .catch(console.error);
+
+    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/logistics/transporters`, {
+      headers: { 'Authorization': `Bearer ${sessionStorage.getItem('token') || localStorage.getItem('token')}` }
+    })
+    .then(res => res.json())
+    .then(data => {
+      const tData = Array.isArray(data) ? data : (data.data || []);
+      setTransporters(tData.map((t: any) => ({ ...t, name: t.transporter_name || t.name })));
+    })
+    .catch(console.error);
+
+    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/generic/Locations`, {
+      headers: { 'Authorization': `Bearer ${sessionStorage.getItem('token') || localStorage.getItem('token')}` }
+    })
+    .then(res => res.json())
+    .then(data => {
+      const lData = Array.isArray(data) ? data : (data.data || []);
+      setLocations(lData.map((l: any) => ({ ...l, name: l.location_name || l.name })));
+    })
     .catch(console.error);
   }, []);
 
@@ -49,11 +96,29 @@ export default function LRList() {
   }, [initialData, filterTransporter, filterLR, filterBale, filterGRN, filterParty]);
 
   // Unique lists for dropdowns
-  const uniqueTransporters = React.useMemo(() => [...new Set(initialData.map(item => item.transporter).filter(Boolean))], [initialData]);
-  const uniqueLRs = React.useMemo(() => [...new Set(initialData.map(item => item.lrNo).filter(Boolean))], [initialData]);
-  const uniqueBales = React.useMemo(() => [...new Set(initialData.map(item => String(item.bales)).filter(Boolean))], [initialData]);
-  const uniqueGRNs = React.useMemo(() => [...new Set(initialData.map(item => item.grn).filter(Boolean))], [initialData]);
-  const uniqueParties = React.useMemo(() => [...new Set(initialData.map(item => item.partyName).filter(Boolean))], [initialData]);
+  const uniqueTransportersList = React.useMemo(() => {
+    const map = new Map();
+    transporters.forEach(t => map.set((t.name || t.transporter_name)?.toLowerCase(), t));
+    return Array.from(map.values());
+  }, [transporters]);
+
+  const uniqueHundekarisList = React.useMemo(() => {
+    const map = new Map();
+    hundekaris.forEach(h => map.set((h.name || h.hundekari_name)?.toLowerCase(), h));
+    return Array.from(map.values());
+  }, [hundekaris]);
+
+  const selectedTransporterName = formData.transporter_name || '';
+  const selectedLRsInRows = lrRows.map(r => r.lr_no?.toUpperCase()).filter(Boolean);
+  const pendingLRsForTransporter = initialData.filter(lr => 
+    lr.transporter?.trim().toLowerCase() === selectedTransporterName?.trim().toLowerCase() &&
+    !selectedLRsInRows.includes(lr.lrNo?.toUpperCase())
+  );
+  const uniqueTransporters = React.useMemo(() => [...new Set(initialData.filter(item => item.transporter != null && String(item.transporter).toLowerCase() !== 'null').map(item => String(item.transporter)).filter(Boolean))], [initialData]);
+  const uniqueLRs = React.useMemo(() => [...new Set(initialData.filter(item => item.lrNo != null && String(item.lrNo).toLowerCase() !== 'null').map(item => String(item.lrNo)).filter(Boolean))], [initialData]);
+  const uniqueBales = React.useMemo(() => [...new Set(initialData.filter(item => item.bales != null && String(item.bales).toLowerCase() !== 'null').map(item => String(item.bales)).filter(Boolean))], [initialData]);
+  const uniqueGRNs = React.useMemo(() => [...new Set(initialData.filter(item => item.grn != null && String(item.grn).toLowerCase() !== 'null').map(item => String(item.grn)).filter(Boolean))], [initialData]);
+  const uniqueParties = React.useMemo(() => [...new Set(initialData.filter(item => item.partyName != null && String(item.partyName).toLowerCase() !== 'null').map(item => String(item.partyName)).filter(Boolean))], [initialData]);
 
   // Adjust selected index if filtering shrinks the list
   useEffect(() => {
@@ -63,6 +128,18 @@ export default function LRList() {
       setSelectedIndex(0);
     }
   }, [filteredData.length, selectedIndex]);
+
+  const getRowBgClass = (idx: number, status: string) => {
+    if (selectedIndex === idx) return 'bg-[#ffe000] text-black font-bold';
+    if (!status) return idx % 2 === 0 ? 'bg-white' : 'bg-[#fcfaf2]';
+    
+    const s = status.toLowerCase();
+    if (s.includes('pending')) return 'bg-orange-200';
+    if (s.includes('delivered')) return 'bg-green-200';
+    if (s.includes('printed')) return 'bg-blue-200';
+    
+    return idx % 2 === 0 ? 'bg-white' : 'bg-[#fcfaf2]';
+  };
 
   useEffect(() => {
     if (mode === 'list' && listRef.current) {
@@ -133,9 +210,15 @@ export default function LRList() {
       const newRows = [...lrRows];
       if (data.success && data.expectedBales !== null) {
         newRows[index].invoiced_bales = data.expectedBales;
+        newRows[index].status = data.status || 'MATCHED';
         newRows[index].error = '';
+      } else if (data.success && data.status === 'NO_INVOICE') {
+        newRows[index].invoiced_bales = null;
+        newRows[index].status = 'NO_INVOICE';
+        newRows[index].error = 'Without Invoice';
       } else {
         newRows[index].invoiced_bales = null;
+        newRows[index].status = 'ERROR';
         newRows[index].error = data.message || 'LR not found';
       }
       setLrRows(newRows);
@@ -150,9 +233,15 @@ export default function LRList() {
       return;
     }
 
-    const validRows = lrRows.filter(r => r.lr_no && r.received_bales);
+    const validRows = lrRows.filter(r => r.lr_no && r.received_bales && r.status !== 'ERROR');
     if (validRows.length === 0) {
-      alert("Please enter at least one LR row");
+      alert("Please enter at least one valid LR row");
+      return;
+    }
+
+    const missingVendorRows = validRows.filter(r => r.status === 'NO_INVOICE' && !r.vendor_id);
+    if (missingVendorRows.length > 0) {
+      alert("Please select a Party (Vendor) for LRs without invoices");
       return;
     }
 
@@ -181,8 +270,8 @@ export default function LRList() {
       const data = await res.json();
       if (data.success) {
         alert("Batch LRs inwarded successfully!");
-        setLrRows([{ id: 1, lr_no: '', received_bales: '', invoiced_bales: null, error: '' }]);
-        setFormData({});
+        setLrRows([{ id: 1, lr_no: '', received_bales: '', invoiced_bales: null, error: '', status: '', vendor_id: '' }]);
+        setFormData({ inward_at_location_id: localStorage.getItem('default_inward_location_id') || '' });
         setMode('list');
       } else {
         alert(data.message || "Failed to save");
@@ -321,6 +410,7 @@ export default function LRList() {
                            <th className='px-2 py-1 border-r border-slate-300'>Transporter</th>
                            <th className='px-2 py-1 border-r border-slate-300 w-24'>LR No</th>
                            <th className='px-2 py-1 border-r border-slate-300 w-16 text-center'>Bales</th>
+                           <th className='px-2 py-1 border-r border-slate-300 w-24 text-center'>Status</th>
                            <th className='px-2 py-1 border-r border-slate-300'>Party Name</th>
                            <th className='px-2 py-1 border-r border-slate-300 w-24'>Bill No</th>
                            <th className='px-2 py-1 w-24 text-center'>Bill Date</th>
@@ -331,19 +421,20 @@ export default function LRList() {
                            <tr 
                              key={row.id} 
                              onClick={() => setSelectedIndex(idx)}
-                             className={`cursor-pointer ${selectedIndex === idx ? 'bg-[#ffe000] text-black font-bold' : (idx % 2 === 0 ? 'bg-white' : 'bg-[#fcfaf2]')}`}
+                             className={`cursor-pointer ${getRowBgClass(idx, row.status)}`}
                            >
                              <td className={`px-2 py-1 border-r border-slate-300 text-center ${selectedIndex === idx ? 'border-r-black' : ''}`}>{row.id}</td>
                              <td className={`px-2 py-1 border-r border-slate-300 ${selectedIndex === idx ? 'border-r-black' : ''}`}>{row.transporter}</td>
                              <td className={`px-2 py-1 border-r border-slate-300 ${selectedIndex === idx ? 'border-r-black' : ''}`}>{row.lrNo}</td>
                              <td className={`px-2 py-1 border-r border-slate-300 text-center ${selectedIndex === idx ? 'border-r-black' : ''}`}>{row.bales}</td>
+                             <td className={`px-2 py-1 border-r border-slate-300 text-center font-bold ${selectedIndex === idx ? 'border-r-black' : ''}`}>{row.status}</td>
                              <td className={`px-2 py-1 border-r border-slate-300 ${selectedIndex === idx ? 'border-r-black' : ''}`}>{row.partyName}</td>
                              <td className={`px-2 py-1 border-r border-slate-300 ${selectedIndex === idx ? 'border-r-black' : ''}`}>{row.billNo}</td>
                              <td className='px-2 py-1 text-center'>{row.billDate}</td>
                            </tr>
                          )) : (
                            <tr>
-                             <td colSpan={9} className="text-center py-4 font-bold text-slate-500 italic">
+                             <td colSpan={10} className="text-center py-4 font-bold text-slate-500 italic">
                                No LRs found for selected filters
                              </td>
                            </tr>
@@ -359,12 +450,29 @@ export default function LRList() {
                         <div className="text-[12px] font-bold text-[#1b5e58] border-b border-[#a3c3be] mb-2 pb-1">Batch Header Details</div>
                         
                         <div className="flex items-center mb-1">
+                          <div className="w-[140px] text-slate-800 font-bold text-[12px] text-right pr-2">Inward Location</div>
+                          <SearchableDropdown 
+                            className="w-[250px] bg-white border border-slate-400 px-1 py-[2px] text-[12px] font-bold text-black focus:bg-[#ffffe0] focus:outline-none focus:border-slate-800"
+                            value={formData.inward_at_location_id || ''}
+                            onChange={(v) => {
+                              setFormData({...formData, inward_at_location_id: v});
+                              localStorage.setItem('default_inward_location_id', v);
+                            }}
+                            options={locations}
+                            displayKey="name"
+                            placeholder="Select Location"
+                          />
+                        </div>
+
+                        <div className="flex items-center mb-1 mt-4">
                           <div className="w-[140px] text-slate-800 font-bold text-[12px] text-right pr-2">Transporter</div>
                           <SearchableDropdown 
-                            className="flex-1 bg-white border border-slate-400 px-1 py-[2px] text-[12px] font-bold text-black focus:bg-[#ffffe0] focus:outline-none focus:border-slate-800"
-                            value={formData.transporter_id || ''}
-                            onChange={(v) => setFormData({...formData, transporter_id: v})}
-                            options={['VRL Logistics', 'SafeExpress', 'TCI Freight']} // Mocked for now
+                            className="w-[250px] bg-white border border-slate-400 px-1 py-[2px] text-[12px] font-bold text-black focus:bg-[#ffffe0] focus:outline-none focus:border-slate-800"
+                            value={formData.transporter_name || ''}
+                            onChange={(v) => setFormData({...formData, transporter_name: v})}
+                            onSelect={(opt) => setFormData({...formData, transporter_name: opt.name || opt.transporter_name, transporter_id: opt.id})}
+                            options={uniqueTransportersList}
+                            displayKey="name"
                             placeholder="Select Transporter"
                           />
                         </div>
@@ -372,22 +480,20 @@ export default function LRList() {
                         <div className="flex items-center mb-1">
                           <div className="w-[140px] text-slate-800 font-bold text-[12px] text-right pr-2">Hundekari</div>
                           <SearchableDropdown 
-                            className="flex-1 bg-white border border-slate-400 px-1 py-[2px] text-[12px] font-bold text-black focus:bg-[#ffffe0] focus:outline-none focus:border-slate-800"
-                            value={formData.hundekari_id || ''}
-                            onChange={(v) => setFormData({...formData, hundekari_id: v})}
-                            options={['Shreeji Transport', 'Kalyan Hundekari']}
+                            className="w-[250px] bg-white border border-slate-400 px-1 py-[2px] text-[12px] font-bold text-black focus:bg-[#ffffe0] focus:outline-none focus:border-slate-800"
+                            value={formData.hundekari_name || ''}
+                            onChange={(v) => setFormData({...formData, hundekari_name: v})}
+                            onSelect={(opt) => setFormData({...formData, hundekari_name: opt.name || opt.hundekari_name, hundekari_id: opt.id})}
+                            onKeyDown={(e) => {
+                              if (e.altKey && (e.key.toLowerCase() === 'c' || e.code === 'KeyC')) {
+                                e.preventDefault();
+                                setShowHundekariModal(true);
+                              }
+                            }}
+                            onNotFound={() => setShowHundekariModal(true)}
+                            options={uniqueHundekarisList}
+                            displayKey="name"
                             placeholder="Select Hundekari"
-                          />
-                        </div>
-
-                        <div className="flex items-center mb-1 mt-4">
-                          <div className="w-[140px] text-slate-800 font-bold text-[12px] text-right pr-2">Inward Location</div>
-                          <SearchableDropdown 
-                            className="flex-1 bg-white border border-slate-400 px-1 py-[2px] text-[12px] font-bold text-black focus:bg-[#ffffe0] focus:outline-none focus:border-slate-800"
-                            value={formData.inward_at_location_id || ''}
-                            onChange={(v) => setFormData({...formData, inward_at_location_id: v})}
-                            options={['Godown A', 'Main Store', 'Warehouse 1']}
-                            placeholder="Select Location"
                           />
                         </div>
 
@@ -395,7 +501,7 @@ export default function LRList() {
                           <div className="w-[140px] text-slate-800 font-bold text-[12px] text-right pr-2">LR Inward Date</div>
                           <input 
                             type="date"
-                            className="flex-1 bg-white border border-slate-400 px-1 py-[2px] text-[12px] font-bold text-black focus:bg-[#ffffe0] focus:outline-none focus:border-slate-800"
+                            className="w-[150px] bg-white border border-slate-400 px-1 py-[2px] text-[12px] font-bold text-black focus:bg-[#ffffe0] focus:outline-none focus:border-slate-800"
                             value={formData.lr_inward_date || new Date().toISOString().split('T')[0]}
                             onChange={(e) => setFormData({...formData, lr_inward_date: e.target.value})}
                           />
@@ -412,6 +518,7 @@ export default function LRList() {
                             <th className="px-2 py-1 text-left text-[12px] font-bold text-black border-r border-slate-400 w-[120px]">Received Bales</th>
                             <th className="px-2 py-1 text-left text-[12px] font-bold text-black border-r border-slate-400 w-[120px]">Invoiced Bales</th>
                             <th className="px-2 py-1 text-left text-[12px] font-bold text-black border-r border-slate-400">Status</th>
+                            <th className="px-2 py-1 text-left text-[12px] font-bold text-black border-r border-slate-400 w-[200px]">Party (If No Invoice)</th>
                             <th className="px-2 py-1 text-center text-[12px] font-bold text-black w-[50px]">Action</th>
                           </tr>
                         </thead>
@@ -420,17 +527,35 @@ export default function LRList() {
                             <tr key={row.id} className="border-b border-slate-300 hover:bg-[#ffffe0]">
                               <td className="px-2 py-1 text-[12px] font-bold text-slate-700 border-r border-slate-400">{index + 1}</td>
                               <td className="border-r border-slate-400 p-0">
-                                <input 
-                                  type="text"
+                                <SearchableDropdown 
                                   className="w-full bg-transparent px-2 py-1 text-[12px] font-bold text-black focus:bg-[#ffffe0] focus:outline-none"
                                   value={row.lr_no}
-                                  onChange={(e) => {
+                                  onChange={(v) => {
                                     const newRows = [...lrRows];
-                                    newRows[index].lr_no = e.target.value.toUpperCase();
+                                    newRows[index].lr_no = v.toUpperCase();
+                                    setLrRows(newRows);
+                                  }}
+                                  onSelect={(opt) => {
+                                    const newRows = [...lrRows];
+                                    newRows[index].lr_no = (opt.lrNo || '').toUpperCase();
+                                    newRows[index].received_bales = String(opt.bales || '');
+                                    newRows[index].invoiced_bales = opt.bales || null;
+                                    newRows[index].status = opt.billNo ? 'MATCHED' : 'Pending';
                                     setLrRows(newRows);
                                   }}
                                   onBlur={() => handleLRBlur(index, row.lr_no)}
+                                  options={pendingLRsForTransporter}
+                                  displayKey="lrNo"
+                                  renderOption={(opt: any) => (
+                                    <div className="flex justify-between items-center w-full">
+                                      <span className="font-bold text-slate-800">{opt.lrNo}</span>
+                                      <span className="text-[10px] text-slate-500 font-normal truncate max-w-[200px]">
+                                        <span className="mr-2">Bales: <span className="font-bold text-slate-700">{opt.bales || 0}</span></span>
+                                      </span>
+                                    </div>
+                                  )}
                                   placeholder="Enter LR No"
+                                  width="320px"
                                 />
                               </td>
                               <td className="border-r border-slate-400 p-0">
@@ -450,14 +575,46 @@ export default function LRList() {
                                 {row.invoiced_bales !== null ? row.invoiced_bales : '-'}
                               </td>
                               <td className="px-2 py-1 text-[12px] font-bold border-r border-slate-400">
-                                {row.invoiced_bales !== null ? (
+                                {row.status === 'MATCHED' ? (
                                   parseInt(row.received_bales) === row.invoiced_bales ? (
                                     <span className="text-green-600 flex items-center gap-1">✅ Matched</span>
                                   ) : (
                                     <span className="text-red-600 flex items-center gap-1" title={row.error}>⚠️ Mismatch</span>
                                   )
+                                ) : row.status === 'NO_INVOICE' ? (
+                                  <span className="bg-yellow-200 text-yellow-800 px-1 border border-yellow-400">⚠️ Without Invoice</span>
                                 ) : (
-                                  <span className="text-slate-500">{row.error || 'Pending'}</span>
+                                  <span className="text-red-600 font-bold">{row.error || 'Pending'}</span>
+                                )}
+                              </td>
+                              <td className="border-r border-slate-400 p-0 relative">
+                                {row.status === 'NO_INVOICE' ? (
+                                  <SearchableDropdown
+                                    className="w-full bg-[#ffffe0] border border-orange-400 px-2 py-1 text-[11px] font-bold text-black focus:outline-none"
+                                    value={row.vendor_name || ''}
+                                    onChange={(v) => {
+                                      const newRows = [...lrRows];
+                                      newRows[index].vendor_name = v;
+                                      if (!vendors.find(vd => vd.name === v)) {
+                                          newRows[index].vendor_id = ''; 
+                                      }
+                                      setLrRows(newRows);
+                                    }}
+                                    onSelect={(opt) => {
+                                      const newRows = [...lrRows];
+                                      newRows[index].vendor_name = opt.name;
+                                      newRows[index].vendor_id = opt.id;
+                                      setLrRows(newRows);
+                                    }}
+                                    options={vendors}
+                                    displayKey="name"
+                                    placeholder="Select Party"
+                                    width="250px"
+                                  />
+                                ) : (
+                                  <div className="w-full h-full bg-slate-100 flex items-center px-2 text-slate-400 text-[11px]">
+                                    {row.status === 'MATCHED' ? 'Auto-linked' : '-'}
+                                  </div>
                                 )}
                               </td>
                               <td className="px-2 py-1 text-center">
@@ -478,7 +635,7 @@ export default function LRList() {
                       </table>
                       <div className="p-2 border-t border-black bg-[#f1f5f9]">
                         <button 
-                          onClick={() => setLrRows([...lrRows, { id: Date.now(), lr_no: '', received_bales: '', invoiced_bales: null, error: '' }])}
+                          onClick={() => setLrRows([...lrRows, { id: Date.now(), lr_no: '', received_bales: '', invoiced_bales: null, error: '', status: '', vendor_id: '' }])}
                           className="text-[#1b5e58] font-bold text-[12px] hover:underline"
                         >
                           + Add Another LR
@@ -577,6 +734,20 @@ export default function LRList() {
           <div className='font-medium tracking-wide'>LR Management</div>
         </div>
       </div>
+
+      {showHundekariModal && (
+        <HundekariModal 
+          isOpen={showHundekariModal} 
+          onClose={() => setShowHundekariModal(false)}
+          initialName={typeof formData.hundekari_name === 'string' && !uniqueHundekarisList.find((h:any) => h.name === formData.hundekari_name) ? formData.hundekari_name : ''}
+          locations={locations}
+          onSave={(newHundekari: any) => {
+            setHundekaris([...hundekaris, newHundekari]);
+            setFormData({ ...formData, hundekari_id: newHundekari.id, hundekari_name: newHundekari.name || newHundekari.hundekari_name });
+            setShowHundekariModal(false);
+          }}
+        />
+      )}
     </>
   );
 }

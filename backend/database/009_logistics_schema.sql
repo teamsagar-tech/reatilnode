@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS `Hundekari` (
 CREATE TABLE IF NOT EXISTS `Unlinked_LRs` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `firm_id` INT NOT NULL,
+  `vendor_id` INT NULL,
   `transporter_id` INT NOT NULL,
   `hundekari_id` INT NOT NULL,
   `lr_no` VARCHAR(100) NOT NULL,
@@ -40,5 +41,6 @@ CREATE TABLE IF NOT EXISTS `Unlinked_LRs` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `idx_firm_lrno` (`firm_id`, `lr_no`),
   CONSTRAINT `fk_lr_transporter` FOREIGN KEY (`transporter_id`) REFERENCES `Transporters` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `fk_lr_hundekari` FOREIGN KEY (`hundekari_id`) REFERENCES `Hundekari` (`id`) ON DELETE CASCADE
+  CONSTRAINT `fk_lr_hundekari` FOREIGN KEY (`hundekari_id`) REFERENCES `Hundekaris` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_lr_vendor` FOREIGN KEY (`vendor_id`) REFERENCES `Vendors` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

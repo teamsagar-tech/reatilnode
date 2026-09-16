@@ -1,0 +1,67 @@
+--- FrontEndV2/src/components/inventory/MasterCreationModal.tsx
++++ FrontEndV2/src/components/inventory/MasterCreationModal.tsx
+@@ -9,6 +9,9 @@
+   initialBrand?: string;
+   initialBrandId?: number | null;
+   parentId?: number | null;
++  editId?: number | string | null;
++  initialExtra2?: string;
++  initialExtra3?: string;
+ }
+ 
+ const InputRow = ({ label, value, onChange, placeholder = "", width = "flex-1", onKeyDown, onBlur, id }: any) => (
+@@ -38,7 +41,7 @@
+   </div>
+ );
+ 
+-export default function MasterCreationModal({ isOpen, onClose, onSave, masterType, initialValue = '', initialBrand, initialBrandId, parentId }: MasterCreationModalProps) {
++export default function MasterCreationModal({ isOpen, onClose, onSave, masterType, initialValue = '', initialBrand, initialBrandId, parentId, editId, initialExtra2, initialExtra3 }: MasterCreationModalProps) {
+   const [name, setName] = useState('');
+   const [extra1, setExtra1] = useState('');
+   const [extra2, setExtra2] = useState('');
+@@ -65,14 +68,15 @@
+     if (isOpen) {
+       setName(initialValue || '');
+       setExtra1(masterType === 'item' && initialBrand ? initialBrand : '');
+-      setExtra2('');
++      setExtra2(initialExtra2 || '');
++      setExtra3(initialExtra3 || '');
+       setHsnSuggestions([]);
+       setFocusedIndex(-1);
+       setTimeout(() => {
+         firstInputRef.current?.focus();
+       }, 100);
+     }
+-  }, [isOpen, masterType, initialValue, initialBrand]);
++  }, [isOpen, masterType, initialValue, initialBrand, initialExtra2, initialExtra3]);
+ 
+   const handleHsnChange = (val: string) => {
+     setExtra2(val);
+@@ -154,10 +158,16 @@
+     
+     let data: any = { name };
+     let endpoint = '';
++    let method = 'POST';
+     
+     if (masterType === 'item') {
+       const finalBrandId = extra1 === initialBrand ? initialBrandId : null;
+-      data = { name, brand: extra1, brand_id: finalBrandId, hsn: extra2 };
+-      endpoint = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/items`;
++      data = { name, brand: extra1, brand_id: finalBrandId, hsn: extra2, tax_percent: extra3 ? parseFloat(extra3) : 0 };
++      if (editId) {
++        endpoint = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/items/${editId}`;
++        method = 'PUT';
++      } else {
++        endpoint = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/items`;
++      }
+     } else if (masterType === 'hsn') {
+       data = { name, description: extra1, tax_percent: extra3 ? parseFloat(extra3) : 0 };
+@@ -183,7 +193,7 @@
+     try {
+       if (endpoint) {
+         const response = await fetch(endpoint, {
+-          method: 'POST',
++          method: method,
+           headers: {
+             'Content-Type': 'application/json',
+             'Authorization': `Bearer ${localStorage.getItem('token')}`

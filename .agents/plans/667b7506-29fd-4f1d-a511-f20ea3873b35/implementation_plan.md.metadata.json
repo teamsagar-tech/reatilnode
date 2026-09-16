@@ -1,6 +1,6 @@
 {
-  "summary": "Implementation plan for backend schema modifications and frontend payload mapping for Purchase Invoices to properly store Size Matrix data and Pre-Tax charges.",
-  "updatedAt": "2026-09-13T06:47:44.409942Z",
+  "summary": "Implementation plan to restore the MRP Markdown grid sequence, add Disc 2 % and Sale Rate columns, and fix the discount/subtotal calculation logic.",
+  "updatedAt": "2026-09-13T14:39:27.513418Z",
   "requestFeedback": true,
   "userFacing": true
 }

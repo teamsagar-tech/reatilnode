@@ -18,13 +18,13 @@ const SectionTitle = ({ children }: { children: React.ReactNode }) => (
 const InputRow = ({ label, value, onChange, placeholder = "", width = "flex-1", id }: any) => (
   <div className="flex items-center mb-[2px]">
     <div className="w-[110px] text-slate-800 font-bold text-[11px] text-right pr-2 leading-tight">{label}</div>
-    <input 
+    <input autoComplete="off"  
       id={id}
       className={`${width} bg-white border border-slate-400 px-1 py-[2px] text-[12px] font-bold text-black focus:bg-[#ffffe0] focus:outline-none focus:border-slate-800`}
       value={value} 
       onChange={(e) => onChange(e.target.value)} 
       placeholder={placeholder}
-      autoComplete="new-password"
+      autoComplete="off"
     />
   </div>
 );

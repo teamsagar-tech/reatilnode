@@ -1,0 +1,494 @@
+const db = require('../config/db');
+
+exports.getAll = async (req, res) => {
+  try {
+    const [rows] = await db.execute(`
+      SELECT p.*, v.name as vendor_name
+      FROM PurchaseInvoices p
+      LEFT JOIN Vendors v ON p.vendor_id = v.id
+      WHERE p.firm_id = ?
+      ORDER BY p.created_at DESC
+    `, [req.firm_id]);
+    res.json(rows);
+  } catch (error) {
+    console.error('Error fetching purchase invoices:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+exports.getLastRate = async (req, res) => {
+  const { vendor_id, item_id } = req.query;
+  if (!vendor_id || !item_id) return res.status(400).json({ error: 'vendor_id and item_id are required' });
+
+  try {
+    const [rows] = await db.execute(`
+      SELECT pii.purchase_rate 
+      FROM PurchaseInvoiceItems pii
+      JOIN PurchaseInvoices pi ON pii.invoice_id = pi.id
+      WHERE pi.vendor_id = ? AND pii.item_id = ? AND pi.firm_id = ?
+      ORDER BY pi.bill_date DESC 
+      LIMIT 1
+    `, [vendor_id, item_id, req.firm_id]);
+    
+    if (rows.length > 0) {
+      res.json({ last_rate: rows[0].purchase_rate });
+    } else {
+      res.json({ last_rate: null });
+    }
+  } catch (error) {
+    console.error('Error fetching last purchase rate:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+exports.getById = async (req, res) => {
+  const conn = await db.getConnection();
+  try {
+    // 1. Get Header
+    const [invoiceRows] = await conn.execute(`
+      SELECT p.*, v.name as vendor_name
+      FROM PurchaseInvoices p
+      LEFT JOIN Vendors v ON p.vendor_id = v.id
+      WHERE p.firm_id = ? AND p.id = ?
+    `, [req.firm_id, req.params.id]);
+
+    if (invoiceRows.length === 0) {
+      return res.status(404).json({ error: 'Invoice not found' });
+    }
+    const invoice = invoiceRows[0];
+
+    // 2. Get Items
+    const [items] = await conn.execute(`
+      SELECT pi.*, i.name as item_name, i.hsn_code, b.name as brand_name
+      FROM PurchaseInvoiceItems pi
+      LEFT JOIN Items i ON pi.item_id = i.id
+      LEFT JOIN Brands b ON pi.brand_id = b.id
+      WHERE pi.invoice_id = ?
+      ORDER BY pi.id ASC
+    `, [invoice.id]);
+
+    // 3. Get Attributes for Items
+    for (let item of items) {
+      const [attributes] = await conn.execute(`
+        SELECT pia.*, 
+          s.name as size_name, 
+          c.name as color_name, 
+          d.name as design_name
+        FROM PurchaseInvoiceItemAttributes pia
+        LEFT JOIN Sizes s ON pia.size_id = s.id
+        LEFT JOIN Colors c ON pia.color_id = c.id
+        LEFT JOIN Styles d ON pia.design_id = d.id
+        WHERE pia.invoice_item_id = ?
+        ORDER BY pia.id ASC
+      `, [item.id]);
+      item.attributes = attributes;
+    }
+
+    invoice.items = items;
+    res.json(invoice);
+  } catch (error) {
+    console.error('Error fetching purchase invoice:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  } finally {
+    conn.release();
+  }
+};
+
+exports.checkBulk = async (req, res) => {
+  const { invoices } = req.body;
+  if (!invoices || !Array.isArray(invoices)) return res.json({ existing: [] });
+  
+  const conn = await db.getConnection();
+  try {
+    const existing = [];
+    for (const inv of invoices) {
+       if (inv.vendor_id && inv.bill_no) {
+           const [rows] = await conn.execute(
+               'SELECT id FROM PurchaseInvoices WHERE firm_id = ? AND vendor_id = ? AND bill_no = ?', 
+               [req.firm_id, inv.vendor_id, inv.bill_no]
+           );
+           if (rows.length > 0) {
+               existing.push({ vendor_id: inv.vendor_id, bill_no: inv.bill_no });
+           }
+       }
+    }
+    res.json({ existing });
+  } catch(e) {
+      console.error(e);
+      res.status(500).json({ error: 'Internal server error' });
+  } finally {
+      conn.release();
+  }
+};
+
+// Helper to generate GRN dynamically
+async function generateGRN(conn, firm_id) {
+  // 1. Fetch Firm Settings
+  const [firms] = await conn.execute('SELECT settings FROM Firms WHERE id = ?', [firm_id]);
+  const settings = firms[0]?.settings || {};
+  const template = settings.grn_template || 'GRN-{{SEQ}}'; // default template
+
+  // 2. Fetch the latest GRN sequence for this firm
+  const [latest] = await conn.execute(
+    'SELECT grn_no FROM PurchaseInvoices WHERE firm_id = ? ORDER BY id DESC LIMIT 1', 
+    [firm_id]
+  );
+  
+  let nextSeq = 1;
+  if (latest.length > 0 && latest[0].grn_no) {
+    // Extract the numeric part at the end of the GRN
+    const match = latest[0].grn_no.match(/(\d+)$/);
+    if (match) {
+      nextSeq = parseInt(match[1], 10) + 1;
+    }
+  }
+
+  const seqStr = String(nextSeq).padStart(4, '0');
+  
+  // Replace tokens
+  let grn = template.replace('{{SEQ}}', seqStr);
+  
+  // Add more dynamic logic like FY, MM, DD if needed by the template
+  const date = new Date();
+  grn = grn.replace('{{YYYY}}', date.getFullYear());
+  grn = grn.replace('{{MM}}', String(date.getMonth() + 1).padStart(2, '0'));
+  grn = grn.replace('{{DD}}', String(date.getDate()).padStart(2, '0'));
+
+  return grn;
+}
+
+exports.create = async (req, res) => {
+  const { vendor_id, bill_no, bill_date, receive_date, total_amount, gst_amount, net_amount, discount_percent, discount_amount, commission_percent, commission_amount, narration, items, lr_no, transporter, bales, freight, insurance, packing_charges } = req.body;
+  
+  if (!vendor_id) return res.status(400).json({ error: 'Vendor is required' });
+  if (!items || !Array.isArray(items) || items.length === 0) {
+    return res.status(400).json({ error: 'At least one item is required' });
+  }
+
+  const conn = await db.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    if (bill_no) {
+      const [existing] = await conn.execute(
+        `SELECT id FROM PurchaseInvoices WHERE firm_id = ? AND vendor_id = ? AND bill_no = ?`,
+        [req.firm_id, vendor_id, bill_no]
+      );
+      if (existing.length > 0) {
+        await conn.rollback();
+        return res.status(409).json({ error: `An invoice with Bill No "${bill_no}" already exists for this party.` });
+      }
+    }
+
+    // 1. Generate GRN dynamically
+    const grn_no = await generateGRN(conn, req.firm_id);
+    const created_by = req.user?.id || null;
+    const ip_address = req.headers['x-forwarded-for'] || req.socket.remoteAddress || null;
+
+    const lr_status = 'LR PENDING';
+
+    // 2. Insert Header
+    const [invoiceResult] = await conn.execute(
+      `INSERT INTO PurchaseInvoices 
+       (firm_id, grn_no, vendor_id, bill_no, bill_date, receive_date, discount_percent, discount_amount, commission_percent, commission_amount, total_amount, gst_amount, net_amount, narration, lr_status, purchase_order_id, lr_no, transporter, bales, freight, insurance, packing_charges, created_by, ip_address) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [req.firm_id, grn_no, vendor_id, bill_no || null, bill_date || null, receive_date || new Date(), discount_percent || 0, discount_amount || 0, commission_percent || 0, commission_amount || 0, total_amount || 0, gst_amount || 0, net_amount || 0, narration || null, lr_status, req.body.purchase_order_id || null, lr_no || null, transporter || null, bales || null, freight || 0, insurance || 0, packing_charges || 0, created_by, ip_address]
+    );
+    const invoiceId = invoiceResult.insertId;
+
+    // Post to Vendor Ledger (Credit Amount)
+    if (net_amount && net_amount > 0) {
+      // Get current balance
+      const [vendorRows] = await conn.execute('SELECT current_balance FROM Vendors WHERE id = ?', [vendor_id]);
+      const current_balance = vendorRows[0]?.current_balance || 0;
+      const new_balance = Number(current_balance) + Number(net_amount);
+
+      await conn.execute(
+        `INSERT INTO PartyLedgers 
+         (firm_id, party_type, party_id, transaction_date, voucher_type, voucher_no, credit_amount, running_balance, created_by_user_id) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [req.firm_id, 'Vendor', vendor_id, receive_date || new Date(), 'Purchase Invoice', grn_no, net_amount, new_balance, created_by]
+      );
+
+      await conn.execute('UPDATE Vendors SET current_balance = ? WHERE id = ?', [new_balance, vendor_id]);
+    }
+    
+    // Fulfill Purchase Order
+    if (req.body.purchase_order_id) {
+       await conn.execute(
+         'UPDATE PurchaseOrders SET status = "Fulfilled" WHERE id = ? AND firm_id = ?', 
+         [req.body.purchase_order_id, req.firm_id]
+       );
+    }
+
+    // 2. Insert Items & Attributes
+    for (let item of items) {
+      const [itemResult] = await conn.execute(
+        `INSERT INTO PurchaseInvoiceItems 
+         (invoice_id, item_id, category_id, brand_id, purchase_rate, mrp, total_qty, gst_percent, gst_amount, total_amount, size_group_id) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [invoiceId, item.item_id, item.category_id || null, item.brand_id || null, item.purchase_rate || 0, item.mrp || 0, item.total_qty || 0, item.gst_percent || 0, item.gst_amount || 0, item.total_amount || 0, item.size_group_id || null]
+      );
+      const itemId = itemResult.insertId;
+
+      // 3. Insert Attributes Breakup (if any)
+      if (item.attributes && Array.isArray(item.attributes) && item.attributes.length > 0) {
+        for (let attr of item.attributes) {
+          // generate a unique barcode here if not provided
+          let barcode = attr.barcode || `${invoiceId}-${itemId}-${Date.now() % 100000}`;
+          
+          await conn.execute(
+            `INSERT INTO PurchaseInvoiceItemAttributes 
+             (invoice_item_id, size_id, color_id, design_id, qty, barcode) 
+             VALUES (?, ?, ?, ?, ?, ?)`,
+            [itemId, attr.size_id || null, attr.color_id || null, attr.design_id || null, attr.qty || 0, barcode]
+          );
+        }
+      } else if (item.matrixData && Array.isArray(item.matrixData) && item.matrixData.length > 0) {
+        // Handle Size Matrix Data
+        for (let matrixRow of item.matrixData) {
+          let barcode = `${invoiceId}-${itemId}-${Date.now() % 100000}`;
+          
+          let sizeId = null;
+          if (matrixRow.size) {
+            const [sizeRows] = await conn.execute('SELECT id FROM Sizes WHERE firm_id = ? AND name = ?', [req.firm_id, matrixRow.size.trim()]);
+            if (sizeRows.length > 0) sizeId = sizeRows[0].id;
+          }
+
+          // matrixRow contains { size, qty, rate, mrp }
+          await conn.execute(
+            `INSERT INTO PurchaseInvoiceItemAttributes 
+             (invoice_item_id, size_id, qty, barcode, purchase_rate, mrp) 
+             VALUES (?, ?, ?, ?, ?, ?)`,
+            [itemId, sizeId, matrixRow.qty || 0, barcode, matrixRow.rate || null, matrixRow.mrp || null]
+          );
+        }
+      } else {
+        let designId = null, colorId = null, sizeId = null;
+        if (item.design) {
+           const [rows] = await conn.execute('SELECT id FROM Styles WHERE firm_id = ? AND name = ?', [req.firm_id, item.design]);
+           if (rows.length > 0) designId = rows[0].id;
+        }
+        if (item.colour) {
+           const [rows] = await conn.execute('SELECT id FROM Colors WHERE firm_id = ? AND name = ?', [req.firm_id, item.colour]);
+           if (rows.length > 0) colorId = rows[0].id;
+        }
+        if (item.size) {
+           const [rows] = await conn.execute('SELECT id FROM Sizes WHERE firm_id = ? AND name = ?', [req.firm_id, item.size]);
+           if (rows.length > 0) sizeId = rows[0].id;
+        }
+        let barcode = item.barcode || `${invoiceId}-${itemId}-${Date.now() % 100000}`;
+        await conn.execute(
+            `INSERT INTO PurchaseInvoiceItemAttributes 
+             (invoice_item_id, size_id, color_id, design_id, qty, barcode, purchase_rate, mrp) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            [itemId, sizeId, colorId, designId, item.total_qty || 0, barcode, item.purchase_rate || null, item.mrp || null]
+        );
+      }
+    }
+
+    await conn.commit();
+    res.status(201).json({ message: 'Purchase Invoice created successfully', id: invoiceId, grn_no });
+  } catch (error) {
+    await conn.rollback();
+    console.error('Error creating purchase invoice:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  } finally {
+    conn.release();
+  }
+};
+
+exports.delete = async (req, res) => {
+  const conn = await db.getConnection();
+  try {
+    await conn.beginTransaction();
+    
+    // Deleting the invoice will cascade and delete items & attributes if foreign keys have ON DELETE CASCADE
+    // But we manually ensure it is from the correct firm
+    const [result] = await conn.execute('DELETE FROM PurchaseInvoices WHERE id = ? AND firm_id = ?', [req.params.id, req.firm_id]);
+    
+    if (result.affectedRows === 0) {
+      await conn.rollback();
+      return res.status(404).json({ error: 'Invoice not found' });
+    }
+
+    await conn.commit();
+    res.json({ message: 'Purchase Invoice deleted successfully' });
+  } catch (error) {
+    await conn.rollback();
+    console.error('Error deleting purchase invoice:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  } finally {
+    conn.release();
+  }
+};
+
+exports.update = async (req, res) => {
+  const { id } = req.params;
+  const { vendor_id, bill_no, bill_date, receive_date, total_amount, gst_amount, net_amount, discount_percent, discount_amount, commission_percent, commission_amount, narration, items, lr_no, transporter, bales } = req.body;
+  
+  if (!vendor_id) return res.status(400).json({ error: 'Vendor is required' });
+  if (!items || !Array.isArray(items) || items.length === 0) {
+    return res.status(400).json({ error: 'At least one item is required' });
+  }
+
+  const conn = await db.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    // Fetch existing invoice
+    const [existingInvoiceRows] = await conn.execute(
+      'SELECT id, grn_no, net_amount, vendor_id FROM PurchaseInvoices WHERE id = ? AND firm_id = ?',
+      [id, req.firm_id]
+    );
+    if (existingInvoiceRows.length === 0) {
+      await conn.rollback();
+      return res.status(404).json({ error: 'Invoice not found' });
+    }
+    const oldInvoice = existingInvoiceRows[0];
+    const { freight, insurance, packing_charges } = req.body;
+
+    if (bill_no) {
+      const [existingBill] = await conn.execute(
+        `SELECT id FROM PurchaseInvoices WHERE firm_id = ? AND vendor_id = ? AND bill_no = ? AND id != ?`,
+        [req.firm_id, vendor_id, bill_no, id]
+      );
+      if (existingBill.length > 0) {
+        await conn.rollback();
+        return res.status(409).json({ error: `An invoice with Bill No "${bill_no}" already exists for this party.` });
+      }
+    }
+
+    // Adjust Vendor Balance
+    if (oldInvoice.vendor_id === vendor_id) {
+      // Same vendor
+      const diff = Number(net_amount || 0) - Number(oldInvoice.net_amount || 0);
+      if (diff !== 0) {
+        await conn.execute('UPDATE Vendors SET current_balance = current_balance + ? WHERE id = ?', [diff, vendor_id]);
+        await conn.execute(
+          'UPDATE PartyLedgers SET credit_amount = ?, transaction_date = ? WHERE voucher_type = "Purchase Invoice" AND voucher_no = ? AND firm_id = ?',
+          [net_amount || 0, receive_date || new Date(), oldInvoice.grn_no, req.firm_id]
+        );
+      }
+    } else {
+      // Vendor changed, remove from old, add to new
+      await conn.execute('UPDATE Vendors SET current_balance = current_balance - ? WHERE id = ?', [oldInvoice.net_amount || 0, oldInvoice.vendor_id]);
+      await conn.execute('UPDATE Vendors SET current_balance = current_balance + ? WHERE id = ?', [net_amount || 0, vendor_id]);
+      await conn.execute(
+        'UPDATE PartyLedgers SET party_id = ?, credit_amount = ?, transaction_date = ? WHERE voucher_type = "Purchase Invoice" AND voucher_no = ? AND firm_id = ?',
+        [vendor_id, net_amount || 0, receive_date || new Date(), oldInvoice.grn_no, req.firm_id]
+      );
+    }
+
+    // Update Header
+    await conn.execute(
+      `UPDATE PurchaseInvoices 
+       SET vendor_id=?, bill_no=?, bill_date=?, receive_date=?, discount_percent=?, discount_amount=?, commission_percent=?, commission_amount=?, total_amount=?, gst_amount=?, net_amount=?, narration=?, purchase_order_id=?, lr_no=?, transporter=?, bales=?, freight=?, insurance=?, packing_charges=?, ip_address=?
+       WHERE id=? AND firm_id=?`,
+      [vendor_id, bill_no || null, bill_date || null, receive_date || new Date(), discount_percent || 0, discount_amount || 0, commission_percent || 0, commission_amount || 0, total_amount || 0, gst_amount || 0, net_amount || 0, narration || null, req.body.purchase_order_id || null, lr_no || null, transporter || null, bales || null, freight || 0, insurance || 0, packing_charges || 0, req.headers['x-forwarded-for'] || req.socket.remoteAddress || null, id, req.firm_id]
+    );
+
+    // Delete old items (attributes will cascade if set, otherwise we should manually delete attributes first)
+    // To be safe, delete attributes first
+    await conn.execute(
+      `DELETE FROM PurchaseInvoiceItemAttributes WHERE invoice_item_id IN (SELECT id FROM PurchaseInvoiceItems WHERE invoice_id = ?)`,
+      [id]
+    );
+    await conn.execute('DELETE FROM PurchaseInvoiceItems WHERE invoice_id = ?', [id]);
+
+    // Insert Items & Attributes
+    for (let item of items) {
+      const [itemResult] = await conn.execute(
+        `INSERT INTO PurchaseInvoiceItems 
+         (invoice_id, item_id, category_id, brand_id, purchase_rate, mrp, total_qty, gst_percent, gst_amount, total_amount, size_group_id) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [id, item.item_id, item.category_id || null, item.brand_id || null, item.purchase_rate || 0, item.mrp || 0, item.total_qty || 0, item.gst_percent || 0, item.gst_amount || 0, item.total_amount || 0, item.size_group_id || null]
+      );
+      const itemId = itemResult.insertId;
+
+      if (item.attributes && Array.isArray(item.attributes) && item.attributes.length > 0) {
+        for (let attr of item.attributes) {
+          let barcode = attr.barcode || `${id}-${itemId}-${Date.now() % 100000}`;
+          await conn.execute(
+            `INSERT INTO PurchaseInvoiceItemAttributes 
+             (invoice_item_id, size_id, color_id, design_id, qty, barcode) 
+             VALUES (?, ?, ?, ?, ?, ?)`,
+            [itemId, attr.size_id || null, attr.color_id || null, attr.design_id || null, attr.qty || 0, barcode]
+          );
+        }
+      } else if (item.matrixData && Array.isArray(item.matrixData) && item.matrixData.length > 0) {
+        for (let matrixRow of item.matrixData) {
+          let barcode = `${id}-${itemId}-${Date.now() % 100000}`;
+          
+          let sizeId = null;
+          if (matrixRow.size) {
+            const [sizeRows] = await conn.execute('SELECT id FROM Sizes WHERE firm_id = ? AND name = ?', [req.firm_id, matrixRow.size.trim()]);
+            if (sizeRows.length > 0) sizeId = sizeRows[0].id;
+          }
+
+          await conn.execute(
+            `INSERT INTO PurchaseInvoiceItemAttributes 
+             (invoice_item_id, size_id, qty, barcode, purchase_rate, mrp) 
+             VALUES (?, ?, ?, ?, ?, ?)`,
+            [itemId, sizeId, matrixRow.qty || 0, barcode, matrixRow.rate || null, matrixRow.mrp || null]
+          );
+        }
+      } else {
+        let designId = null, colorId = null, sizeId = null;
+        if (item.design) {
+           const [rows] = await conn.execute('SELECT id FROM Styles WHERE firm_id = ? AND name = ?', [req.firm_id, item.design]);
+           if (rows.length > 0) designId = rows[0].id;
+        }
+        if (item.colour) {
+           const [rows] = await conn.execute('SELECT id FROM Colors WHERE firm_id = ? AND name = ?', [req.firm_id, item.colour]);
+           if (rows.length > 0) colorId = rows[0].id;
+        }
+        if (item.size) {
+           const [rows] = await conn.execute('SELECT id FROM Sizes WHERE firm_id = ? AND name = ?', [req.firm_id, item.size]);
+           if (rows.length > 0) sizeId = rows[0].id;
+        }
+        let barcode = item.barcode || `${id}-${itemId}-${Date.now() % 100000}`;
+        await conn.execute(
+            `INSERT INTO PurchaseInvoiceItemAttributes 
+             (invoice_item_id, size_id, color_id, design_id, qty, barcode, purchase_rate, mrp) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            [itemId, sizeId, colorId, designId, item.total_qty || 0, barcode, item.purchase_rate || null, item.mrp || null]
+        );
+      }
+    }
+
+    await conn.commit();
+    res.json({ message: 'Purchase Invoice updated successfully', id, grn_no: oldInvoice.grn_no });
+  } catch (error) {
+    await conn.rollback();
+    console.error('Error updating purchase invoice:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  } finally {
+    conn.release();
+  }
+};
+
+exports.checkLR = async (req, res) => {
+  const { transporter_id, lr_no } = req.query;
+  const firm_id = req.firm_id;
+
+  if (!transporter_id || !lr_no) {
+    return res.status(400).json({ error: 'Missing transporter_id or lr_no' });
+  }
+
+  try {
+    const [rows] = await db.execute(
+      'SELECT id, bill_no FROM PurchaseInvoices WHERE firm_id = ? AND transporter_id = ? AND lr_no = ?',
+      [firm_id, transporter_id, lr_no]
+    );
+
+    if (rows.length > 0) {
+      res.json({ exists: true, invoice_number: rows[0].bill_no });
+    } else {
+      res.json({ exists: false });
+    }
+  } catch (error) {
+    console.error('Error checking LR No:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};

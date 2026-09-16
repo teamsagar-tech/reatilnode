@@ -1,0 +1,159 @@
+import React, { useState, useEffect } from 'react';
+import { X } from 'lucide-react';
+
+interface HundekariModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: (newHundekari: any) => void;
+  initialName?: string;
+  locations?: any[];
+}
+
+const SectionTitle = ({ children }: { children: React.ReactNode }) => (
+  <div className="bg-[#eef5ed] text-[#1b5e58] font-bold text-[11px] px-2 py-1 mb-1 border-b border-[#a3c3be] shadow-[inset_1px_1px_0_rgba(255,255,255,0.8)]">
+    {children}
+  </div>
+);
+
+const InputRow = ({ label, value, onChange, placeholder = "", width = "flex-1", id }: any) => (
+  <div className="flex items-center mb-[2px]">
+    <div className="w-[110px] text-slate-800 font-bold text-[11px] text-right pr-2 leading-tight">{label}</div>
+    <input autoComplete="off"  
+      id={id}
+      className={`${width} bg-white border border-slate-400 px-1 py-[2px] text-[12px] font-bold text-black focus:bg-[#ffffe0] focus:outline-none focus:border-slate-800`}
+      value={value} 
+      onChange={(e) => onChange(e.target.value)} 
+      placeholder={placeholder}
+    />
+  </div>
+);
+
+export default function HundekariModal({ isOpen, onClose, onSave, initialName = '', locations = [] }: HundekariModalProps) {
+  const [formData, setFormData] = useState({
+    hundekari_name: initialName,
+    mobile: '',
+    email: '',
+    rate_per_bale: '',
+    location_id: ''
+  });
+
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      setFormData({
+        hundekari_name: initialName || '',
+        mobile: '',
+        email: '',
+        rate_per_bale: '',
+        location_id: ''
+      });
+      setTimeout(() => document.getElementById('input-hundekariName')?.focus(), 100);
+    }
+  }, [isOpen, initialName]);
+
+  const handleKeyDown = (e: KeyboardEvent) => {
+    if (isOpen && e.key === 'Escape') {
+      e.preventDefault();
+      onClose();
+    }
+  };
+
+  useEffect(() => {
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen]);
+
+  const handleSave = async () => {
+    if (!formData.hundekari_name) {
+      alert("Hundekari Name is required");
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      const token = sessionStorage.getItem('token') || localStorage.getItem('token');
+      
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/logistics/hundekari`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(formData)
+      });
+      
+      const data = await res.json();
+      if (data.success) {
+        onSave({
+          id: data.insertId || data.data?.id || Math.random(),
+          hundekari_name: formData.hundekari_name,
+          name: formData.hundekari_name,
+          mobile: formData.mobile,
+          email: formData.email,
+          rate_per_bale: formData.rate_per_bale,
+          location_id: formData.location_id
+        });
+      } else {
+        alert(data.message || "Failed to create Hundekari");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error saving Hundekari");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[9999]">
+      <div className="bg-[#fcfaf2] border-2 border-[#81a09d] flex flex-col shadow-2xl w-[400px]">
+        {/* Header */}
+        <div className="bg-[#1b5e58] text-white font-bold px-2 py-1 flex justify-between items-center">
+          <div>Create New Hundekari</div>
+          <button onClick={onClose} className="hover:text-red-300">
+            <X size={16} />
+          </button>
+        </div>
+        
+        {/* Body */}
+        <div className="p-2 bg-[#f4f7f4] flex-1">
+          <SectionTitle>Basic Info</SectionTitle>
+          <div className="bg-white border border-[#a3c3be] p-2 mb-2 shadow-sm">
+            <InputRow id="input-hundekariName" label="Hundekari Name" value={formData.hundekari_name} onChange={(v: string) => setFormData({...formData, hundekari_name: v})} />
+            <InputRow label="Mobile" value={formData.mobile} onChange={(v: string) => setFormData({...formData, mobile: v})} />
+            <InputRow label="Email" value={formData.email} onChange={(v: string) => setFormData({...formData, email: v})} />
+            
+            <div className="flex items-center mb-[2px]">
+              <div className="w-[110px] text-slate-800 font-bold text-[11px] text-right pr-2 leading-tight">Location</div>
+              <select
+                className="flex-1 bg-white border border-slate-400 px-1 py-[2px] text-[12px] font-bold text-black focus:bg-[#ffffe0] focus:outline-none focus:border-slate-800"
+                value={formData.location_id}
+                onChange={(e) => setFormData({...formData, location_id: e.target.value})}
+              >
+                <option value="">Select Location</option>
+                {locations.map((loc: any) => (
+                  <option key={loc.id} value={loc.id}>{loc.name || loc.location_name}</option>
+                ))}
+              </select>
+            </div>
+            
+            <InputRow label="Rate Per Bale" value={formData.rate_per_bale} onChange={(v: string) => setFormData({...formData, rate_per_bale: v})} />
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="bg-[#eef5ed] border-t border-[#a3c3be] px-2 py-1 flex justify-end gap-2">
+          <button onClick={onClose} tabIndex={-1} className="bg-slate-200 border border-slate-400 px-4 py-1 text-xs font-bold text-slate-700 hover:bg-slate-300">
+            Cancel
+          </button>
+          <button onClick={handleSave} disabled={loading} className="bg-[#1b5e58] border border-[#12423d] px-4 py-1 text-xs font-bold text-white hover:bg-[#12423d] disabled:opacity-50">
+            {loading ? 'Saving...' : 'Save'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

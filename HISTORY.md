@@ -327,3 +327,32 @@ These refinements transform the CSV import from a basic shell to a highly reliab
 - **Frontend:** Created a standalone `OCRTest.tsx` UI under `Inventory > Advanced > OCR Prototype` allowing users to upload an image and compare raw Tesseract text against the heuristically parsed table.
 - **Live Server:** Installed `tesseract-ocr`, `pytesseract`, and `Pillow` via apt/pip on the production server to enable the Python subprocess.
 **State:** Currently testing viability of local OCR for complex tabular extraction.
+
+### Fixed Purchase Invoice Item Rendering & Scrollability (2026-09-16)
+- **Rationale:** The `PurchaseInvoice` item grid was truncating large item lists (e.g., 19+ items) and restricting the user from scrolling down to view them, which was particularly critical in "View Mode".
+- **Current State:** 
+  - Restructured the CSS flex hierarchy within the table wrapper in `PurchaseInvoice.tsx`. Removed `flex flex-col` from the table wrapper to prevent the `<table />` from erroneously squishing to fit the container bounds, allowing its height to natively expand and trigger the CSS overflow parameters.
+  - Implemented `.readonly-mode` in `index.css` to gracefully enforce "View Mode" by targeting `input`, `select`, `textarea`, and `.voucher-action-btn` specifically, rather than using `pointer-events-none` on the root layout container (which inadvertently disabled mouse wheel and scrollbar tracking).
+  - Added custom `.custom-scroll` CSS for reliable scrollbar rendering across browsers for master layout grids.
+
+## [2026-09-16] Logistics & LR Management Enhancements
+
+### Features & Updates
+- **Hundekari Integration**:
+  - Separated `Hundekaris` into a dedicated database table instead of mixing them into the `Parties` master.
+  - Linked `Hundekaris` to the `Location` in the UI (Inward Location). 
+- **Transporter & Hundekari UX Fixes**:
+  - Resolved duplicate entries (e.g., VRL) appearing in Transporter dropdowns by implementing a case-insensitive deduplication map in the frontend.
+  - Fixed state bugs to accurately store ID vs. Name mappings for logistics dropdowns to ensure the database relations don't break.
+- **Smart LR No Suggestions**:
+  - Upgraded the `LR No` field to a `SearchableDropdown`.
+  - Dynamically fetches `pendingLRsForTransporter` and filters based on the selected Transporter.
+  - Already-selected LRs in the batch grid are automatically excluded from subsequent row suggestions.
+- **LR Selection Auto-fill**:
+  - Selecting an LR instantly auto-fills `Received Bales` and `Invoiced Bales` directly from the suggestion object.
+  - The row immediately marks as `MATCHED` (Auto-linked) synchronously, bypassing the need for an onBlur verify request.
+  - LR dropdown suggestions concisely display the `Bales` alongside the `LR No`.
+- **Party Dropdown for Unlinked LRs**:
+  - Upgraded the `Party (If No Invoice)` column to a `SearchableDropdown` for easy textual searching of vendors when manually entering LRs.
+- **UX Caching**:
+  - Added browser-side caching for the `Inward Location` using `localStorage`, defaulting to the user's last selection on reload.

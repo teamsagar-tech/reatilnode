@@ -32,3 +32,17 @@
 - **Primary Modules:** `masters`, `inventory`, `sales`, `purchase`, `logistics`.
 - **Submodules:** Typically `basic` and `advance`, or categorized (e.g., `inventory`, `accounting`, `config` inside `masters`).
 - If you add a new page (e.g. `Tax Config`), you MUST add it to `AVAILABLE_MODULES` (e.g. inside `masters -> config`) so that the Superadmin can grant/revoke access to it for tenant firms.
+
+## 7. Refactoring & Code Modification Golden Rule
+- **Rule:** If the user requests a new feature to be added, DO NOT remove or overwrite existing logic or functionality without explicitly asking first.
+- **Rule:** If you find existing code that might conflict with the new feature, ALWAYS ask the user before removing it. Do NOT directly remove existing code on an assumption. Either keep it, or ask the user if it should be removed or modified.
+
+## 8. Pre-Refactor Safeguards
+- **Rule:** Before modifying any core file or undertaking significant UI layout refactoring, the agent MUST run `git diff` to check for uncommitted local changes.
+- **Rule:** If uncommitted changes exist, the agent MUST explicitly ask the user for permission or ask the user to commit their work before proceeding with the refactor.
+- **Rule:** ONLY USE SURGICAL EDITS, NO BULK OVERWRITES. Avoid using bulk string replacements (e.g. replacing massive blocks of HTML at once) or blindly restoring from cached snapshots. ALWAYS explicitly read the live file content immediately before modifying it to preserve uncommitted local changes, and use surgical replacements (e.g. `multi_replace_file_content`).
+
+## 9. Amount & Decimal Formatting
+- **Rule:** For all financial fields (MRP, Rate, Sale Rate, Discount Percent, GST, Amount, etc.), values must be formatted to 2 decimal places (e.g., `450.00`) when the field loses focus (`onBlur`).
+- **Rule:** Users must be able to type naturally without decimals being forced during `onChange`.
+- **Rule:** Never show a default value of `0` or `0.00` in input fields. If a value evaluates to `0`, the input must display as an empty string (`''`) so the UI looks clean.

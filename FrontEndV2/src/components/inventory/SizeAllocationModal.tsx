@@ -11,15 +11,16 @@ interface SizeAllocationModalProps {
   brandId?: string | number;
   initialSizeSet?: string;
   expectedTotalQty?: number | null;
+  initialMatrixData?: any[];
 }
 
-export default function SizeAllocationModal({ isOpen, onClose, onSave, itemName, brandId, initialSizeSet, expectedTotalQty }: SizeAllocationModalProps) {
+export default function SizeAllocationModal({ isOpen, onClose, onSave, itemName, brandId, initialSizeSet, expectedTotalQty, initialMatrixData }: SizeAllocationModalProps) {
   const [sizeGroups, setSizeGroups] = useState<any[]>([]);
   const [selectedGroupId, setSelectedGroupId] = useState('');
   const [baseRate, setBaseRate] = useState('');
-  const [rateStep, setRateStep] = useState('0');
+  const [rateStep, setRateStep] = useState('');
   const [baseMrp, setBaseMrp] = useState('');
-  const [mrpStep, setMrpStep] = useState('0');
+  const [mrpStep, setMrpStep] = useState('');
   
   const [matrixData, setMatrixData] = useState<any[]>([]);
   const firstInputRef = useRef<HTMLInputElement>(null);
@@ -42,10 +43,23 @@ export default function SizeAllocationModal({ isOpen, onClose, onSave, itemName,
           if (match) {
             setSelectedGroupId(match.id.toString());
             setSearchText(match.name);
-            // Need a slight timeout to ensure state is set if generateGrid uses state (but it doesn't anymore)
             setTimeout(() => {
-              generateGrid(match, '', '0', '', '0', 'base-rate');
-            }, 0);
+              if (initialMatrixData && initialMatrixData.length > 0) {
+                 document.getElementById('base-rate-input')?.focus();
+              } else {
+                 generateGrid(match, '', '', '', '', 'base-rate');
+              }
+            }, 100);
+          } else {
+            setSearchText(initialSizeSet);
+            setSelectedGroupId('');
+            setTimeout(() => {
+              if (initialMatrixData && initialMatrixData.length > 0) {
+                 document.getElementById('base-rate-input')?.focus();
+              } else {
+                 generateGrid({ name: initialSizeSet }, '', '', '', '', 'base-rate');
+              }
+            }, 100);
           }
         }
       }
@@ -60,13 +74,34 @@ export default function SizeAllocationModal({ isOpen, onClose, onSave, itemName,
       // Reset state
       setSelectedGroupId('');
       setSearchText('');
-      setBaseRate('');
-      setRateStep('0');
-      setBaseMrp('');
-      setMrpStep('0');
-      setMatrixData([]);
+      if (initialMatrixData && initialMatrixData.length > 0) { 
+        setMatrixData(initialMatrixData);
+        setBaseRate(initialMatrixData[0].rate || '');
+        setBaseMrp(initialMatrixData[0].mrp || '');
+        if (initialMatrixData.length > 1) {
+          const r0 = parseFloat(initialMatrixData[0].rate) || 0;
+          const r1 = parseFloat(initialMatrixData[1].rate) || 0;
+          setRateStep(r1 - r0 !== 0 ? (r1 - r0).toString() : '');
+          const m0 = parseFloat(initialMatrixData[0].mrp) || 0;
+          const m1 = parseFloat(initialMatrixData[1].mrp) || 0;
+          setMrpStep(m1 - m0 !== 0 ? (m1 - m0).toString() : '');
+        } else {
+          setRateStep('');
+          setMrpStep('');
+        }
+      } else { 
+        setMatrixData([]); 
+        setBaseRate('');
+        setRateStep('');
+        setBaseMrp('');
+        setMrpStep('');
+      }
 
       fetchSizeGroups();
+      
+      setTimeout(() => {
+        document.getElementById('base-rate-input')?.focus();
+      }, 200);
     }
   }, [isOpen, brandId, initialSizeSet]);
 
@@ -104,11 +139,34 @@ export default function SizeAllocationModal({ isOpen, onClose, onSave, itemName,
     const mrpS = parseFloat(mStep) || 0;
 
     setMatrixData(prev => {
+      // Check if we already have non-empty quantities in this size set
+      const hasAnyExistingQty = sizesArray.some(s => {
+        const existing = prev?.find(m => m.size === s.trim());
+        return existing && existing.qty && parseFloat(existing.qty) > 0;
+      });
+
+      let baseQty = 0;
+      let remainderQty = 0;
+      
+      if (!hasAnyExistingQty && expectedTotalQty && expectedTotalQty > 0 && sizesArray.length > 0) {
+        baseQty = Math.floor(expectedTotalQty / sizesArray.length);
+        remainderQty = expectedTotalQty % sizesArray.length;
+      }
+
       return sizesArray.map((size: string, index: number) => {
         const existing = prev?.find(m => m.size === size.trim());
+        let assignedQty = existing ? existing.qty : '';
+        
+        if (!hasAnyExistingQty && expectedTotalQty && expectedTotalQty > 0) {
+           const qtyForThisSize = baseQty + (index < remainderQty ? 1 : 0);
+           if (qtyForThisSize > 0) {
+               assignedQty = qtyForThisSize.toString();
+           }
+        }
+        
         return {
           size: size.trim(),
-          qty: existing ? existing.qty : '',
+          qty: assignedQty,
           rate: baseR + (rateS * index),
           mrp: baseM + (mrpS * index),
         };
@@ -126,38 +184,71 @@ export default function SizeAllocationModal({ isOpen, onClose, onSave, itemName,
     }
   };
 
-  useEffect(() => {
-    if (selectedGroupId && sizeGroups.length > 0) {
-      const group = sizeGroups.find(g => g.id.toString() === selectedGroupId.toString());
-      if (group && (group.sizes_list || group.sizes)) {
-        generateGrid(group, baseRate, rateStep, baseMrp, mrpStep, 'none');
-      }
-    }
-  }, [baseRate, rateStep, baseMrp, mrpStep, selectedGroupId]);
-
-  const handleGenerateGrid = () => {
-    if (!selectedGroupId) {
-      if (searchText.trim() !== '') {
-        setShowMasterModal(true);
-      } else {
-        alert('Please select a size set first.');
-      }
-      return;
-    }
-    
-    const group = sizeGroups.find(g => g.id.toString() === selectedGroupId.toString());
-    if (!group || (!group.sizes_list && !group.sizes)) return;
-
-    generateGrid(group, baseRate, rateStep, baseMrp, mrpStep, 'first-qty');
-  };
-
+  
   const handleQtyChange = (index: number, value: string) => {
     const updated = [...matrixData];
     updated[index].qty = value;
     setMatrixData(updated);
   };
   
-  const handleRateChange = (index: number, value: string) => {
+  
+  const handleBaseRateChange = (value: string) => {
+    setBaseRate(value);
+    const stepVal = parseFloat(rateStep) || 0;
+    const currentBase = parseFloat(value) || 0;
+    if (value === '') return;
+    setMatrixData(prev => {
+      const newData = [...prev];
+      for (let i = 0; i < newData.length; i++) {
+         newData[i].rate = (currentBase + (stepVal * i)).toFixed(2);
+      }
+      return newData;
+    });
+  };
+
+  const handleBaseMrpChange = (value: string) => {
+    setBaseMrp(value);
+    const stepVal = parseFloat(mrpStep) || 0;
+    const currentBase = parseFloat(value) || 0;
+    if (value === '') return;
+    setMatrixData(prev => {
+      const newData = [...prev];
+      for (let i = 0; i < newData.length; i++) {
+         newData[i].mrp = (currentBase + (stepVal * i)).toString();
+      }
+      return newData;
+    });
+  };
+
+  const handleRateStepChange = (value: string) => {
+    setRateStep(value);
+    const stepVal = parseFloat(value) || 0;
+    const currentBase = parseFloat(baseRate) || 0;
+    if (baseRate === '') return;
+    setMatrixData(prev => {
+      const newData = [...prev];
+      for (let i = 0; i < newData.length; i++) {
+         newData[i].rate = (currentBase + (stepVal * i)).toFixed(2);
+      }
+      return newData;
+    });
+  };
+
+  const handleMrpStepChange = (value: string) => {
+    setMrpStep(value);
+    const stepVal = parseFloat(value) || 0;
+    const currentBase = parseFloat(baseMrp) || 0;
+    if (baseMrp === '') return;
+    setMatrixData(prev => {
+      const newData = [...prev];
+      for (let i = 0; i < newData.length; i++) {
+         newData[i].mrp = (currentBase + (stepVal * i)).toString();
+      }
+      return newData;
+    });
+  };
+
+const handleRateChange = (index: number, value: string) => {
     const updated = [...matrixData];
     updated[index].rate = parseFloat(value) || 0;
     setMatrixData(updated);
@@ -242,8 +333,8 @@ export default function SizeAllocationModal({ isOpen, onClose, onSave, itemName,
       return;
     }
 
-    const avgRate = totalQty > 0 ? (totalAmount / totalQty) : 0;
-    const avgMrp = totalQty > 0 ? (totalMrpAmount / totalQty) : 0;
+    const avgRate = totalQty > 0 ? (totalAmount / totalQty).toFixed(2) : 0;
+    const avgMrp = totalQty > 0 ? (totalMrpAmount / totalQty).toFixed(2) : 0;
 
     const summaryInfo = {
       totalQty,
@@ -262,7 +353,7 @@ export default function SizeAllocationModal({ isOpen, onClose, onSave, itemName,
 
   return (
     <div className="fixed inset-0 bg-black/60 z-[90] flex items-center justify-center backdrop-blur-sm p-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col border border-slate-200 relative">
+      <div className="bg-white rounded-xl shadow-2xl w-fit max-w-[95vw] max-h-[90vh] flex flex-col border border-slate-200 relative mx-auto">
         
         {/* Header */}
         <div className="bg-[#1b5e58] rounded-t-xl flex justify-between items-center p-3 text-white shrink-0">
@@ -291,6 +382,7 @@ export default function SizeAllocationModal({ isOpen, onClose, onSave, itemName,
                   onSelect={(opt) => {
                     setSearchText(opt.name);
                     setSelectedGroupId(opt.id);
+                    setTimeout(() => generateGrid(opt, baseRate, rateStep, baseMrp, mrpStep, 'base-rate'), 0);
                   }}
                   options={sizeGroups}
                   displayKey="name"
@@ -323,28 +415,7 @@ export default function SizeAllocationModal({ isOpen, onClose, onSave, itemName,
                 />
               </div>
             </div>
-            <div className="w-[100px]">
-              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Base Rate</label>
-              <input id="base-rate-input" type="number" value={baseRate} onChange={e => setBaseRate(e.target.value)} className="w-full bg-slate-50 border border-slate-200 px-2 py-1.5 text-xs font-bold text-slate-800 rounded-md focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 text-right" />
-            </div>
-            <div className="w-[100px]">
-              <label className="block text-[10px] font-bold text-emerald-600 uppercase tracking-wider mb-1">Step (+₹)</label>
-              <input type="number" value={rateStep} onChange={e => setRateStep(e.target.value)} className="w-full bg-emerald-50 border border-emerald-200 px-2 py-1.5 text-xs font-bold text-emerald-800 rounded-md focus:outline-none focus:border-emerald-400 text-right" />
-            </div>
-            <div className="w-[100px]">
-              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Base MRP</label>
-              <input type="number" value={baseMrp} onChange={e => setBaseMrp(e.target.value)} className="w-full bg-slate-50 border border-slate-200 px-2 py-1.5 text-xs font-bold text-slate-800 rounded-md focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 text-right" />
-            </div>
-            <div className="w-[100px]">
-              <label className="block text-[10px] font-bold text-emerald-600 uppercase tracking-wider mb-1">Step (+₹)</label>
-              <input type="number" value={mrpStep} onChange={e => setMrpStep(e.target.value)} className="w-full bg-emerald-50 border border-emerald-200 px-2 py-1.5 text-xs font-bold text-emerald-800 rounded-md focus:outline-none focus:border-emerald-400 text-right" />
-            </div>
-            <button 
-              onClick={handleGenerateGrid}
-              className="bg-slate-800 text-white font-bold text-xs px-4 py-1.5 rounded-md hover:bg-slate-900 transition-colors shadow-sm"
-            >
-              Generate Grid
-            </button>
+            
           </div>
 
           </div>
@@ -354,16 +425,14 @@ export default function SizeAllocationModal({ isOpen, onClose, onSave, itemName,
         <div className="p-4 bg-slate-50 flex flex-col gap-4 overflow-y-auto flex-1 custom-scrollbar relative z-[10]">
           {matrixData.length > 0 && (
             <div className="bg-white border border-slate-200 rounded-lg shadow-sm overflow-x-auto custom-scrollbar pb-2">
-              <table className="w-full border-collapse text-left min-w-max">
+              <table className="w-max border-collapse text-left">
                 <thead>
                   <tr>
-                    <th className="bg-slate-100 border-b border-r border-slate-200 p-2 text-xs font-bold text-slate-700 w-[120px] sticky left-0 z-10 shadow-[1px_0_0_#e2e8f0]">Details</th>
+                    <th className="bg-slate-100 border-b border-r border-slate-200 p-2 text-xs font-bold text-slate-700 px-2 sticky left-0 z-10 shadow-[1px_0_0_#e2e8f0] w-[1%] whitespace-nowrap">Details</th>
                     {matrixData.map((col, idx) => (
-                      <th key={idx} className="bg-indigo-50 border-b border-r border-slate-200 p-2 text-xs font-black text-indigo-900 text-center min-w-[80px]">
-                        Size {col.size}
-                      </th>
+                      <th key={idx} className="bg-indigo-50 border-b border-r border-slate-200 p-1 text-xs font-black text-indigo-900 text-center min-w-[45px] w-[50px]">{col.size}</th>
                     ))}
-                    <th className="bg-slate-100 border-b border-slate-200 p-2 text-xs font-bold text-slate-700 text-right min-w-[100px]">Total</th>
+                    <th className="bg-slate-100 border-b border-slate-200 p-2 text-xs font-bold text-slate-700 text-right px-4 whitespace-nowrap">Total</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -392,8 +461,17 @@ export default function SizeAllocationModal({ isOpen, onClose, onSave, itemName,
 
                   {/* Purchase Rate Row */}
                   <tr>
-                    <td className="bg-white border-b border-r border-slate-200 p-2 text-xs font-bold text-slate-600 sticky left-0 z-10 shadow-[1px_0_0_#e2e8f0]">
-                      Pur. Rate
+                    <td className="bg-white border-b border-r border-slate-200 p-2 sticky left-0 z-10 shadow-[1px_0_0_#e2e8f0]">
+                      <div className="flex items-center justify-start gap-4">
+                        <span className="text-xs font-bold text-slate-600 whitespace-nowrap">Pur. Rate</span>
+                        <div className="flex items-center gap-1.5">
+                          <input autoComplete="off" placeholder="Base" type="number" id="base-rate-input" className="w-[70px] bg-indigo-50 border border-indigo-200 px-2 py-1 rounded text-xs text-indigo-900 font-bold focus:outline-none placeholder-indigo-300" onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); document.getElementById('rate-step-input')?.focus(); } }} value={baseRate} onChange={e => handleBaseRateChange(e.target.value)} />
+                          <div className="flex items-center gap-1 bg-emerald-50 px-1.5 py-1 rounded border border-emerald-200">
+                            <span className="text-[10px] text-emerald-700 uppercase font-bold">+</span>
+                            <input autoComplete="off" placeholder="Step" type="number" id="rate-step-input" className="w-[50px] bg-transparent text-xs text-emerald-900 font-bold focus:outline-none placeholder-emerald-300" onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); document.getElementById('base-mrp-input')?.focus(); } }} value={rateStep} onChange={e => handleRateStepChange(e.target.value)} />
+                          </div>
+                        </div>
+                      </div>
                     </td>
                     {matrixData.map((col, idx) => (
                       <td key={idx} className="bg-white border-b border-r border-slate-200 p-1">
@@ -414,8 +492,17 @@ export default function SizeAllocationModal({ isOpen, onClose, onSave, itemName,
 
                   {/* MRP Row */}
                   <tr>
-                    <td className="bg-white border-b border-r border-slate-200 p-2 text-xs font-bold text-slate-600 sticky left-0 z-10 shadow-[1px_0_0_#e2e8f0]">
-                      MRP
+                    <td className="bg-white border-b border-r border-slate-200 p-2 sticky left-0 z-10 shadow-[1px_0_0_#e2e8f0]">
+                      <div className="flex items-center justify-start gap-4">
+                        <span className="text-xs font-bold text-slate-600 whitespace-nowrap">MRP</span>
+                        <div className="flex items-center gap-1.5">
+                          <input autoComplete="off" placeholder="Base" type="number" id="base-mrp-input" className="w-[70px] bg-indigo-50 border border-indigo-200 px-2 py-1 rounded text-xs text-indigo-900 font-bold focus:outline-none placeholder-indigo-300" onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); document.getElementById('mrp-step-input')?.focus(); } }} value={baseMrp} onChange={e => handleBaseMrpChange(e.target.value)} />
+                          <div className="flex items-center gap-1 bg-emerald-50 px-1.5 py-1 rounded border border-emerald-200">
+                            <span className="text-[10px] text-emerald-700 uppercase font-bold">+</span>
+                            <input autoComplete="off" placeholder="Step" type="number" id="mrp-step-input" className="w-[50px] bg-transparent text-xs text-emerald-900 font-bold focus:outline-none placeholder-emerald-300" onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); document.getElementById('qty-input-0')?.focus(); } }} value={mrpStep} onChange={e => handleMrpStepChange(e.target.value)} />
+                          </div>
+                        </div>
+                      </div>
                     </td>
                     {matrixData.map((col, idx) => (
                       <td key={idx} className="bg-white border-b border-r border-slate-200 p-1">
@@ -434,20 +521,7 @@ export default function SizeAllocationModal({ isOpen, onClose, onSave, itemName,
                     </td>
                   </tr>
                   
-                  {/* Amount Row (Calculated) */}
-                  <tr>
-                    <td className="bg-slate-50 border-r border-slate-200 p-2 text-[11px] font-bold text-slate-500 sticky left-0 z-10 shadow-[1px_0_0_#e2e8f0]">
-                      Amount
-                    </td>
-                    {matrixData.map((col, idx) => (
-                      <td key={idx} className="bg-slate-50 border-r border-slate-200 p-2 text-[11px] font-bold text-indigo-700 text-center">
-                        {((parseFloat(col.qty) || 0) * (parseFloat(col.rate) || 0)).toFixed(2)}
-                      </td>
-                    ))}
-                    <td className="bg-indigo-50 p-2 text-xs font-black text-indigo-900 text-right">
-                      ₹{matrixData.reduce((acc, curr) => acc + ((parseFloat(curr.qty) || 0) * (parseFloat(curr.rate) || 0)), 0).toFixed(2)}
-                    </td>
-                  </tr>
+                  
                 </tbody>
               </table>
             </div>

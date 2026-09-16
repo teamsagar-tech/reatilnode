@@ -120,13 +120,14 @@ import LRList2 from "./pages/purchase/LRList2"
 import ManageReceivable from "./pages/inventory/ManageReceivable"
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import ToastContainer from "./components/ui/ToastContainer";
-
+import NetworkStatusIndicator from "./components/NetworkStatusIndicator";
 function App() {
   useGlobalKeyboard();
 
   return (
     <HelmetProvider>
       <Router>
+        <NetworkStatusIndicator />
         <ToastContainer />
         <Routes>
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
@@ -237,6 +238,8 @@ function App() {
             <Route path="tickets/:id" element={<TicketDetail />} />
           </Route>
           <Route path="/masters/size" element={<SizeMaster />} />
+          <Route path="/masters/sizeset" element={<SizeSetMaster />} />
+          <Route path="/masters/sizegroup" element={<SizeGroupMaster />} />
           <Route path="/masters/department" element={<DepartmentMaster />} />
           <Route path="/masters/taxonomy" element={<TaxonomyMaster />} />
           <Route path="/masters/cut" element={<CutMaster />} />

@@ -21,12 +21,12 @@ const SectionTitle = ({ children }: { children: React.ReactNode }) => (
 const InputRow = ({ label, value, onChange, placeholder = "", width = "flex-1" }: any) => (
   <div className="flex items-center mb-[2px]">
     <div className="w-[110px] text-slate-800 font-bold text-[11px] text-right pr-2 leading-tight">{label}</div>
-    <input 
+    <input autoComplete="off"  
       className={`${width} bg-white border border-slate-400 px-1 py-[2px] text-[12px] font-bold text-black focus:bg-[#ffffe0] focus:outline-none focus:border-slate-800`}
       value={value} 
       onChange={(e) => onChange(e.target.value)} 
       placeholder={placeholder}
-      autoComplete="new-password"
+      autoComplete="off"
     />
   </div>
 );
@@ -599,7 +599,7 @@ export default function PartyModal({ isOpen, onClose, onSave, initialPartyName =
                 <div className="w-1/2 flex flex-col gap-1">
                   <div className="flex items-center mb-[2px]">
                     <div className="w-[110px] text-slate-800 font-bold text-[11px] text-right pr-2 leading-tight">GSTIN</div>
-                    <input 
+                    <input autoComplete="off"  
                       id="input-gstin"
                       className={`flex-1 bg-white border ${gstStatusError ? 'border-red-500' : 'border-slate-400'} px-1 py-[2px] text-[12px] font-bold text-black focus:bg-[#ffffe0] focus:outline-none focus:border-slate-800`}
                       value={formData.gstin} 
@@ -609,7 +609,7 @@ export default function PartyModal({ isOpen, onClose, onSave, initialPartyName =
                         if (gstStatusError) setGstStatusError(null);
                       }} 
                       placeholder="15-digit GSTIN"
-                      autoComplete="new-password"
+                      autoComplete="off"
                     />
                     {(!formData.gstRawData) && (
                     <button 
@@ -632,7 +632,7 @@ export default function PartyModal({ isOpen, onClose, onSave, initialPartyName =
                     <div className="ml-[110px] bg-white border border-slate-300 p-2 shadow flex flex-col gap-2 mb-2 w-[calc(100%-110px)]">
                       <img src={captchaData.image} alt="captcha" className="h-10 border border-slate-300 object-contain w-32 bg-white" />
                       <div className="flex items-center gap-1">
-                        <input 
+                        <input autoComplete="off"  
                           type="text" 
                           placeholder="Enter Captcha" 
                           value={captchaInput}
@@ -748,7 +748,7 @@ export default function PartyModal({ isOpen, onClose, onSave, initialPartyName =
                     </div>
                     <div className="flex items-center">
                       <div className="w-[110px] text-slate-800 font-bold text-[11px] text-right pr-2 leading-tight">Name</div>
-                      <input 
+                      <input autoComplete="off"  
                         type="text"
                         className="flex-1 bg-white border border-slate-400 px-1 py-[2px] text-[12px] font-bold text-black focus:bg-[#ffffe0] focus:outline-none focus:border-slate-800"
                         value={contact.name}
@@ -761,7 +761,7 @@ export default function PartyModal({ isOpen, onClose, onSave, initialPartyName =
                     </div>
                     <div className="flex items-center">
                       <div className="w-[110px] text-slate-800 font-bold text-[11px] text-right pr-2 leading-tight">Mobile</div>
-                      <input 
+                      <input autoComplete="off"  
                         type="text"
                         className="flex-1 bg-white border border-slate-400 px-1 py-[2px] text-[12px] font-bold text-black focus:bg-[#ffffe0] focus:outline-none focus:border-slate-800"
                         value={contact.mobile}
@@ -797,7 +797,7 @@ export default function PartyModal({ isOpen, onClose, onSave, initialPartyName =
                         <div className="flex items-center gap-1 mb-1">
                           {/* Category Input */}
                           <div className="relative flex-1">
-                            <input 
+                            <input autoComplete="off"  
                               className="w-full bg-white border border-slate-400 px-1 py-[2px] text-[12px] font-bold text-black focus:bg-[#ffffe0] focus:outline-none focus:border-slate-800" 
                               placeholder="Category (Alt+C)" 
                               value={tempCat} 
@@ -861,7 +861,7 @@ export default function PartyModal({ isOpen, onClose, onSave, initialPartyName =
                           
                           {/* Subcategory Input */}
                           <div className="relative flex-1">
-                            <input 
+                            <input autoComplete="off"  
                               className="w-full bg-white border border-slate-400 px-1 py-[2px] text-[12px] font-bold text-black focus:bg-[#ffffe0] focus:outline-none focus:border-slate-800 disabled:opacity-50" 
                               placeholder={selectedCatId ? "Subcat (Alt+C)" : "Select Category"}
                               value={tempSub} 
@@ -966,7 +966,7 @@ export default function PartyModal({ isOpen, onClose, onSave, initialPartyName =
                         </div>
                         <SectionTitle>Assigned Brands</SectionTitle>
                 <div className="relative flex items-center gap-1 mb-1">
-                  <input 
+                  <input autoComplete="off"  
                     className="flex-1 bg-white border border-slate-400 px-1 py-[2px] text-[12px] font-bold text-black focus:bg-[#ffffe0] focus:outline-none focus:border-slate-800" 
                     placeholder="Type brand name or Alt+C to create" 
                     value={tempBrand}

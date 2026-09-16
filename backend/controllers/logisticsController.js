@@ -69,7 +69,7 @@ exports.updateTransporter = async (req, res) => {
 exports.getHundekaris = async (req, res) => {
   try {
     const firmId = req.firm_id;
-    const [rows] = await db.query('SELECT * FROM Hundekari WHERE firm_id = ? ORDER BY id DESC', [firmId]);
+    const [rows] = await db.query('SELECT * FROM Hundekaris WHERE firm_id = ? ORDER BY id DESC', [firmId]);
     res.json({ success: true, data: rows });
   } catch (error) {
     console.error('Error fetching hundekaris:', error);
@@ -80,15 +80,15 @@ exports.getHundekaris = async (req, res) => {
 exports.createHundekari = async (req, res) => {
   try {
     const firmId = req.firm_id;
-    const { hundekari_name, mobile, email } = req.body;
+    const { hundekari_name, mobile, email, rate_per_bale, location_id } = req.body;
 
     if (!hundekari_name) {
       return res.status(400).json({ success: false, message: 'Hundekari name is required' });
     }
 
     const [result] = await db.query(
-      'INSERT INTO Hundekari (firm_id, hundekari_name, mobile, email) VALUES (?, ?, ?, ?)',
-      [firmId, hundekari_name, mobile, email]
+      'INSERT INTO Hundekaris (firm_id, hundekari_name, mobile, email, rate_per_bale, location_id) VALUES (?, ?, ?, ?, ?, ?)',
+      [firmId, hundekari_name, mobile || null, email || null, rate_per_bale || 0, location_id || null]
     );
 
     res.json({ success: true, message: 'Hundekari created successfully', data: { id: result.insertId } });
@@ -160,8 +160,8 @@ exports.createBulkUnlinkedLR = async (req, res) => {
         if (!row.lr_no || !row.received_bales) continue;
 
         await connection.query(
-          'INSERT INTO Unlinked_LRs (firm_id, transporter_id, hundekari_id, lr_no, bale, inward_at_location_id, lr_inward_date, inwarded_by_user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-          [firmId, transporter_id, hundekari_id, row.lr_no, row.received_bales, inward_at_location_id, lr_inward_date, req.user?.id || null]
+          'INSERT INTO Unlinked_LRs (firm_id, vendor_id, transporter_id, hundekari_id, lr_no, bale, inward_at_location_id, lr_inward_date, inwarded_by_user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+          [firmId, row.vendor_id || null, transporter_id, hundekari_id, row.lr_no, row.received_bales, inward_at_location_id, lr_inward_date, req.user?.id || null]
         );
       }
       await connection.commit();
@@ -191,16 +191,24 @@ exports.verifyLRBales = async (req, res) => {
     const [rows] = await db.query(
       `SELECT p.id, p.bales 
        FROM PurchaseInvoices p 
-       WHERE p.firm_id = ? AND p.lr_no = ? AND p.lr_status = 'LR PENDING' 
+       WHERE p.firm_id = ? AND p.lr_no = ? AND (p.lr_status = 'LR PENDING' OR p.lr_status = 'Pending') 
        ORDER BY p.created_at DESC LIMIT 1`,
       [req.firm_id, lr_no]
     );
 
     if (rows.length === 0) {
-      return res.json({ success: false, message: 'LR No not found or already inwarded', expectedBales: null });
+      // Check if it's already in Unlinked_LRs to prevent double entry
+      const [unlinkedRows] = await db.query(
+        `SELECT id FROM Unlinked_LRs WHERE firm_id = ? AND lr_no = ?`,
+        [req.firm_id, lr_no]
+      );
+      if (unlinkedRows.length > 0) {
+        return res.json({ success: false, message: 'LR already inwarded previously', expectedBales: null });
+      }
+      return res.json({ success: true, message: 'No Invoice Found', expectedBales: null, status: 'NO_INVOICE' });
     }
 
-    res.json({ success: true, expectedBales: rows[0].bales });
+    res.json({ success: true, expectedBales: rows[0].bales, status: 'MATCHED' });
   } catch (error) {
     console.error('Error verifying LR bales:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -229,5 +237,28 @@ exports.getPendingLRs = async (req, res) => {
   } catch (error) {
     console.error('Error fetching pending LRs:', error);
     res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+exports.verifyUnlinkedLR = async (req, res) => {
+  try {
+    const { vendor_id, lr_no } = req.body;
+    if (!vendor_id || !lr_no) {
+      return res.status(400).json({ success: false, error: 'Vendor ID and LR No are required' });
+    }
+
+    const [rows] = await db.query(
+      `SELECT id FROM Unlinked_LRs WHERE firm_id = ? AND vendor_id = ? AND lr_no = ? LIMIT 1`,
+      [req.firm_id, vendor_id, lr_no]
+    );
+
+    if (rows.length > 0) {
+      res.json({ success: true, exists: true, message: 'LR already received. Will be auto-delivered!' });
+    } else {
+      res.json({ success: true, exists: false });
+    }
+  } catch (error) {
+    console.error('Error verifying unlinked LR:', error);
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 };

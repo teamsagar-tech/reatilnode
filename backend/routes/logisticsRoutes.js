@@ -22,6 +22,7 @@ router.get('/unlinked-lrs', requirePermission('logistics', 'read'), logisticsCon
 router.post('/unlinked-lrs', requirePermission('logistics', 'write'), logisticsController.createUnlinkedLR);
 router.post('/bulk-unlinked-lrs', requirePermission('logistics', 'write'), logisticsController.createBulkUnlinkedLR);
 router.post('/verify-lr-bales', requirePermission('logistics', 'read'), logisticsController.verifyLRBales);
+router.post('/verify-unlinked-lr', requirePermission('logistics', 'read'), logisticsController.verifyUnlinkedLR);
 
 // Pending LRs from Purchase Invoices
 router.get('/pending-lrs', requirePermission('logistics', 'read'), logisticsController.getPendingLRs);

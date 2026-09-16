@@ -16,11 +16,12 @@ export interface SearchableDropdownProps {
   onSelect?: (option: any) => void;
   width?: string;
   onNotFound?: (value: string) => void;
+  onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void;
 }
 
 export default function SearchableDropdown({
   id, value, onChange, onKeyDown, options, placeholder, className, autoFocus,
-  displayKey = 'name', searchKeys, renderOption, onSelect, width = '350px', onNotFound
+  displayKey = 'name', searchKeys, renderOption, onSelect, width = '350px', onNotFound, onBlur
 }: SearchableDropdownProps) {
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -33,7 +34,7 @@ export default function SearchableDropdown({
       return searchKeys.some(key => (o[key] || '').toString().toLowerCase().includes(searchVal));
     }
     const str = typeof o === 'string' ? o : o[displayKey];
-    return (str || '').toLowerCase().includes(searchVal);
+    return String(str || '').toLowerCase().includes(searchVal);
   });
 
   useEffect(() => {
@@ -111,6 +112,9 @@ export default function SearchableDropdown({
           setActiveIndex(0);
         }}
         onBlur={e => {
+          if (onBlur) {
+            onBlur(e);
+          }
           // Small timeout to allow click events on dropdown options to fire first
           setTimeout(() => {
             setOpen(false);

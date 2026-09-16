@@ -17,7 +17,9 @@ export default function PurchaseInvoice() {
   const modKey = isMac ? 'Option' : 'Alt';
 
   const [isReadOnly, setIsReadOnly] = useState(false);
+  const [invoiceLrStatus, setInvoiceLrStatus] = useState<string>('');
   const [editInvoiceId, setEditInvoiceId] = useState<number | null>(null);
+  const [lrMessage, setLrMessage] = useState<string>('');
 
   const [invoiceData, setInvoiceData] = useState({
     invoiceDate: new Date().toISOString().split('T')[0],
@@ -59,12 +61,13 @@ export default function PurchaseInvoice() {
   });
 
   const [products, setProducts] = useState<any[]>([
-    { id: 1, item_id: null, item: '', brand_id: null, brand: '', qty: '', cut_size: '', pieces: '', rate: '', last_rate: null, disc: 0, gst: 0, design: '', colour: '', size: '', mrp: 0, attributes: [], category: null }
+    { id: 1, item_id: null, item: '', brand_id: null, brand: '', qty: '', cut_size: '', pieces: '', rate: '', last_rate: null, disc: 0, gst: 0, design: '', colour: '', size: '', mrp: 0, disc2: 0, sale_rate: '', attributes: [], category: null }
   ]);
   const [cuts, setCuts] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [preTaxCharges, setPreTaxCharges] = useState({ freight: 0, insurance: 0, packing: 0 });
   const [showAdditionalChargesModal, setShowAdditionalChargesModal] = useState(false);
+  const [sortConfig, setSortConfig] = useState<{key: string, direction: 'asc'|'desc'} | null>(null);
 
   useEffect(() => {
     const id = location.state?.invoiceId;
@@ -79,13 +82,30 @@ export default function PurchaseInvoice() {
       .then(res => res.json())
       .then(data => {
          if (!data.error) {
+           let hasDesign = false;
+           let hasColour = false;
+           let hasSize = false;
+           if (data.items) {
+             data.items.forEach((item: any) => {
+               if (item.attributes) {
+                 item.attributes.forEach((attr: any) => {
+                   if (attr.design_name) hasDesign = true;
+                   if (attr.color_name) hasColour = true;
+                   if (attr.size_name) hasSize = true;
+                 });
+               }
+             });
+           }
+
+           setInvoiceLrStatus(data.lr_status || '');
            setInvoiceData(prev => ({
              ...prev,
              billNo: data.bill_no || '',
              billDate: data.bill_date ? data.bill_date.split('T')[0] : '',
              receiveDate: data.receive_date ? data.receive_date.split('T')[0] : '',
              supplier: data.vendor_name || '',
-             billAmount: data.total_amount || '',
+             billAmount: data.net_amount || data.total_amount || '',
+             totalQuantity: data.items ? data.items.reduce((sum: number, item: any) => sum + (Number(item.total_qty) || 0), 0) : '',
              discountPercent: Number(data.discount_percent) || 0,
              discountAmount: Number(data.discount_amount) || 0,
              commissionPercent: Number(data.commission_percent) || 0,
@@ -93,7 +113,10 @@ export default function PurchaseInvoice() {
              lrNo: data.lr_no || '',
              transporter: data.transporter || '',
              bale: data.bales || '',
-             narration: data.narration || ''
+             narration: data.narration || '',
+             designNo: hasDesign,
+             colourNo: hasColour,
+             showSize: hasSize
            }));
            if (data.items && data.items.length > 0) {
              const mappedProducts = data.items.map((item: any, idx: number) => {
@@ -151,6 +174,52 @@ export default function PurchaseInvoice() {
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
+  const requestSort = (key: string) => {
+    let direction: 'asc'|'desc' = 'asc';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+
+    setProducts(prev => {
+      const taggedPrev = prev.map((p, i) => {
+        if (p.serialNo === undefined) {
+          return { ...p, serialNo: i + 1 };
+        }
+        return p;
+      });
+
+      const active = taggedPrev.filter(p => (p.item && p.item.trim() !== '') || Number(p.qty) > 0 || p.brand);
+      const empty = taggedPrev.filter(p => !((p.item && p.item.trim() !== '') || Number(p.qty) > 0 || p.brand));
+
+      active.sort((a, b) => {
+        let valA = a[key];
+        let valB = b[key];
+
+        if (key === 'amount') {
+          valA = (Number(a.qty) || 0) * (Number(a.rate) || 0) * (1 - (Number(a.disc) || 0) / 100);
+          valB = (Number(b.qty) || 0) * (Number(b.rate) || 0) * (1 - (Number(b.disc) || 0) / 100);
+        } else if (['qty', 'rate', 'disc', 'mrp', 'gst', 'cut_size', 'pieces', 'disc1', 'disc2', 'sale_rate', 'serialNo'].includes(key)) {
+          valA = Number(valA) || 0;
+          valB = Number(valB) || 0;
+        } else {
+          valA = (valA || '').toString().toLowerCase();
+          valB = (valB || '').toString().toLowerCase();
+        }
+
+        if (valA < valB) return direction === 'asc' ? -1 : 1;
+        if (valA > valB) return direction === 'asc' ? 1 : -1;
+        return 0;
+      });
+
+      return [...active, ...empty];
+    });
+  };
+
+  const renderSortIndicator = (key: string) => {
+    if (!sortConfig || sortConfig.key !== key) return null;
+    return sortConfig.direction === 'asc' ? ' ↑' : ' ↓';
+  };
   
   const handleSaveInvoice = async () => {
     if (!invoiceData.supplier) {
@@ -186,7 +255,7 @@ export default function PurchaseInvoice() {
     if (invoiceData.gstOn === 'items') {
       const ratio = subtotal > 0 ? (afterCommission / subtotal) : 1;
       tax = products.reduce((acc: any, p: any) => {
-        const lineAmount = (p.qty || 0) * (p.rate || 0) * (1 - (p.disc || 0) / 100);
+        const lineAmount = invoiceData.showMarkdown ? ((p.qty || 0) * (p.rate || 0)) : ((p.qty || 0) * (p.rate || 0) * (1 - (p.disc || 0) / 100));
         const lineTaxable = lineAmount * ratio;
         return acc + (lineTaxable * (p.gst || 0) / 100);
       }, 0);
@@ -217,17 +286,21 @@ export default function PurchaseInvoice() {
       narration: invoiceData.narration || '',
       items: products.filter((p: any) => p.item_id).map((p: any) => ({
         item_id: p.item_id,
-        category_id: null,
+        category_id: p.category || null,
         brand_id: p.brand_id || null,
         purchase_rate: Number(p.rate) || 0,
         mrp: Number(p.mrp) || 0,
         total_qty: Number(p.qty) || 0,
         gst_percent: Number(p.gst) || 0,
-        gst_amount: 0,
+        gst_amount: ((Number(p.rate) * Number(p.qty)) * (Number(p.gst) || 0) / 100),
         total_amount: (Number(p.rate) * Number(p.qty)) || 0,
-        attributes: p.attributes || [],
+        attributes: p.attributes && p.attributes.length > 1 ? p.attributes : [],
+        barcode: p.attributes && p.attributes.length === 1 ? p.attributes[0].barcode : '',
         matrixData: p.matrixData || [],
-        size_group_id: p.size_group_id || null
+        size_group_id: p.size_group_id || null,
+        design: p.design || '',
+        colour: p.colour || '',
+        size: p.size || ''
       }))
     };
 
@@ -269,7 +342,7 @@ export default function PurchaseInvoice() {
             discountPercent: 0, discountAmount: 0, commissionPercent: 0, 
             cgstPercent: 'Auto', sgstPercent: 'Auto', otherCharges: 0, purchaser: ''
         });
-        setProducts([{ id: Date.now(), item_id: null, item: '', hsn: '', brand_id: null, brand: '', qty: '', cut_size: '', pieces: '', rate: '', last_rate: null, disc: 0, gst: 0, design: '', colour: '', size: '', mrp: 0 }]);
+        setProducts([{ id: Date.now(), item_id: null, item: '', hsn: '', brand_id: null, brand: '', qty: '', cut_size: '', pieces: '', rate: '', last_rate: null, disc: 0, gst: 0, design: '', colour: '', size: '', mrp: 0, disc2: 0, sale_rate: '' }]);
       }
     } catch (err: any) {
       console.error(err);
@@ -588,7 +661,7 @@ export default function PurchaseInvoice() {
   const [showItemModal, setShowItemModal] = useState(false);
   const [showPartyModal, setShowPartyModal] = useState(false);
   const [showTransporterModal, setShowTransporterModal] = useState(false);
-  const [masterModal, setMasterModal] = useState<{ type: 'brand' | 'size' | 'item' | 'hsn' | 'design' | 'colour', initialValue: string, rowIndex: number, initialBrand?: string, initialBrandId?: number | null } | null>(null);
+  const [masterModal, setMasterModal] = useState<{ type: 'brand' | 'size' | 'item' | 'hsn' | 'design' | 'colour', initialValue: string, rowIndex: number, initialBrand?: string, initialBrandId?: number | null, editId?: number | string | null, initialExtra2?: string, initialExtra3?: string } | null>(null);
   const [masterCreationState, setMasterCreationState] = useState<{isOpen: boolean; type: string; initialValue: string; category?: string; subcategory?: string}>({
       isOpen: false, type: '', initialValue: ''
   });
@@ -737,7 +810,11 @@ export default function PurchaseInvoice() {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     })
     .then(res => res.json())
-    .then(data => setAvailableHsns(Array.isArray(data) ? data : []))
+    .then(data => {
+      const arr = Array.isArray(data) ? data : [];
+      const uniqueHsns = arr.filter((v, i, a) => a.findIndex(t => (t.name === v.name)) === i);
+      setAvailableHsns(uniqueHsns);
+    })
     .catch(console.error);
 
     // Auto-focus first field
@@ -756,6 +833,7 @@ export default function PurchaseInvoice() {
         }
         if (showPartyModal) setShowPartyModal(false);
         else if (showTransporterModal) setShowTransporterModal(false);
+        else if (showAdditionalChargesModal) setShowAdditionalChargesModal(false);
         else if (masterCreationState.isOpen) setMasterCreationState({ ...masterCreationState, isOpen: false });
         else if (showSupplierDropdown) setShowSupplierDropdown(false);
         else if (showPurchaserDropdown) setShowPurchaserDropdown(false);
@@ -768,26 +846,46 @@ export default function PurchaseInvoice() {
       if (e.altKey) {
         if (e.code === 'KeyS') {
           e.preventDefault();
-          console.log('Submit Order');
+          handleSaveInvoice();
         } else if (e.code === 'KeyD') {
           e.preventDefault();
           console.log('Save Draft');
         } else if (e.code === 'KeyB') {
           e.preventDefault();
           setInvoiceData(prev => ({ ...prev, requireBoxPacking: !prev.requireBoxPacking }));
-        } else if (e.code === 'KeyI') {
+        } else if (e.code === 'KeyI' && !isReadOnly) {
           e.preventDefault();
           fileInputRef.current?.click();
+        } else if (e.code === 'KeyE' && isReadOnly) {
+          e.preventDefault();
+          if (invoiceLrStatus?.toLowerCase() === 'delivered' || invoiceLrStatus?.toLowerCase() === 'lr delivered') {
+            alert('This invoice cannot be edited because it is marked as Delivered.');
+            return;
+          }
+          setIsReadOnly(false);
+        } else if (e.code === 'KeyQ') {
+          e.preventDefault();
+          navigate('/dashboard');
         }
       }
     };
     window.addEventListener('keydown', handleGlobalKeyDown);
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-  }, [showSupplierDropdown, showPurchaserDropdown, activeSuggestionRow, showPartyModal, showTransporterModal, navigate]);
+  }, [showSupplierDropdown, showPurchaserDropdown, activeSuggestionRow, showPartyModal, showTransporterModal, showAdditionalChargesModal, navigate]);
 
 
   const handleInvoiceChange = (field: string, value: any) => {
-    if (field === 'supplier') {
+    if (field === 'supplier' && value !== invoiceData.supplier) {
+      const hasData = products.some(p => (p.item && p.item.trim() !== '') || Number(p.qty) > 0);
+      if (hasData) {
+        const confirmReset = window.confirm('Changing the Party will clear the current items in the table. Do you want to continue?');
+        if (!confirmReset) {
+          return;
+        }
+      }
+      // Always reset the table to clear stray data like brand/hsn even if hasData is false
+      setProducts([{ id: Date.now(), item_id: null, item: '', hsn: '', brand_id: null, brand: '', qty: '', cut_size: '', pieces: '', rate: '', last_rate: null, disc: 0, gst: 0, design: '', colour: '', size: '', mrp: 0, disc2: 0, sale_rate: '' }]);
+
       try {
         const prefStr = localStorage.getItem(`party_pref_${value}`);
         if (prefStr) {
@@ -812,7 +910,50 @@ export default function PurchaseInvoice() {
   const updateProduct = (index: number, field: string, value: any) => {
     setProducts(prev => {
       const newProducts = [...prev];
-      newProducts[index] = { ...newProducts[index], [field]: value };
+      let p = { ...newProducts[index], [field]: value };
+      
+      // Auto-calculate Discount % if MRP Markdown is enabled
+      if (invoiceData.showMarkdown) {
+        if (field === 'mrp' || field === 'disc' || field === 'rate') {
+          const m = parseFloat(p.mrp) || 0;
+          if (field === 'mrp' || field === 'disc') {
+            const d = parseFloat(p.disc) || 0;
+            if (m > 0) p.rate = (m * (1 - d / 100)).toFixed(2);
+          } else if (field === 'rate') {
+            const r = parseFloat(p.rate) || 0;
+            if (m > 0 && r > 0 && r <= m) p.disc = parseFloat((((m - r) / m) * 100).toFixed(2));
+            else if (m > 0 && r === 0) p.disc = 0;
+          }
+          if (field === 'mrp' && (parseFloat(p.disc2) || 0) > 0) {
+            p.sale_rate = (m * (1 - (parseFloat(p.disc2) || 0) / 100)).toFixed(2);
+          }
+        }
+        if (field === 'mrp' || field === 'disc2' || field === 'sale_rate') {
+          const m = parseFloat(p.mrp) || 0;
+          if (field === 'mrp' || field === 'disc2') {
+             const d2 = parseFloat(p.disc2) || 0;
+             if (m > 0) p.sale_rate = (m * (1 - d2 / 100)).toFixed(2);
+          } else if (field === 'sale_rate') {
+             const sr = parseFloat(p.sale_rate) || 0;
+             if (m > 0 && sr > 0 && sr <= m) p.disc2 = parseFloat((((m - sr) / m) * 100).toFixed(2));
+             else if (m > 0 && sr === 0) p.disc2 = 0;
+          }
+        }
+      }
+      
+      newProducts[index] = p;
+      return newProducts;
+    });
+  };
+  const handleInputBlur = (index: number, field: string) => {
+    setProducts(prev => {
+      const newProducts = [...prev];
+      const val = parseFloat(newProducts[index][field]);
+      if (!isNaN(val) && val !== 0) {
+        newProducts[index][field] = val.toFixed(2);
+      } else if (val === 0 || isNaN(val)) {
+        newProducts[index][field] = '';
+      }
       return newProducts;
     });
   };
@@ -826,7 +967,7 @@ export default function PurchaseInvoice() {
         hsn: '', 
         brand: last ? (last.brand || '') : '', 
         brand_id: last ? (last.brand_id || null) : null,
-        qty: '', cut_size: '', pieces: '', rate: '', last_rate: null, disc: 0, gst: 0, design: '', colour: '', size: '', mrp: 0 
+        qty: '', cut_size: '', pieces: '', rate: '', last_rate: null, disc: last ? (last.disc || 0) : 0, gst: 0, design: '', colour: '', size: '', mrp: 0, disc2: last ? (last.disc2 || 0) : 0, sale_rate: '' 
       }];
     });
   };
@@ -863,6 +1004,32 @@ export default function PurchaseInvoice() {
   };
 
   const handleLRNoBlur = async () => {
+    setLrMessage(''); // reset first
+    if (invoiceData.supplier && invoiceData.lrNo) {
+      // 1. Verify Unlinked LR Auto-Link
+      const matchedVendor = vendors.find(v => (v.name || '').toLowerCase() === (invoiceData.supplier || '').toLowerCase());
+      if (matchedVendor && matchedVendor.id) {
+        try {
+          const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/logistics/verify-unlinked-lr`, {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${localStorage.getItem('token') || sessionStorage.getItem('token')}` 
+            },
+            body: JSON.stringify({ vendor_id: matchedVendor.id, lr_no: invoiceData.lrNo })
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.exists) {
+              setLrMessage('LR already received! Status will be Auto-Delivered.');
+            }
+          }
+        } catch (err) {
+          console.error('Error verifying unlinked LR:', err);
+        }
+      }
+    }
+
     if (invoiceData.transporter && invoiceData.lrNo) {
       const matchedTransporter = transporters.find(t => (t.name || '').toLowerCase() === invoiceData.transporter.toLowerCase());
       if (matchedTransporter && matchedTransporter.id) {
@@ -905,7 +1072,7 @@ export default function PurchaseInvoice() {
     const allowedBrandNames = vendorBrands.map(b => typeof b === 'string' ? b : b.name).filter(Boolean);
     
     return {
-      isSingle: matchedVendor.brand_type === 'Single',
+      isSingle: matchedVendor.brand_type === 'Single' || allowedBrandNames.length === 1,
       allowedBrands: allowedBrandNames.length > 0 ? allowedBrandNames : null
     };
   };
@@ -913,7 +1080,24 @@ export default function PurchaseInvoice() {
   const { isSingle: isSingleBrandVendor, allowedBrands: vendorAllowedBrands } = getVendorBrandConfig();
 
   // Determine if a single brand is already locked in (for Single Brand parties)
-  const lockedBrand = isSingleBrandVendor ? (products.find(p => p.brand)?.brand || null) : null;
+  const lockedBrand = isSingleBrandVendor ? ((vendorAllowedBrands?.length === 1 ? vendorAllowedBrands[0] : null) || products.find(p => p.brand)?.brand) : null;
+
+  // Auto-fill empty brands for Single Brand vendors
+  useEffect(() => {
+    if (isSingleBrandVendor && lockedBrand) {
+      const hasEmptyBrand = products.some(p => !p.brand);
+      if (hasEmptyBrand) {
+        const bObj = availableBrands.find(b => b.name === lockedBrand);
+        const bId = bObj ? bObj.id : null;
+        setProducts(prev => prev.map(p => {
+          if (!p.brand) {
+            return { ...p, brand: lockedBrand, brand_id: bId };
+          }
+          return p;
+        }));
+      }
+    }
+  }, [isSingleBrandVendor, lockedBrand, products, availableBrands]);
 
 
   // Determine Category Config Helper
@@ -956,11 +1140,17 @@ export default function PurchaseInvoice() {
     if (showSizeCol) fields.push('size');
     if (showCutCol) fields.push('cut_size');
     
-    fields.push('qty', 'rate');
-    
-    if (showDiscCol) fields.push('disc');
-    if (showMRPCol) fields.push('mrp');
-    if (invoiceData.gstOn === 'items') fields.push('gst');
+    fields.push('qty');
+    if (invoiceData.showMarkdown) {
+       fields.push('mrp', 'disc', 'rate');
+       if (invoiceData.gstOn === 'items') fields.push('gst');
+       fields.push('mrp_2', 'disc2', 'sale_rate');
+    } else {
+       fields.push('rate');
+       if (showDiscCol) fields.push('disc');
+       if (showMRPCol) fields.push('mrp');
+       if (invoiceData.gstOn === 'items') fields.push('gst');
+    }
 
     const currentFieldIndex = fields.indexOf(field);
 
@@ -976,7 +1166,10 @@ export default function PurchaseInvoice() {
           initialValue: e.currentTarget.value || '',
           rowIndex: index,
           initialBrand: field === 'item' ? products[index].brand : undefined,
-          initialBrandId: field === 'item' ? products[index].brand_id : undefined
+          initialBrandId: field === 'item' ? products[index].brand_id : undefined,
+          editId: field === 'item' ? products[index].item_id || null : null,
+          initialExtra2: field === 'item' ? products[index].hsn || '' : undefined,
+          initialExtra3: field === 'item' ? (products[index].gst ? String(products[index].gst) : '') : undefined
         });
       }
       return;
@@ -1251,7 +1444,10 @@ export default function PurchaseInvoice() {
             initialValue: e.currentTarget.value || '',
             rowIndex: index,
             initialBrand: products[index].brand,
-            initialBrandId: products[index].brand_id
+            initialBrandId: products[index].brand_id,
+            editId: products[index].item_id || null,
+            initialExtra2: products[index].hsn || '',
+            initialExtra3: products[index].gst ? String(products[index].gst) : ''
           });
           return;
         }
@@ -1313,6 +1509,12 @@ export default function PurchaseInvoice() {
   };
 
   const handleBrandFocus = (e: React.FocusEvent<HTMLInputElement>, index: number) => {
+    if (isSingleBrandVendor && lockedBrand) {
+      setTimeout(() => {
+        document.getElementById(`row-${index}-item`)?.focus();
+      }, 10);
+      return;
+    }
     e.target.select();
     setActiveBrandRow(index);
     setBrandSuggestionIndex(0);
@@ -1421,7 +1623,7 @@ export default function PurchaseInvoice() {
     setIsCreating(false);
   };
 
-  const subtotal = products.reduce((acc, p) => acc + ((p.qty || 0) * (p.rate || 0) * (1 - (p.disc || 0) / 100)), 0);
+  const subtotal = products.reduce((acc, p) => acc + (invoiceData.showMarkdown ? ((p.qty || 0) * (p.rate || 0)) : ((p.qty || 0) * (p.rate || 0) * (1 - (p.disc || 0) / 100))), 0);
   const totalQty = products.reduce((acc, p) => acc + (parseFloat(p.qty) || 0), 0);
   
   const totalPreTaxCharges = preTaxCharges.freight + preTaxCharges.insurance + preTaxCharges.packing;
@@ -1444,7 +1646,7 @@ export default function PurchaseInvoice() {
   let tax = 0;
   if (invoiceData.gstOn === 'items') {
     tax = products.reduce((acc, p) => {
-      const lineAmount = (p.qty || 0) * (p.rate || 0) * (1 - (p.disc || 0) / 100);
+      const lineAmount = invoiceData.showMarkdown ? ((p.qty || 0) * (p.rate || 0)) : ((p.qty || 0) * (p.rate || 0) * (1 - (p.disc || 0) / 100));
       
       // Calculate row's share of discount
       let rowDiscount = 0;
@@ -1524,7 +1726,7 @@ export default function PurchaseInvoice() {
       </Helmet>
       
       {/* RetailNode Main Background */}
-      <div className={`flex flex-col h-screen font-sans text-[13px] selection:bg-transparent overflow-hidden bg-[#e0efeb] w-full ${isReadOnly ? 'pointer-events-none opacity-85' : ''}`}>
+      <div className={`flex flex-col h-screen font-sans text-[13px] selection:bg-transparent overflow-hidden bg-[#e0efeb] w-full ${isReadOnly ? 'readonly-mode' : ''}`}>
         <input type="file" ref={fileInputRef} onChange={handleImport} accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" className="hidden" />
         
         {importQueue.length > 0 && (
@@ -1599,16 +1801,21 @@ export default function PurchaseInvoice() {
           {/* Main Voucher Container */}
           <div className="flex-1 bg-[#fcfaf2] border-2 border-[#81a09d] flex flex-col overflow-hidden shadow-inner relative">
             
-            {/* Voucher Header / Title */}
-            <div className="bg-[#1b5e58] text-white font-bold px-2 py-1 flex justify-between shrink-0">
-               <div>Accounting Voucher Creation</div>
-               <div className="flex gap-4 items-center"><button onClick={() => fileInputRef.current?.click()} className="bg-yellow-400 text-black px-2 py-0.5 rounded text-xs hover:bg-yellow-500 transition-colors">Import (Alt+I)</button><div className="text-yellow-300">Purchase</div></div>
-            </div>
+            {/* Top Info Header */}
+          <div className="bg-[#1b5e58] text-white font-bold px-2 py-1 flex justify-between shrink-0">
+             <div>Accounting Voucher Creation</div>
+             <div className="flex gap-4 items-center">
+                {!isReadOnly && (
+                  <button onClick={() => fileInputRef.current?.click()} className="bg-yellow-400 text-black px-2 py-0.5 rounded text-xs hover:bg-yellow-500 transition-colors voucher-action-btn">Import (Alt+I)</button>
+                )}
+                <div className="text-yellow-300">Purchase</div>
+             </div>
+          </div>
 
-            <div className="flex flex-col flex-1 overflow-y-auto">
+            <div className="flex flex-col flex-1 overflow-hidden min-h-0">
               
               {/* Voucher Top Form */}
-              <div className="p-2 border-b-2 border-black flex gap-4">
+              <div className="p-2 border-b-2 border-black flex gap-4 shrink-0">
                 
                 {/* Left Panel */}
                 <div className="w-[35%] flex flex-col gap-1 pr-4 border-r-2 border-[#81a09d]">
@@ -1703,7 +1910,12 @@ export default function PurchaseInvoice() {
                     ) : (
                       <>
                         <span className="w-[100px] text-slate-800 font-bold mr-2">L R No :</span>
-                        <input type="text" id="input-lrNo" value={invoiceData.lrNo} onBlur={handleLRNoBlur} onChange={e => setInvoiceData({...invoiceData, lrNo: e.target.value})} onKeyDown={e => handleHeaderKeyDown(e, 'input-bale')} className="border border-slate-500 bg-white px-1 flex-1 focus:outline-none focus:border-black focus:bg-[#ffffe0]" />
+                        <div className="flex-1 flex flex-col relative">
+                          <input type="text" id="input-lrNo" value={invoiceData.lrNo} onBlur={handleLRNoBlur} onChange={e => setInvoiceData({...invoiceData, lrNo: e.target.value})} onKeyDown={e => handleHeaderKeyDown(e, 'input-bale')} className="border border-slate-500 bg-white px-1 w-full focus:outline-none focus:border-black focus:bg-[#ffffe0]" />
+                          {lrMessage && (
+                            <span className="text-[10px] text-green-600 font-bold absolute -bottom-[14px] whitespace-nowrap">{lrMessage}</span>
+                          )}
+                        </div>
                       </>
                     )}
                   </div>
@@ -1825,31 +2037,39 @@ export default function PurchaseInvoice() {
               </div>
 
               {/* Items Table */}
-              <div className="flex-1 border-b-2 border-black flex flex-col bg-[#fcfaf2]">
-                <table className="w-full text-left border-collapse relative">
-                  <thead className="sticky top-0 bg-[#eef5ed] shadow-[0_1px_2px_rgba(0,0,0,0.1)]">
-                    <tr className="border-b-2 border-black text-slate-900 font-bold text-[12px]">
-                      <th className="px-1 py-1 border-r border-slate-300 w-8 text-center">#</th>
-                      <th className="px-1 py-1 border-r border-slate-300 w-[100px] text-center">Brand</th>
-                      <th className="px-1 py-1 border-r border-slate-300 w-[200px] text-center">Name of Item</th>
-                      <th className="px-1 py-1 border-r border-slate-300 w-[80px] text-center">HSN/SAC</th>
-                      {showDesignCol && <th className="px-1 py-1 border-r border-slate-300 w-[80px] text-center">Design</th>}
-                      {showColourCol && <th className="px-1 py-1 border-r border-slate-300 w-[80px] text-center">Colour</th>}
-                      {showSizeCol && <th className="px-1 py-1 border-r border-slate-300 w-[60px] text-center">Size</th>}
-                      {showCutCol && <th className="px-1 py-1 border-r border-slate-300 w-[70px] text-center">Cut Size</th>}
-                      {showCutCol && <th className="px-1 py-1 border-r border-slate-300 w-[60px] text-center">Pieces</th>}
-                      <th className="px-1 py-1 border-r border-slate-300 w-[70px] text-center">Quantity</th>
-                      <th className="px-1 py-1 border-r border-slate-300 w-[80px] text-center">Rate</th>
-                      {showDiscCol && <th className="px-1 py-1 border-r border-slate-300 w-[60px] text-center">Disc%</th>}
-                      {showMRPCol && <th className="px-1 py-1 border-r border-slate-300 w-[70px] text-center">MRP</th>}
-                      {invoiceData.gstOn === 'items' && <th className="px-1 py-1 border-r border-slate-300 w-[60px] text-center">GST%</th>}
-                      <th className="px-1 py-1 w-[100px] text-center">Amount</th>
+              <div className="flex-1 border-b-2 border-black bg-[#fcfaf2] overflow-y-auto custom-scroll min-h-0">
+                <table className="w-full text-left border-separate border-spacing-0 relative">
+                  <thead className="shadow-[0_1px_2px_rgba(0,0,0,0.1)]">
+                    <tr className="text-slate-900 font-bold text-[12px] select-none">
+                      <th className="sticky top-0 z-20 bg-emerald-50 bg-clip-padding border-b-2 border-black px-1 py-1 border-r border-slate-300 w-8 text-center cursor-pointer" onClick={() => requestSort('id')}>#{renderSortIndicator('id')}</th>
+                      <th className="sticky top-0 z-20 bg-emerald-50 bg-clip-padding border-b-2 border-black px-1 py-1 border-r border-slate-300 w-[100px] text-center cursor-pointer hover:bg-slate-200" onClick={() => requestSort('brand')}>Brand{renderSortIndicator('brand')}</th>
+                      <th className="sticky top-0 z-20 bg-emerald-50 bg-clip-padding border-b-2 border-black px-1 py-1 border-r border-slate-300 w-[200px] text-center cursor-pointer hover:bg-slate-200" onClick={() => requestSort('item')}>Name of Item{renderSortIndicator('item')}</th>
+                      <th className="sticky top-0 z-20 bg-emerald-50 bg-clip-padding border-b-2 border-black px-1 py-1 border-r border-slate-300 w-[80px] text-center cursor-pointer hover:bg-slate-200" onClick={() => requestSort('hsn')}>HSN/SAC{renderSortIndicator('hsn')}</th>
+                      {showDesignCol && <th className="sticky top-0 z-20 bg-emerald-50 bg-clip-padding border-b-2 border-black px-1 py-1 border-r border-slate-300 w-[80px] text-center cursor-pointer hover:bg-slate-200" onClick={() => requestSort('design')}>Design{renderSortIndicator('design')}</th>}
+                      {showColourCol && <th className="sticky top-0 z-20 bg-emerald-50 bg-clip-padding border-b-2 border-black px-1 py-1 border-r border-slate-300 w-[80px] text-center cursor-pointer hover:bg-slate-200" onClick={() => requestSort('colour')}>Colour{renderSortIndicator('colour')}</th>}
+                      {showSizeCol && <th className="sticky top-0 z-20 bg-emerald-50 bg-clip-padding border-b-2 border-black px-1 py-1 border-r border-slate-300 w-[60px] text-center cursor-pointer hover:bg-slate-200" onClick={() => requestSort('size')}>Size{renderSortIndicator('size')}</th>}
+                      {showCutCol && <th className="sticky top-0 z-20 bg-emerald-50 bg-clip-padding border-b-2 border-black px-1 py-1 border-r border-slate-300 w-[70px] text-center cursor-pointer hover:bg-slate-200" onClick={() => requestSort('cut_size')}>Cut Size{renderSortIndicator('cut_size')}</th>}
+                      {showCutCol && <th className="sticky top-0 z-20 bg-emerald-50 bg-clip-padding border-b-2 border-black px-1 py-1 border-r border-slate-300 w-[60px] text-center cursor-pointer hover:bg-slate-200" onClick={() => requestSort('pieces')}>Pieces{renderSortIndicator('pieces')}</th>}
+                      <th className="sticky top-0 z-20 bg-emerald-50 bg-clip-padding border-b-2 border-black px-1 py-1 border-r border-slate-300 w-[70px] text-center cursor-pointer hover:bg-slate-200" onClick={() => requestSort('qty')}>Quantity{renderSortIndicator('qty')}</th>
+                      {!invoiceData.showMarkdown && <th className="sticky top-0 z-20 bg-emerald-50 bg-clip-padding border-b-2 border-black px-1 py-1 border-r border-slate-300 w-[80px] text-center cursor-pointer hover:bg-slate-200" onClick={() => requestSort('rate')}>Rate{renderSortIndicator('rate')}</th>}
+                      {!invoiceData.showMarkdown && showDiscCol && <th className="sticky top-0 z-20 bg-emerald-50 bg-clip-padding border-b-2 border-black px-1 py-1 border-r border-slate-300 w-[60px] text-center cursor-pointer hover:bg-slate-200" onClick={() => requestSort('disc')}>Disc%{renderSortIndicator('disc')}</th>}
+                      
+                      {invoiceData.showMarkdown && <th className="sticky top-0 z-20 bg-emerald-50 bg-clip-padding border-b-2 border-black px-1 py-1 border-r border-slate-300 w-[70px] text-center cursor-pointer hover:bg-slate-200" onClick={() => requestSort('mrp')}>MRP{renderSortIndicator('mrp')}</th>}
+                      {invoiceData.showMarkdown && <th className="sticky top-0 z-20 bg-emerald-50 bg-clip-padding border-b-2 border-black px-1 py-1 border-r border-slate-300 w-[60px] text-center cursor-pointer hover:bg-slate-200" onClick={() => requestSort('disc')}>Disc1%{renderSortIndicator('disc')}</th>}
+                      {invoiceData.showMarkdown && <th className="sticky top-0 z-20 bg-emerald-50 bg-clip-padding border-b-2 border-black px-1 py-1 border-r border-slate-300 w-[80px] text-center cursor-pointer hover:bg-slate-200" onClick={() => requestSort('rate')}>Rate{renderSortIndicator('rate')}</th>}
+                      
+                      {invoiceData.gstOn === 'items' && <th className="sticky top-0 z-20 bg-emerald-50 bg-clip-padding border-b-2 border-black px-1 py-1 border-r border-slate-300 w-[60px] text-center cursor-pointer hover:bg-slate-200" onClick={() => requestSort('gst')}>GST%{renderSortIndicator('gst')}</th>}
+                      <th className="sticky top-0 z-20 bg-emerald-50 bg-clip-padding border-b-2 border-black px-1 py-1 border-r border-slate-300 w-[100px] text-center cursor-pointer hover:bg-slate-200" onClick={() => requestSort('amount')}>Amount{renderSortIndicator('amount')}</th>
+                      
+                      {invoiceData.showMarkdown && <th className="sticky top-0 z-20 bg-emerald-50 bg-clip-padding border-b-2 border-black px-1 py-1 border-r border-slate-300 w-[70px] text-center">MRP</th>}
+                      {invoiceData.showMarkdown && <th className="sticky top-0 z-20 bg-emerald-50 bg-clip-padding border-b-2 border-black px-1 py-1 border-r border-slate-300 w-[60px] text-center">Disc2%</th>}
+                      {invoiceData.showMarkdown && <th className="sticky top-0 z-20 bg-emerald-50 bg-clip-padding border-b-2 border-black px-1 py-1 w-[80px] text-center">Sale Rate</th>}
                     </tr>
                   </thead>
                   <tbody>
                     {products.filter((item, index) => item.item || Number(item.qty) > 0 || index === products.length - 1).map((item, index) => (
                       <tr key={item.id} className="text-[13px] border-b border-slate-300">
-                        <td className="border-r border-slate-300 px-1 py-[2px] text-center font-bold text-slate-500">{index + 1}</td>
+                        <td className="border-r border-slate-300 px-1 py-[2px] text-center font-bold text-slate-500">{item.serialNo !== undefined ? item.serialNo : index + 1}</td>
                         <td className="border-r border-slate-300 px-1 py-[2px] relative">
                           <input id={`row-${index}-brand`} type="text" value={item.brand} onChange={e => { updateProduct(index, 'brand', e.target.value); setBrandSuggestionIndex(0); }} onFocus={(e) => handleBrandFocus(e, index)} onBlur={handleBrandBlur} onKeyDown={(e) => handleKeyDown(e, index, 'brand')} className="w-full bg-transparent focus:bg-[#ffffe0] focus:outline-none px-1" autoComplete="off" />
                           {activeBrandRow === index && (
@@ -2059,7 +2279,7 @@ export default function PurchaseInvoice() {
                         )}
                         {showSizeCol && (
                           <td className="border-r border-slate-300 px-1 py-[2px] relative">
-                            <input id={`row-${index}-size`} type="text" value={item.size} onChange={e => { updateProduct(index, 'size', e.target.value); setActiveSizeRow(index); setSizeSuggestionIndex(0); }} onKeyDown={(e) => handleKeyDown(e, index, 'size')} onClick={() => { setActiveSizeRow(index); setSizeSuggestionIndex(0); }} className="w-full bg-transparent focus:bg-[#ffffe0] focus:outline-none px-1 font-bold text-center" autoComplete="off" />
+                            <input id={`row-${index}-size`} type="text" value={item.size} onChange={e => { updateProduct(index, 'size', e.target.value); setActiveSizeRow(index); setSizeSuggestionIndex(0); }} onKeyDown={(e) => handleKeyDown(e, index, 'size')} onClick={() => { setActiveSizeRow(index); setSizeSuggestionIndex(0); }} onBlur={() => setTimeout(() => setActiveSizeRow(null), 200)} className="w-full bg-transparent focus:bg-[#ffffe0] focus:outline-none px-1 font-bold text-center" autoComplete="off" />
                             {activeSizeRow === index && (
                               <div className="absolute top-full left-0 mt-0 bg-white border-2 border-black z-50 w-[250px] shadow-md max-h-[150px] overflow-y-auto">
                                 {(() => {
@@ -2171,53 +2391,68 @@ export default function PurchaseInvoice() {
                               } else {
                                 handleKeyDown(e, index, 'qty');
                               }
-                            }} 
+                            }}
                             className="w-full bg-transparent focus:bg-[#ffffe0] focus:outline-none px-1 text-right font-bold" 
                           />
                         </td>
-                        <td className="border-r border-slate-300 px-1 py-[2px]">
-                          <input id={`row-${index}-rate`} type="number" value={item.rate} onChange={e => updateProduct(index, 'rate', e.target.value)} onKeyDown={(e) => handleKeyDown(e, index, 'rate')} className={`w-full bg-transparent focus:bg-[#ffffe0] focus:outline-none px-1 text-right font-bold ${item.last_rate ? (parseFloat(item.rate) > item.last_rate ? 'text-red-600 bg-red-50' : parseFloat(item.rate) < item.last_rate ? 'text-green-600 bg-green-50' : '') : ''}`} title={item.last_rate ? `Last Rate: ₹${item.last_rate}` : ''} />
-                        </td>
-                        {showDiscCol && (
+{!invoiceData.showMarkdown && (
                           <td className="border-r border-slate-300 px-1 py-[2px]">
-                            <input id={`row-${index}-disc`} type="number" value={item.disc || ''} onChange={e => updateProduct(index, 'disc', parseFloat(e.target.value) || 0)} onKeyDown={(e) => handleKeyDown(e, index, 'disc')} className="w-full bg-transparent focus:bg-[#ffffe0] focus:outline-none px-1 text-right font-bold" />
+                            <input id={`row-${index}-rate`} type="number" value={item.rate} onChange={e => updateProduct(index, 'rate', e.target.value)} onBlur={() => handleInputBlur(index, 'rate')} onKeyDown={(e) => handleKeyDown(e, index, 'rate')} className={`w-full bg-transparent focus:bg-[#ffffe0] focus:outline-none px-1 text-right font-bold ${item.last_rate ? (parseFloat(item.rate) > item.last_rate ? 'text-red-600 bg-red-50' : parseFloat(item.rate) < item.last_rate ? 'text-green-600 bg-green-50' : '') : ''}`} title={item.last_rate ? `Last Rate: ₹${item.last_rate}` : ''} />
                           </td>
                         )}
-                        {showMRPCol && (
+                        {!invoiceData.showMarkdown && showDiscCol && (
                           <td className="border-r border-slate-300 px-1 py-[2px]">
-                            <input id={`row-${index}-mrp`} type="number" value={item.mrp || ''} onChange={e => updateProduct(index, 'mrp', parseFloat(e.target.value) || 0)} onKeyDown={(e) => handleKeyDown(e, index, 'mrp')} className="w-full bg-transparent focus:bg-[#ffffe0] focus:outline-none px-1 text-right font-bold" />
+                            <input id={`row-${index}-disc`} type="number" value={item.disc || ''} onChange={e => updateProduct(index, 'disc', e.target.value)} onBlur={() => handleInputBlur(index, 'disc')} onKeyDown={(e) => handleKeyDown(e, index, 'disc')} className="w-full bg-transparent focus:bg-[#ffffe0] focus:outline-none px-1 text-right font-bold" />
                           </td>
+                        )}
+                        {invoiceData.showMarkdown && (
+                          <>
+                            <td className="border-r border-slate-300 px-1 py-[2px]">
+                              <input id={`row-${index}-mrp`} type="number" value={item.mrp || ''} onChange={e => updateProduct(index, 'mrp', e.target.value)} onBlur={() => handleInputBlur(index, 'mrp')} onKeyDown={(e) => handleKeyDown(e, index, 'mrp')} className="w-full bg-transparent focus:bg-[#ffffe0] focus:outline-none px-1 text-right font-bold" />
+                            </td>
+                            <td className="border-r border-slate-300 px-1 py-[2px]">
+                              <input id={`row-${index}-disc`} type="number" value={item.disc || ''} onChange={e => updateProduct(index, 'disc', e.target.value)} onBlur={() => handleInputBlur(index, 'disc')} onKeyDown={(e) => handleKeyDown(e, index, 'disc')} className="w-full bg-transparent focus:bg-[#ffffe0] focus:outline-none px-1 text-right font-bold text-red-600" />
+                            </td>
+                            <td className="border-r border-slate-300 px-1 py-[2px]">
+                              <input id={`row-${index}-rate`} type="number" value={item.rate} onChange={e => updateProduct(index, 'rate', e.target.value)} onBlur={() => handleInputBlur(index, 'rate')} onKeyDown={(e) => handleKeyDown(e, index, 'rate')} className={`w-full bg-transparent focus:bg-[#ffffe0] focus:outline-none px-1 text-right font-bold text-green-700 ${item.last_rate ? (parseFloat(item.rate) > item.last_rate ? 'text-red-600 bg-red-50' : parseFloat(item.rate) < item.last_rate ? 'text-green-600 bg-green-50' : '') : ''}`} title={item.last_rate ? `Last Rate: ₹${item.last_rate}` : ''} />
+                            </td>
+                          </>
                         )}
                         {invoiceData.gstOn === 'items' && (
                           <td className="border-r border-slate-300 px-1 py-[2px]">
-                            <input id={`row-${index}-gst`} type="number" value={item.gst || ''} onChange={e => updateProduct(index, 'gst', parseFloat(e.target.value) || 0)} onKeyDown={(e) => handleKeyDown(e, index, 'gst')} className="w-full bg-transparent focus:bg-[#ffffe0] focus:outline-none px-1 text-right font-bold" />
+                            <input id={`row-${index}-gst`} type="number" value={item.gst || ''} onChange={e => updateProduct(index, 'gst', e.target.value)} onBlur={() => handleInputBlur(index, 'gst')} onKeyDown={(e) => handleKeyDown(e, index, 'gst')} className="w-full bg-transparent focus:bg-[#ffffe0] focus:outline-none px-1 text-right font-bold" />
                           </td>
                         )}
-                        <td className="px-1 py-[2px]">
-                          <input type="text" value={((parseFloat(item.qty) || 0) * (parseFloat(item.rate) || 0) * (1 - (item.disc || 0)/100)).toFixed(2)} readOnly className="w-full bg-transparent focus:outline-none px-1 text-right font-bold" />
+                        <td className={`px-1 py-[2px] ${invoiceData.showMarkdown ? 'border-r border-slate-300' : ''}`}>
+                          <input type="text" value={invoiceData.showMarkdown ? ((parseFloat(item.qty) || 0) * (parseFloat(item.rate) || 0)).toFixed(2) : ((parseFloat(item.qty) || 0) * (parseFloat(item.rate) || 0) * (1 - (item.disc || 0)/100)).toFixed(2)} readOnly className="w-full bg-transparent focus:outline-none px-1 text-right font-bold text-slate-900 bg-slate-100" />
                         </td>
+                        {invoiceData.showMarkdown && (
+                          <>
+                            <td className="border-r border-slate-300 px-1 py-[2px]">
+                              <input id={`row-${index}-mrp_2`} type="number" value={item.mrp || ''} onChange={e => updateProduct(index, 'mrp', e.target.value)} onBlur={() => handleInputBlur(index, 'mrp')} onKeyDown={(e) => handleKeyDown(e, index, 'mrp_2')} className="w-full bg-transparent focus:bg-[#ffffe0] focus:outline-none px-1 text-right font-bold text-gray-500" />
+                            </td>
+                            <td className="border-r border-slate-300 px-1 py-[2px]">
+                              <input id={`row-${index}-disc2`} type="number" value={item.disc2 || ''} onChange={e => updateProduct(index, 'disc2', e.target.value)} onBlur={() => handleInputBlur(index, 'disc2')} onKeyDown={(e) => handleKeyDown(e, index, 'disc2')} className="w-full bg-transparent focus:bg-[#ffffe0] focus:outline-none px-1 text-right font-bold text-red-600" />
+                            </td>
+                            <td className="px-1 py-[2px]">
+                              <input id={`row-${index}-sale_rate`} type="number" value={item.sale_rate} onChange={e => updateProduct(index, 'sale_rate', e.target.value)} onBlur={() => handleInputBlur(index, 'sale_rate')} onKeyDown={(e) => handleKeyDown(e, index, 'sale_rate')} className="w-full bg-transparent focus:bg-[#ffffe0] focus:outline-none px-1 text-right font-bold text-blue-700" />
+                            </td>
+                          </>
+                        )}
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
               
-              {/* Two-Part Footer: Narration (Left) and Detailed Totals (Right) */}
+              {/* Footer: Detailed Totals */}
               <div className="flex border-b-2 border-black bg-[#fcfaf2] shrink-0">
                 
-                {/* Left Part: Narration */}
-                <div className="w-[60%] border-r-2 border-[#81a09d] p-2 flex flex-col justify-end">
-                  <div className="flex flex-col gap-1">
-                    <span className="text-slate-800 font-bold text-[11px]">Narration:</span>
-                    <textarea 
-                      className="border border-slate-500 bg-white px-1 py-0.5 w-full focus:outline-none focus:border-black focus:bg-[#ffffe0] italic resize-none text-[11px]" 
-                      rows={2}
-                    ></textarea>
-                  </div>
-                </div>
+                {/* Left Part: Empty Space */}
+                <div className="w-[60%] border-r-2 border-[#81a09d]"></div>
 
                 {/* Right Part: Totals Table */}
-                <div className="w-[40%] flex flex-col font-bold text-[11px] text-slate-800 leading-tight">
+                <div className="w-[40%] flex flex-col font-bold text-[13px] text-slate-800 leading-tight">
                   
                   {/* Taxable Amount */}
                   <div className="flex border-b border-slate-300">
@@ -2393,11 +2628,17 @@ export default function PurchaseInvoice() {
 
              {isReadOnly ? (
                <button 
-                 onClick={() => setIsReadOnly(false)}
+                 onClick={() => {
+                   if (invoiceLrStatus?.toLowerCase() === 'delivered' || invoiceLrStatus?.toLowerCase() === 'lr delivered') {
+                     alert('This invoice cannot be edited because it is marked as Delivered.');
+                     return;
+                   }
+                   setIsReadOnly(false);
+                 }}
                  className="flex flex-row items-center px-2 py-1 bg-blue-500 border border-blue-600 hover:bg-blue-600 text-left transition-all shadow-[inset_1px_1px_0_rgba(255,255,255,0.8)] mb-2 w-full text-white"
                >
-                   <span className="font-bold text-[11px] w-[25px] underline">E</span>
-                   <span className="text-[11px] font-medium border-l border-blue-600 pl-1 ml-1">Edit</span>
+                 <span className="font-bold text-[11px] w-[25px] underline">E</span>
+                 <span className="text-[11px] font-medium border-l border-blue-600 pl-1 ml-1">Edit</span>
                </button>
              ) : (
                <button 
@@ -2471,20 +2712,48 @@ export default function PurchaseInvoice() {
 
       <SizeAllocationModal
         isOpen={activeSizeMatrixRow !== null}
-        onClose={() => setActiveSizeMatrixRow(null)}
+        onClose={() => {
+          const rowToFocus = activeSizeMatrixRow;
+          setActiveSizeMatrixRow(null);
+          if (rowToFocus !== null) {
+            setTimeout(() => {
+              const mrpEl = document.getElementById(`row-${rowToFocus}-mrp`);
+              if (mrpEl) mrpEl.focus();
+              else document.getElementById(`row-${rowToFocus}-qty`)?.focus();
+            }, 100);
+          }
+        }}
         itemName={activeSizeMatrixRow !== null ? products[activeSizeMatrixRow].item : ''}
         brandId={activeSizeMatrixRow !== null ? products[activeSizeMatrixRow].brand_id : ''}
         initialSizeSet={activeSizeMatrixRow !== null ? products[activeSizeMatrixRow].size : undefined}
         expectedTotalQty={activeSizeMatrixRow !== null ? (parseFloat(String(products[activeSizeMatrixRow].qty)) || null) : null}
+        initialMatrixData={activeSizeMatrixRow !== null ? products[activeSizeMatrixRow].matrixData : undefined}
         onSave={(allocatedSizes, summaryInfo) => {
           if (activeSizeMatrixRow !== null) {
             setProducts(prev => {
               const newProducts = [...prev];
+              const m = summaryInfo.avgMrp || 0;
+              const r = summaryInfo.avgRate || 0;
+              let calculatedDisc = newProducts[activeSizeMatrixRow].disc || 0;
+              if (m > 0 && r > 0 && r <= m) {
+                 calculatedDisc = parseFloat((((m - r) / m) * 100).toFixed(2));
+              } else if (m > 0 && r === 0) {
+                 calculatedDisc = 0;
+              }
+              
+              const d2 = parseFloat(newProducts[activeSizeMatrixRow].disc2) || 0;
+              let sr = newProducts[activeSizeMatrixRow].sale_rate || '';
+              if (m > 0) {
+                 sr = (m * (1 - d2 / 100)).toFixed(2);
+              }
+
               newProducts[activeSizeMatrixRow] = {
                 ...newProducts[activeSizeMatrixRow],
                 qty: summaryInfo.totalQty,
-                rate: summaryInfo.avgRate,
-                mrp: summaryInfo.avgMrp || 0,
+                rate: parseFloat(r as string) > 0 ? parseFloat(r as string).toFixed(2) : '',
+                mrp: parseFloat(m as string) > 0 ? parseFloat(m as string).toFixed(2) : '',
+                disc: calculatedDisc,
+                sale_rate: sr,
                 size: summaryInfo.sizeDisplay,
                 matrixData: allocatedSizes,
                 size_group_id: summaryInfo.size_group_id
@@ -2499,13 +2768,24 @@ export default function PurchaseInvoice() {
                   hsn: '',
                   brand: last ? (last.brand || '') : '', 
                   brand_id: last ? (last.brand_id || null) : null,
-                  qty: '', cut_size: '', pieces: '', rate: '', last_rate: null, disc: 0, gst: 0, design: '', colour: '', size: '', mrp: 0 
+                  qty: '', cut_size: '', pieces: '', rate: '', last_rate: null, disc: last ? (last.disc || 0) : 0, gst: 0, design: '', colour: '', size: '', mrp: 0, disc2: last ? (last.disc2 || 0) : 0, sale_rate: ''
                 });
               }
               return newProducts;
             });
           }
+          const rowToFocus = activeSizeMatrixRow;
           setActiveSizeMatrixRow(null);
+          if (rowToFocus !== null) {
+            setTimeout(() => {
+              const nextFieldId = invoiceData.gstOn === 'items' ? `row-${rowToFocus}-gst` : 
+                                  invoiceData.showMarkdown ? `row-${rowToFocus}-mrp_2` : 
+                                  `row-${rowToFocus + 1}-brand`;
+              const el = document.getElementById(nextFieldId);
+              if (el) el.focus();
+              else document.getElementById(`row-${rowToFocus + 1}-item`)?.focus();
+            }, 100);
+          }
         }}
       />
 
@@ -2573,6 +2853,9 @@ export default function PurchaseInvoice() {
         initialValue={masterModal?.initialValue || ''}
         initialBrand={masterModal?.initialBrand}
         initialBrandId={masterModal?.initialBrandId}
+        editId={masterModal?.editId}
+        initialExtra2={masterModal?.initialExtra2}
+        initialExtra3={masterModal?.initialExtra3}
         onSave={(type, data) => {
            console.log(`Created new master of type ${type}:`, data);
            if (masterModal) {
@@ -2614,7 +2897,12 @@ export default function PurchaseInvoice() {
                  });
                }
              } else if (savedType === 'hsn') {
-               setAvailableHsns(prev => [...prev, { name: data.name, tax_percent: data.tax_percent }]);
+               setAvailableHsns(prev => {
+                 if (!prev.find(h => h.name === data.name)) {
+                   return [...prev, { name: data.name, tax_percent: data.tax_percent }];
+                 }
+                 return prev;
+               });
                setProducts(prev => {
                  const newP = [...prev];
                  newP[rowIndex] = {
@@ -2698,11 +2986,17 @@ export default function PurchaseInvoice() {
                if (showSizeCol) fields.push('size');
                if (showCutCol) fields.push('cut_size');
                
-               fields.push('qty', 'rate');
-               
-               if (showDiscCol) fields.push('disc');
-               if (showMRPCol) fields.push('mrp');
-               if (invoiceData.gstOn === 'items') fields.push('gst');
+               fields.push('qty');
+    if (invoiceData.showMarkdown) {
+       fields.push('mrp', 'disc', 'rate');
+       if (invoiceData.gstOn === 'items') fields.push('gst');
+       fields.push('mrp_2', 'disc2', 'sale_rate');
+    } else {
+       fields.push('rate');
+       if (showDiscCol) fields.push('disc');
+       if (showMRPCol) fields.push('mrp');
+       if (invoiceData.gstOn === 'items') fields.push('gst');
+    }
 
                const currentFieldIndex = fields.indexOf(field);
                setTimeout(() => {

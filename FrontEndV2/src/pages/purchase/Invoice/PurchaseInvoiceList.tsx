@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import SearchableDropdown from '../../../components/SearchableDropdown';
@@ -49,8 +49,17 @@ export default function PurchaseInvoiceList() {
   };
 
   const ResizableHeader = ({ colId, title, className, minWidth = 40 }: { colId: keyof typeof colWidths, title: string, className?: string, minWidth?: number }) => {
+    const handleSortClick = () => {
+      let direction: 'asc' | 'desc' = 'asc';
+      if (sortConfig.key === colId && sortConfig.direction === 'asc') {
+        direction = 'desc';
+      }
+      setSortConfig({ key: colId, direction });
+    };
+
     const handleMouseDown = (e: React.MouseEvent) => {
       e.preventDefault();
+      e.stopPropagation();
       const startX = e.clientX;
       const startWidth = colWidths[colId];
 
@@ -72,20 +81,69 @@ export default function PurchaseInvoiceList() {
 
     return (
       <th 
-        className={`relative px-2 py-1 border-r border-slate-300 select-none ${className}`} 
+        className={`relative px-2 py-1 border-r border-slate-300 select-none cursor-pointer hover:bg-[#d6e8d5] ${className || ''}`} 
         style={{ width: colWidths[colId], minWidth: colWidths[colId], maxWidth: colWidths[colId] }}
+        onClick={handleSortClick}
       >
-        <span className="truncate block w-full text-[11px] leading-tight" title={title}>{title}</span>
+        <div className="flex items-center justify-between w-full h-full">
+          <span className="truncate block text-[11px] leading-tight" title={title}>{title}</span>
+          {sortConfig.key === colId && (
+            <span className="text-[10px] ml-1 text-[#1b5e58]">
+              {sortConfig.direction === 'asc' ? '▲' : '▼'}
+            </span>
+          )}
+        </div>
         <div 
           className="absolute right-0 top-0 h-full w-2 cursor-col-resize hover:bg-[#1b5e58] z-10 opacity-50"
           onMouseDown={handleMouseDown}
+          onClick={(e) => e.stopPropagation()}
         />
       </th>
     );
   };
 
-    const [invoices, setInvoices] = useState<any[]>([]);
+  const [invoices, setInvoices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [sortConfig, setSortConfig] = useState<{key: keyof typeof colWidths | null, direction: 'asc' | 'desc'}>({ key: null, direction: 'asc' });
+
+  const sortedInvoices = useMemo(() => {
+    let sortableItems = [...invoices];
+    if (sortConfig.key !== null) {
+      sortableItems.sort((a, b) => {
+        let aVal = a[sortConfig.key!];
+        let bVal = b[sortConfig.key!];
+        
+        const parseNum = (val: string | number) => {
+          if (typeof val === 'number') return val;
+          if (!val) return 0;
+          return parseFloat(String(val).replace(/,/g, ''));
+        };
+
+        const numFields = ['totalAmt', 'discount', 'addChgs', 'taxableAmt', 'cgstAmt', 'sgstAmt', 'igstAmt', 'netAmount'];
+        
+        if (numFields.includes(sortConfig.key!)) {
+          aVal = parseNum(aVal);
+          bVal = parseNum(bVal);
+        } else if (sortConfig.key === 'recvDt' || sortConfig.key === 'billDate') {
+          const parseDate = (d: string) => {
+            if (!d) return 0;
+            const [day, month, year] = d.split('/');
+            return new Date(`${year}-${month}-${day}`).getTime();
+          };
+          aVal = parseDate(aVal);
+          bVal = parseDate(bVal);
+        } else {
+          aVal = String(aVal || '').toLowerCase();
+          bVal = String(bVal || '').toLowerCase();
+        }
+
+        if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
+        if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+    return sortableItems;
+  }, [invoices, sortConfig]);
 
   useEffect(() => {
     fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/purchase-invoices`, {
@@ -101,7 +159,7 @@ export default function PurchaseInvoiceList() {
           billNo: inv.bill_no || '',
           billDate: inv.bill_date ? new Date(inv.bill_date).toLocaleDateString('en-GB') : '',
           partyName: inv.vendor_name || '',
-          state: '',
+          state: inv.lr_status || '',
           verified: '',
           valueDiff: '',
           totalAmt: (inv.total_amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 }),
@@ -116,6 +174,7 @@ export default function PurchaseInvoiceList() {
           rOff: '',
           netAmount: (inv.net_amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 }),
           userName: 'ADMIN',
+          lrStatus: inv.lr_status || '',
           items: [],
           ledgers: []
         }));
@@ -139,6 +198,15 @@ export default function PurchaseInvoiceList() {
   
   const fmt = (val: number) => val === 0 ? '' : val.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+  const getRowBgClass = (idx: number, status: string) => {
+    if (selectedIndex === idx) return 'bg-[#ffe000] text-black font-bold';
+    const s = status?.toLowerCase() || '';
+    if (s === 'pending' || s === 'lr pending') return 'bg-orange-200';
+    if (s === 'delivered' || s === 'lr delivered') return 'bg-green-200';
+    if (s === 'printed' || s === 'lr printed') return 'bg-blue-200';
+    return idx % 2 === 0 ? 'bg-white' : 'bg-[#fcfaf2]';
+  };
+
   useEffect(() => {
     if (listRef.current) {
       listRef.current.focus();
@@ -149,14 +217,14 @@ export default function PurchaseInvoiceList() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'ArrowDown') {
         e.preventDefault();
-        setSelectedIndex(prev => (prev < invoices.length - 1 ? prev + 1 : prev));
+        setSelectedIndex(prev => (prev < sortedInvoices.length - 1 ? prev + 1 : prev));
       } else if (e.key === 'ArrowUp') {
         e.preventDefault();
         setSelectedIndex(prev => (prev > 0 ? prev - 1 : prev));
       } else if (e.key === 'Enter') {
         e.preventDefault();
-        if (invoices.length > 0 && invoices[selectedIndex]) {
-          navigate('/purchase-invoice', { state: { invoiceId: invoices[selectedIndex].id, mode: 'view' } });
+        if (sortedInvoices.length > 0 && sortedInvoices[selectedIndex]) {
+          navigate('/purchase-invoice', { state: { invoiceId: sortedInvoices[selectedIndex].id, mode: 'view' } });
         }
       } else if (e.key === 'Escape') {
         e.preventDefault();
@@ -171,7 +239,7 @@ export default function PurchaseInvoiceList() {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [navigate, invoices, selectedIndex]);
+  }, [navigate, sortedInvoices, selectedIndex]);
 
   return (
     <>
@@ -296,11 +364,11 @@ export default function PurchaseInvoiceList() {
                      </tr>
                    </thead>
                    <tbody>
-                     {invoices.length > 0 ? invoices.map((inv, idx) => (
+                     {sortedInvoices.length > 0 ? sortedInvoices.map((inv, idx) => (
                        <React.Fragment key={inv.id}>
                          <tr 
                            onClick={() => setSelectedIndex(idx)}
-                           className={`cursor-pointer ${selectedIndex === idx ? 'bg-[#ffe000] text-black font-bold' : (idx % 2 === 0 ? 'bg-white' : 'bg-[#fcfaf2]')}`}
+                           className={`cursor-pointer ${getRowBgClass(idx, inv.lrStatus)}`}
                          >
                            <td className={`px-2 py-1 border-r border-slate-300 overflow-hidden text-ellipsis whitespace-nowrap ${selectedIndex === idx ? 'border-r-black' : ''}`}>{inv.grn}</td>
                            <td className={`px-2 py-1 border-r border-slate-300 overflow-hidden text-ellipsis whitespace-nowrap ${selectedIndex === idx ? 'border-r-black' : ''}`}>{inv.recvDt}</td>

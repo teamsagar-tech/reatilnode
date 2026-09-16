@@ -64,6 +64,7 @@ exports.getById = async (req, res) => {
       LEFT JOIN Items i ON pi.item_id = i.id
       LEFT JOIN Brands b ON pi.brand_id = b.id
       WHERE pi.invoice_id = ?
+      ORDER BY pi.id ASC
     `, [invoice.id]);
 
     // 3. Get Attributes for Items
@@ -78,6 +79,7 @@ exports.getById = async (req, res) => {
         LEFT JOIN Colors c ON pia.color_id = c.id
         LEFT JOIN Styles d ON pia.design_id = d.id
         WHERE pia.invoice_item_id = ?
+        ORDER BY pia.id ASC
       `, [item.id]);
       item.attributes = attributes;
     }
@@ -183,7 +185,20 @@ exports.create = async (req, res) => {
     const created_by = req.user?.id || null;
     const ip_address = req.headers['x-forwarded-for'] || req.socket.remoteAddress || null;
 
-    const lr_status = 'LR PENDING';
+    let lr_status = 'Pending';
+
+    // Auto-Link Unlinked LR if it exists
+    if (lr_no) {
+      const [unlinkedRows] = await conn.execute(
+        'SELECT id FROM Unlinked_LRs WHERE firm_id = ? AND vendor_id = ? AND lr_no = ? LIMIT 1',
+        [req.firm_id, vendor_id, lr_no]
+      );
+      if (unlinkedRows.length > 0) {
+        lr_status = 'Delivered'; // Auto-delivered since LR was already received
+        // Remove it from unlinked pool
+        await conn.execute('DELETE FROM Unlinked_LRs WHERE id = ?', [unlinkedRows[0].id]);
+      }
+    }
 
     // 2. Insert Header
     const [invoiceResult] = await conn.execute(
@@ -261,6 +276,27 @@ exports.create = async (req, res) => {
             [itemId, sizeId, matrixRow.qty || 0, barcode, matrixRow.rate || null, matrixRow.mrp || null]
           );
         }
+      } else {
+        let designId = null, colorId = null, sizeId = null;
+        if (item.design) {
+           const [rows] = await conn.execute('SELECT id FROM Styles WHERE firm_id = ? AND name = ?', [req.firm_id, item.design]);
+           if (rows.length > 0) designId = rows[0].id;
+        }
+        if (item.colour) {
+           const [rows] = await conn.execute('SELECT id FROM Colors WHERE firm_id = ? AND name = ?', [req.firm_id, item.colour]);
+           if (rows.length > 0) colorId = rows[0].id;
+        }
+        if (item.size) {
+           const [rows] = await conn.execute('SELECT id FROM Sizes WHERE firm_id = ? AND name = ?', [req.firm_id, item.size]);
+           if (rows.length > 0) sizeId = rows[0].id;
+        }
+        let barcode = item.barcode || `${invoiceId}-${itemId}-${Date.now() % 100000}`;
+        await conn.execute(
+            `INSERT INTO PurchaseInvoiceItemAttributes 
+             (invoice_item_id, size_id, color_id, design_id, qty, barcode, purchase_rate, mrp) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            [itemId, sizeId, colorId, designId, item.total_qty || 0, barcode, item.purchase_rate || null, item.mrp || null]
+        );
       }
     }
 
@@ -410,6 +446,27 @@ exports.update = async (req, res) => {
             [itemId, sizeId, matrixRow.qty || 0, barcode, matrixRow.rate || null, matrixRow.mrp || null]
           );
         }
+      } else {
+        let designId = null, colorId = null, sizeId = null;
+        if (item.design) {
+           const [rows] = await conn.execute('SELECT id FROM Styles WHERE firm_id = ? AND name = ?', [req.firm_id, item.design]);
+           if (rows.length > 0) designId = rows[0].id;
+        }
+        if (item.colour) {
+           const [rows] = await conn.execute('SELECT id FROM Colors WHERE firm_id = ? AND name = ?', [req.firm_id, item.colour]);
+           if (rows.length > 0) colorId = rows[0].id;
+        }
+        if (item.size) {
+           const [rows] = await conn.execute('SELECT id FROM Sizes WHERE firm_id = ? AND name = ?', [req.firm_id, item.size]);
+           if (rows.length > 0) sizeId = rows[0].id;
+        }
+        let barcode = item.barcode || `${id}-${itemId}-${Date.now() % 100000}`;
+        await conn.execute(
+            `INSERT INTO PurchaseInvoiceItemAttributes 
+             (invoice_item_id, size_id, color_id, design_id, qty, barcode, purchase_rate, mrp) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            [itemId, sizeId, colorId, designId, item.total_qty || 0, barcode, item.purchase_rate || null, item.mrp || null]
+        );
       }
     }
 

@@ -1,0 +1,6 @@
+{
+  "summary": "Plan to create a separate database table for Hundekaris and migrate the associated API endpoints.",
+  "updatedAt": "2026-09-16T14:35:41.818258Z",
+  "requestFeedback": true,
+  "userFacing": true
+}
