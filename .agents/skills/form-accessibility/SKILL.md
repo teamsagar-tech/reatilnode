@@ -44,3 +44,9 @@ All Master layouts must include the following shortcuts in their right sidebar a
 ## 7. Modal Interferences with Global Keyboard Shortcuts
 When building custom global/page-level keyboard listeners, background pages will continue to receive and process keypresses even when a modal is visibly covering the screen.
 - **Rule:** If a page contains a global `handleKeyDown` function, you MUST add an early exit condition at the top to ignore inputs while any modal is open.
+
+## 5. Tally-Style Escape Navigation & Global Dialogs
+- **Escape Key Interception:** On all data entry forms, if the user presses `Escape` (or clicks "Quit"), you MUST check if any unsaved data has been entered.
+- **Quit Confirmation:** If data is entered, intercept the navigation and prompt "Quit: Yes or No?" using the global `confirmDialog` from `useConfirmStore`.
+- **Fast Exit:** If the form is completely blank, `Escape` should back out instantly without prompting.
+- **Global Y/N Hotkeys:** The global `ConfirmDialog` component natively listens for `Y` or `Enter` to confirm, and `N` or `Escape` to cancel. Always ensure these shortcuts are preserved or implemented in any custom dialogs to maintain Tally-like fast keyboard operability.
