@@ -1,41 +1,37 @@
-# Dynamic Party Invoice Configuration
+# Invoice Import Implementation Plan
 
-Allow users to define specific invoice column configurations (Design No, Colour No, Size, Discount %, MRP Markdown) at the Party Master level. When a Party is selected during Purchase Invoice creation, their specific column configuration will be dynamically loaded. If a Party has no configuration saved yet, the system will intuitively learn and save the configuration when the user saves their first invoice for that Party.
+The `sample/invoices` directory contains 9 raw JPEG photos of multi-page invoices from different suppliers (e.g., LA BASE SHIRTS, MOMENTO FASHION, IT'S CREATION, etc.). 
 
-## User Review Required
+You requested to insert all these invoices via the backend API instead of pushing directly to the database. 
 
-- This requires adding a JSON column to the `Parties` table to store this configuration flexibly.
-- Are there any other checkboxes on the invoice screen (like "Cut Size") that you want to include in this master config in the future? Storing it as JSON allows us to easily add more later without changing the database schema again.
+## The Core Challenge
+The `/api/purchase-invoices` endpoint expects relational integer IDs (e.g. `vendor_id`, `item_id`, `brand_id`) rather than raw string names. Because these invoices contain brand new suppliers and item names, **we cannot just post raw extracted strings to the invoice API**—it will crash because those Master records don't exist yet.
 
-## Proposed Changes
+## Proposed Strategy
 
-### Backend Layer
+To automate this cleanly, I propose a **two-phase extraction and ingestion pipeline**:
 
-#### [MODIFY] `Backend/controllers/partyController.js`
-- Update `getParties` to select the new `invoice_config` column.
-- Update `createParty` and `updateParty` queries to accept and store `invoice_config`.
-- Create a new dedicated function `updatePartyInvoiceConfig(req, res)` that specifically updates just the `invoice_config` column. This will be used by the background-save feature in the Purchase Invoice screen.
+### Phase 1: Manual Data Extraction (AI Vision)
+1. I will visually inspect the 9 invoice images in batches.
+2. I will extract and structure the invoice data into a pure `raw_invoices.json` file inside the `sample/invoices/` directory. This file will contain raw strings (e.g., Vendor Name, Item Name, Sizes, MRPs, Rates).
 
-#### [MODIFY] `Backend/routes/partyRoutes.js`
-- Expose a new route: `PUT /api/masters/party/:id/invoice-config` pointing to the new controller function.
+### Phase 2: Intelligent Ingestion Script (`import_invoices.js`)
+I will write a custom Node.js script that will loop through `raw_invoices.json` and perform the following for each invoice:
+1. **Master Data Resolution:** 
+   - Check if the Vendor string exists via the DB. If not, auto-create it and grab the new `vendor_id`.
+   - Check if the Brand/Item string exists via the DB. If not, auto-create it and grab the new `item_id`.
+2. **Payload Construction:** 
+   - Replace all the raw strings in the JSON with the newly resolved `vendor_id`, `item_id`, etc.
+3. **API Insertion:** 
+   - Hit the `/api/purchase-invoices` endpoint with the strictly compliant payload to save the invoice and update financial ledgers properly.
 
-### Frontend Layer
+> [!CAUTION]
+> **Master Data Clutter Warning**
+> Running this script will automatically create roughly ~3 new Vendors, ~5 new Brands, and ~20-30 new Items in your master database to support these invoices. 
 
-#### [MODIFY] `FrontEndV2/src/pages/masters/inventory/PartyMaster.tsx`
-- Add a new "Invoice UI Defaults" section to the UI with the 5 checkboxes (Design No, Colour No, Size, Discount %, MRP Markdown).
-- Map these checkboxes to a new `formData.invoice_config` object so they can be viewed and edited by the user.
+## Open Questions
 
-#### [MODIFY] `FrontEndV2/src/components/inventory/PartyModal.tsx`
-- Replicate the exact same checkbox UI in the popup Party Modal so users can configure this when creating a party on-the-fly.
+1. **Auth Token:** The script will need a valid JWT token to hit the APIs. Are you okay with the script generating a temporary Superadmin token directly from the DB to authenticate its API calls?
+2. **Database Auto-Creation:** Do you approve of the script auto-creating missing Vendors and Items based strictly on the text found in the images?
 
-#### [MODIFY] `FrontEndV2/src/pages/inventory/PurchaseInvoice.tsx`
-- **Dynamic Loading:** Modify `handleInvoiceChange('supplier', val)`. When a supplier is selected, locate the supplier in the `vendors` array. If the vendor has an `invoice_config`, automatically apply those boolean values to `invoiceData` instead of relying on `localStorage`.
-- **Auto-Learning (Background Save):** Modify `handleSaveInvoice()`. After the invoice saves successfully, check if the originally selected vendor had an empty/null `invoice_config`. If it was empty, fire an asynchronous background API request to `PUT /api/masters/party/:id/invoice-config` to permanently save the current checkbox states to that Party Master.
-
-## Verification Plan
-
-### Manual Verification
-1. Open the Party Master, edit an existing party, check "Size" and "Discount %" in the new section, and Save.
-2. Go to Purchase Invoice, select that Party, and verify that "Size" and "Discount %" checkboxes instantly activate.
-3. Select a completely new party (with no configuration). Check "MRP Markdown" manually on the invoice screen, then Save the Invoice.
-4. Go back to Party Master and verify that the newly saved Party has "MRP Markdown" checked automatically.
+Once you approve, I will begin extracting the data from the images into a JSON file!

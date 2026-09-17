@@ -209,9 +209,9 @@ exports.create = async (req, res) => {
     // 2. Insert Header
     const [invoiceResult] = await conn.execute(
       `INSERT INTO PurchaseInvoices 
-       (firm_id, grn_no, vendor_id, bill_no, bill_date, receive_date, discount_percent, discount_amount, commission_percent, commission_amount, total_amount, gst_amount, net_amount, narration, lr_status, purchase_order_id, lr_no, transporter, bales, freight, insurance, packing_charges, created_by, ip_address) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [req.firm_id, grn_no, vendor_id, bill_no || null, bill_date || null, receive_date || new Date(), discount_percent || 0, discount_amount || 0, commission_percent || 0, commission_amount || 0, total_amount || 0, gst_amount || 0, net_amount || 0, narration || null, lr_status, req.body.purchase_order_id || null, lr_no || null, transporter || null, bales || null, freight || 0, insurance || 0, packing_charges || 0, created_by, ip_address]
+       (firm_id, grn_no, vendor_id, bill_no, bill_date, receive_date, discount_percent, discount_amount, commission_percent, commission_amount, total_amount, gst_amount, net_amount, narration, lr_status, purchase_order_id, lr_no, transporter, bales, freight, insurance, packing_charges) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [req.firm_id, grn_no, vendor_id, bill_no || null, bill_date || null, receive_date || new Date(), discount_percent || 0, discount_amount || 0, commission_percent || 0, commission_amount || 0, total_amount || 0, gst_amount || 0, net_amount || 0, narration || null, lr_status, req.body.purchase_order_id || null, lr_no || null, transporter || null, bales || null, freight || 0, insurance || 0, packing_charges || 0]
     );
     const invoiceId = invoiceResult.insertId;
 

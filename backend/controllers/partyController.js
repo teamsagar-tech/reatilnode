@@ -27,9 +27,9 @@ exports.createParty = async (req, res) => {
       `INSERT INTO Parties (
         firm_id, gstin, pan_number, state, state_code, party_name, short_name, party_type,
         line1, line2, line3, pincode, city, taluka, district,
-        email, contact_person, mobile_number1, contact_number2, mobile_number2, contact_number3, mobile_number3,
-        account_name, bank_name, account_number, ifsc, branch, bank_account_type, gst_raw_data, categories, brands, brand_type, contacts, invoice_config
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        email, dynamic_contacts,
+        account_name, bank_name, account_number, ifsc, branch, bank_account_type, categories, brands, invoice_config
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         req.firm_id,
         gstin || null,
@@ -47,23 +47,15 @@ exports.createParty = async (req, res) => {
         taluka || null,
         district || null,
         email || null,
-        contactPerson || null,
-        mobileNumber || null,
-        contactNumber2 || null,
-        mobileNumber2 || null,
-        contactNumber3 || null,
-        mobileNumber3 || null,
+        contacts ? JSON.stringify(contacts) : null,
         accountName || null,
         bankName || null,
         accountNumber || null,
         ifsc || null,
         branch || null,
         bankAccountType || null,
-        gstRawData ? JSON.stringify(gstRawData) : null,
         categories ? JSON.stringify(categories) : null,
         brands ? JSON.stringify(brands) : null,
-        brandType || 'Multi',
-        contacts ? JSON.stringify(contacts) : null,
         invoiceConfig ? JSON.stringify(invoiceConfig) : null
       ]
     );

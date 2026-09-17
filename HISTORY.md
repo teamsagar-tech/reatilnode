@@ -572,3 +572,20 @@ These refinements transform the CSV import from a basic shell to a highly reliab
 **Files Modified:**
 - `FrontEndV2/src/pages/inventory/PurchaseInvoice.tsx`
 - `FrontEndV2/src/components/ui/ConfirmDialog.tsx`
+
+## 2026-09-17: API Payload Verification & Bulk Purchase Invoice Imports
+**Agent:** Antigravity (AI)
+**Features Implemented:**
+- **Automated Sample Importer:** Created `Backend/scripts/import_invoices.js` to automatically ingest raw JSON structures extracted from the 9 sample JPEG invoices. This script bypasses the DB to use the standard application APIs, proving end-to-end integration viability.
+- **Auto-Resolve Vendors & Items:** The importer automatically detects missing Vendors and Items and provisions them dynamically on the fly before creating the master purchase invoices via `/api/purchase-invoices`.
+- **Backend Schema Bug Fixes:** Discovered and fixed numerous discrepancies in the backend controllers that were hard-crashing when dealing with `import_invoices.js`. Fixes include:
+  - Moving Vendor lookups to `/api/vendors` since `PurchaseInvoices` uses a foreign key mapping to the `Vendors` table, not `Parties`.
+  - Removing non-existent columns (`tax_percent` in `HSNSACs`, `created_by` and `ip_address` in `PurchaseInvoices`) from SQL insertion statements.
+- **Stock Business Logic Verification:** Verified that `PurchaseInvoices` currently do *not* auto-inflate item inventory upon creation, adhering to the business rule that stock is strictly updated downstream during the "Inward Process after LR is Received".
+
+**Files Modified:**
+- `Backend/scripts/import_invoices.js` (NEW)
+- `sample/invoices/raw_invoices.json` (NEW)
+- `Backend/controllers/partyController.js`
+- `Backend/controllers/itemController.js`
+- `Backend/controllers/purchaseInvoiceController.js`

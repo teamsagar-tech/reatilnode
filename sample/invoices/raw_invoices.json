@@ -1,0 +1,116 @@
+[
+  {
+    "supplier": "MOMENTO FASHION",
+    "billNo": "1244",
+    "billDate": "2026-08-30",
+    "transporter": "SOLAPUR GOODS",
+    "discountPercent": 5,
+    "discountAmount": 4358.50,
+    "items": [
+      { "item": "5493 - BLUE MODI SUIT", "hsn": "610310", "qty": 8, "rate": 1090, "gst": 5 },
+      { "item": "5493 - ONION MODI SUIT", "hsn": "610310", "qty": 10, "rate": 1065, "gst": 5 },
+      { "item": "5604 - PURPLE MODI SUIT", "hsn": "610310", "qty": 8, "rate": 1181.25, "gst": 5 },
+      { "item": "5658 - DARK GREY MODI SUIT", "hsn": "610310", "qty": 8, "rate": 1345, "gst": 5 },
+      { "item": "6115 - GOLD KURTA SUIT", "hsn": "610310", "qty": 10, "rate": 827, "gst": 5 },
+      { "item": "6273 - YELLOW KURTA SUIT", "hsn": "610310", "qty": 10, "rate": 972.5, "gst": 5 },
+      { "item": "6407 - BLACK PATHANI SUIT", "hsn": "610310", "qty": 10, "rate": 732, "gst": 5 },
+      { "item": "6468 - FIROZI KURTA SUIT", "hsn": "610310", "qty": 8, "rate": 1141.25, "gst": 5 },
+      { "item": "6468 - ONION KURTA SUIT", "hsn": "610310", "qty": 8, "rate": 1141.25, "gst": 5 },
+      { "item": "6512 - BLACK KURTA SUIT", "hsn": "610310", "qty": 8, "rate": 1236.25, "gst": 5 }
+    ]
+  },
+  {
+    "supplier": "FOCUS JEANS INDIA PVT. LTD.",
+    "billNo": "FJ-2069/26-27",
+    "billDate": "2026-08-11",
+    "transporter": "SHOLAPUR GOODS CARRIERS",
+    "discountPercent": 5,
+    "discountAmount": 1083.25,
+    "items": [
+      { "item": "CT15100 T SHIRT", "hsn": "610990", "qty": 11, "rate": 280, "gst": 5 },
+      { "item": "CT15182 T SHIRT", "hsn": "610990", "qty": 6, "rate": 345, "gst": 5 },
+      { "item": "CT15221 T SHIRT", "hsn": "610990", "qty": 6, "rate": 345, "gst": 5 },
+      { "item": "CT15253 T SHIRT", "hsn": "610990", "qty": 7, "rate": 345, "gst": 5 },
+      { "item": "CT15301 T SHIRT", "hsn": "610990", "qty": 6, "rate": 405, "gst": 5 },
+      { "item": "CT15303 T SHIRT", "hsn": "610990", "qty": 6, "rate": 345, "gst": 5 },
+      { "item": "CT60004 T SHIRT", "hsn": "610990", "qty": 3, "rate": 345, "gst": 5 },
+      { "item": "CT60005 T SHIRT", "hsn": "610990", "qty": 3, "rate": 375, "gst": 5 },
+      { "item": "OS15172 T SHIRT", "hsn": "610990", "qty": 2, "rate": 345, "gst": 5 },
+      { "item": "OS15176 T SHIRT", "hsn": "610990", "qty": 4, "rate": 375, "gst": 5 },
+      { "item": "OS15198 T SHIRT", "hsn": "610990", "qty": 4, "rate": 375, "gst": 5 },
+      { "item": "OS15305 T SHIRT", "hsn": "610990", "qty": 6, "rate": 405, "gst": 5 }
+    ]
+  },
+  {
+    "supplier": "SHREE TRADING COMPANY",
+    "billNo": "GT/101",
+    "billDate": "2026-07-24",
+    "transporter": "",
+    "discountPercent": 4.762,
+    "discountAmount": 2904.64,
+    "items": [
+      { "item": "BRA ALIZA C COL", "hsn": "62121000", "qty": 12, "rate": 182.70, "gst": 5 },
+      { "item": "BRA ALIZA B CUP", "hsn": "62121000", "qty": 18, "rate": 153.70, "gst": 5 },
+      { "item": "BRA CORE FIT", "hsn": "62121000", "qty": 12, "rate": 139.20, "gst": 5 },
+      { "item": "BRA CRAZY SEALMESS C/D", "hsn": "62121000", "qty": 42, "rate": 156.60, "gst": 5 },
+      { "item": "BRA GLORIA MOLD", "hsn": "62121000", "qty": 24, "rate": 110.20, "gst": 5 },
+      { "item": "BRA KANISHKA", "hsn": "62121000", "qty": 30, "rate": 104.40, "gst": 5 },
+      { "item": "BRA KANISHKA (Dup)", "hsn": "62121000", "qty": 6, "rate": 110.20, "gst": 5 },
+      { "item": "BRA LIANA C CUP", "hsn": "62121000", "qty": 48, "rate": 127.60, "gst": 5 },
+      { "item": "BRA LIANA C CUP (Dup)", "hsn": "62121000", "qty": 6, "rate": 133.40, "gst": 5 },
+      { "item": "BRA MAHI WSB/COL", "hsn": "62121000", "qty": 12, "rate": 123.54, "gst": 5 },
+      { "item": "BRA MAYA B CUP", "hsn": "62121000", "qty": 30, "rate": 192.56, "gst": 5 },
+      { "item": "BRA MAYA B CUP (Dup)", "hsn": "62121000", "qty": 6, "rate": 198.36, "gst": 5 },
+      { "item": "BRA MAYA C/ D cup", "hsn": "62121000", "qty": 18, "rate": 205.90, "gst": 5 },
+      { "item": "BRA MAYA C/ D cup (Dup)", "hsn": "62121000", "qty": 6, "rate": 211.70, "gst": 5 },
+      { "item": "MONALISA", "hsn": "62121000", "qty": 18, "rate": 198.36, "gst": 5 },
+      { "item": "BRA SAYNA", "hsn": "62121000", "qty": 36, "rate": 136.30, "gst": 5 }
+    ]
+  },
+  {
+    "supplier": "SHREE TRADING COMPANY",
+    "billNo": "GT/102",
+    "billDate": "2026-07-24",
+    "transporter": "",
+    "discountPercent": 4.762,
+    "discountAmount": 2495.69,
+    "items": [
+      { "item": "BELL PAD", "hsn": "62121000", "qty": 30, "rate": 136.30, "gst": 5 },
+      { "item": "BRA CORE FIT", "hsn": "62121000", "qty": 30, "rate": 139.20, "gst": 5 },
+      { "item": "BRA CRAZY SEALMESS C/D", "hsn": "62121000", "qty": 42, "rate": 156.60, "gst": 5 },
+      { "item": "BRA GLORIA MOLD", "hsn": "62121000", "qty": 30, "rate": 110.20, "gst": 5 },
+      { "item": "BRA JERRY DC/ LC", "hsn": "62121000", "qty": 24, "rate": 109.04, "gst": 5 },
+      { "item": "BRA JOCKEY", "hsn": "62121000", "qty": 18, "rate": 98.60, "gst": 5 },
+      { "item": "BRA KANISHKA", "hsn": "62121000", "qty": 30, "rate": 104.40, "gst": 5 },
+      { "item": "BRA LIANA C CUP", "hsn": "62121000", "qty": 30, "rate": 127.60, "gst": 5 },
+      { "item": "BRA NANCY", "hsn": "62121000", "qty": 36, "rate": 110.20, "gst": 5 },
+      { "item": "BRA NINA", "hsn": "62121000", "qty": 24, "rate": 91.64, "gst": 5 },
+      { "item": "BRA ORRY SPORTS", "hsn": "62121000", "qty": 24, "rate": 137.46, "gst": 5 },
+      { "item": "BRA RIVA MOLD", "hsn": "62121000", "qty": 30, "rate": 113.10, "gst": 5 },
+      { "item": "BRA ROSIE MOLD", "hsn": "62121000", "qty": 18, "rate": 170.52, "gst": 5 },
+      { "item": "SENORITA WSB/CLR", "hsn": "62121000", "qty": 24, "rate": 105.56, "gst": 5 },
+      { "item": "BRA SUZEN MOLD", "hsn": "62121000", "qty": 36, "rate": 123.54, "gst": 5 }
+    ]
+  },
+  {
+    "supplier": "SHREE TRADING COMPANY",
+    "billNo": "GT/127",
+    "billDate": "2026-08-07",
+    "transporter": "",
+    "discountPercent": 4.762,
+    "discountAmount": 897.72,
+    "items": [
+      { "item": "A-FIT C CUP", "hsn": "62121000", "qty": 24, "rate": 255.20, "gst": 5 },
+      { "item": "BRA A-FIT C CUP", "hsn": "62121000", "qty": 6, "rate": 261.00, "gst": 5 },
+      { "item": "BRA CORE FIT", "hsn": "62121000", "qty": 6, "rate": 145.00, "gst": 5 },
+      { "item": "BRA CREZY C", "hsn": "62121000", "qty": 6, "rate": 156.60, "gst": 5 },
+      { "item": "BRA LUCIA", "hsn": "62121000", "qty": 6, "rate": 205.90, "gst": 5 },
+      { "item": "BRA MAHI WSB/COL", "hsn": "62121000", "qty": 12, "rate": 123.54, "gst": 5 },
+      { "item": "BRA MAHI WSB/COL (Dup)", "hsn": "62121000", "qty": 6, "rate": 129.34, "gst": 5 },
+      { "item": "BRA MONALISA", "hsn": "62121000", "qty": 6, "rate": 198.36, "gst": 5 },
+      { "item": "BRA PIHU PAD", "hsn": "62121000", "qty": 6, "rate": 147.32, "gst": 5 },
+      { "item": "BRA ROSIE MOLD", "hsn": "62121000", "qty": 18, "rate": 170.52, "gst": 5 },
+      { "item": "BRA TRUE FIT", "hsn": "62121000", "qty": 6, "rate": 118.90, "gst": 5 }
+    ]
+  }
+]

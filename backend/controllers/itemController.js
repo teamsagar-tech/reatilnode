@@ -61,8 +61,8 @@ exports.create = async (req, res) => {
       );
       if (existingHsn.length === 0) {
         await db.execute(
-          `INSERT INTO HSNSACs (firm_id, name, tax_percent) VALUES (?, ?, ?)`,
-          [req.firm_id, hsn_code, tax_percent]
+          `INSERT INTO HSNSACs (firm_id, name) VALUES (?, ?)`,
+          [req.firm_id, hsn_code]
         );
       }
     }
@@ -84,8 +84,8 @@ exports.update = async (req, res) => {
   try {
     if (hsn_code && tax_percent !== undefined) {
       await db.execute(
-        `INSERT IGNORE INTO HSNSACs (firm_id, name, tax_percent) VALUES (?, ?, ?)`,
-        [req.firm_id, hsn_code, tax_percent]
+        `INSERT IGNORE INTO HSNSACs (firm_id, name) VALUES (?, ?)`,
+        [req.firm_id, hsn_code]
       );
     }
 
