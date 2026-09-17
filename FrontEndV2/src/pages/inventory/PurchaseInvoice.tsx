@@ -1979,7 +1979,7 @@ export default function PurchaseInvoice() {
         <div className="flex flex-1 p-1 gap-1 overflow-hidden h-full">
           
           {/* Main Voucher Container */}
-          <div className="flex-1 bg-[#fcfaf2] border-2 border-[#81a09d] flex flex-col overflow-hidden shadow-inner relative">
+          <fieldset disabled={isReadOnly} className="flex-1 bg-[#fcfaf2] border-2 border-[#81a09d] flex flex-col overflow-hidden shadow-inner relative min-w-0 p-0 m-0">
             
             {/* Top Info Header */}
           <div className="bg-[#1b5e58] text-white font-bold px-2 py-1 flex justify-between shrink-0">
@@ -2874,7 +2874,7 @@ export default function PurchaseInvoice() {
               </div>
               
             </div>
-          </div>
+          </fieldset>
 
           {/* Right Action Sidebar (F-keys) */}
           <div className="w-[120px] pointer-events-auto flex-col gap-[2px] overflow-y-auto hidden lg:flex bg-[#e0efeb]">
