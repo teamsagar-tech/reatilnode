@@ -27,4 +27,9 @@ router.post('/verify-unlinked-lr', requirePermission('logistics', 'read'), logis
 // Pending LRs from Purchase Invoices
 router.get('/pending-lrs', requirePermission('logistics', 'read'), logisticsController.getPendingLRs);
 
+// Hundekari Payments
+router.get('/hundekari-pending-lrs/:hundekari_id', requirePermission('logistics', 'read'), logisticsController.getHundekariPendingLRs);
+router.post('/hundekari-payments', requirePermission('logistics', 'write'), logisticsController.createHundekariPayment);
+router.get('/hundekari-payments', requirePermission('logistics', 'read'), logisticsController.getHundekariPayments);
+
 module.exports = router;

@@ -4,6 +4,7 @@ import {
   ShoppingCart, Search, User, CreditCard, Banknote, MapPin, 
   Trash2, Plus, ArrowRight, ScanLine, Tag, Wallet, Clock, Printer
 } from 'lucide-react';
+import { toast } from "../../store/useToastStore";
 
 const MOCK_PRODUCTS = [
   { barcode: '10001', name: 'Premium Cotton Shirt', size: 'L', brand: 'Arrow', rate: 1299, tax: 12, stock: 45 },
@@ -69,7 +70,7 @@ export default function POS() {
         }
         setBarcodeInput('');
       } else {
-        alert('Product not found!');
+        toast.error('Product not found!');
       }
     }
   };
@@ -99,8 +100,8 @@ export default function POS() {
   };
 
   const handleCheckout = () => {
-    if (cart.length === 0) return alert('Cart is empty!');
-    alert(`Payment of ₹${grandTotal.toLocaleString('en-IN')} received via ${paymentMode}. Bill generated successfully!`);
+    if (cart.length === 0) return toast.error('Cart is empty!');
+    toast.success(`Payment of ₹${grandTotal.toLocaleString('en-IN')} received via ${paymentMode}. Bill generated successfully!`);
     setCart([]);
     setCustomerPhone('');
     setActiveCustomer(null);

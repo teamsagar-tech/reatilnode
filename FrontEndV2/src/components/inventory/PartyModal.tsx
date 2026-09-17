@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import MasterCreationModal from './MasterCreationModal';
+import { toast } from "../../store/useToastStore";
 
 interface PartyModalProps {
   isOpen: boolean;
@@ -66,7 +67,8 @@ export default function PartyModal({ isOpen, onClose, onSave, initialPartyName =
     ifscCode: '',
     branch: '',
     accountType: 'Savings',
-    gstRawData: null as any
+    gstRawData: null as any,
+    invoiceConfig: { designNo: false, colourNo: false, showSize: false, showPurchaseDiscount: false, showMarkdown: false }
   });
 
   const [categories, setCategories] = useState<{cat: string, sub: string}[]>([]);
@@ -214,7 +216,8 @@ export default function PartyModal({ isOpen, onClose, onSave, initialPartyName =
           ifscCode: editPartyData.ifsc || '',
           branch: editPartyData.branch || '',
           accountType: editPartyData.bank_account_type || 'Savings',
-          gstRawData: editPartyData.gst_raw_data ? (typeof editPartyData.gst_raw_data === 'object' ? editPartyData.gst_raw_data : (typeof editPartyData.gst_raw_data === 'string' && editPartyData.gst_raw_data.trim().startsWith('{') ? JSON.parse(editPartyData.gst_raw_data) : null)) : null
+          gstRawData: editPartyData.gst_raw_data ? (typeof editPartyData.gst_raw_data === 'object' ? editPartyData.gst_raw_data : (typeof editPartyData.gst_raw_data === 'string' && editPartyData.gst_raw_data.trim().startsWith('{') ? JSON.parse(editPartyData.gst_raw_data) : null)) : null,
+          invoiceConfig: editPartyData.invoice_config ? (typeof editPartyData.invoice_config === 'string' ? JSON.parse(editPartyData.invoice_config) : editPartyData.invoice_config) : { designNo: false, colourNo: false, showSize: false, showPurchaseDiscount: false, showMarkdown: false }
         });
         setCategories(editPartyData.categories ? (typeof editPartyData.categories === 'string' ? JSON.parse(editPartyData.categories) : editPartyData.categories) : []);
         setBrands(editPartyData.brands ? (typeof editPartyData.brands === 'string' ? JSON.parse(editPartyData.brands) : editPartyData.brands) : []);
@@ -249,7 +252,8 @@ export default function PartyModal({ isOpen, onClose, onSave, initialPartyName =
           ifscCode: '',
           branch: '',
           accountType: 'Savings',
-          gstRawData: null
+          gstRawData: null,
+          invoiceConfig: { designNo: false, colourNo: false, showSize: false, showPurchaseDiscount: false, showMarkdown: false }
         });
         setCategories([]);
         setBrands([]);
@@ -310,11 +314,11 @@ export default function PartyModal({ isOpen, onClose, onSave, initialPartyName =
         setCaptchaData(data);
         setCaptchaInput('');
       } else {
-        alert("Failed to fetch GST captcha");
+        toast.error("Failed to fetch GST captcha");
       }
     } catch (e) {
       console.error(e);
-      alert("Network error while fetching GST captcha");
+      toast.error("Network error while fetching GST captcha");
     } finally {
       setFetchingGST(false);
     }
@@ -322,7 +326,7 @@ export default function PartyModal({ isOpen, onClose, onSave, initialPartyName =
 
   const applyGstData = (data: any, gstin: string) => {
     if (data.sts && data.sts !== "Active") {
-      alert(`Cannot add this Party. GST Status is: ${data.sts}`);
+      toast.error(`Cannot add this Party. GST Status is: ${data.sts}`);
       setGstStatusError(data.sts);
       return false;
     }
@@ -467,10 +471,10 @@ export default function PartyModal({ isOpen, onClose, onSave, initialPartyName =
       console.log('=====================================');
       
       if (data.error || data.errorCode) {
-        alert(data.error || data.message || "Invalid Captcha or GSTIN");
+        toast.error(data.error || data.message || "Invalid Captcha or GSTIN");
         setCaptchaData(null);
       } else if (data.sts !== "Active") {
-        alert(`Cannot add this Party. GST Status is: ${data.sts}`);
+        toast.error(`Cannot add this Party. GST Status is: ${data.sts}`);
         setGstStatusError(data.sts);
         setCaptchaData(null);
       } else {
@@ -482,7 +486,7 @@ export default function PartyModal({ isOpen, onClose, onSave, initialPartyName =
       }
     } catch (e) {
       console.error(e);
-      alert("Error submitting GST Captcha");
+      toast.error("Error submitting GST Captcha");
       setCaptchaData(null);
     } finally {
       setFetchingGST(false);
@@ -491,9 +495,9 @@ export default function PartyModal({ isOpen, onClose, onSave, initialPartyName =
 
   const handleSave = async () => {
     if (gstStatusError) {
-      return alert(`Cannot save this Party. The GSTIN status is: ${gstStatusError}`);
+      return toast.error(`Cannot save this Party. The GSTIN status is: ${gstStatusError}`);
     }
-    if (!formData.partyName) return alert('Party Name is required');
+    if (!formData.partyName) return toast.error('Party Name is required');
 
     setLoading(true);
     try {
@@ -529,7 +533,8 @@ export default function PartyModal({ isOpen, onClose, onSave, initialPartyName =
         gstRawData: formData.gstRawData,
         categories: categories.length > 0 ? categories : null,
         brands: brands.length > 0 ? brands : null,
-        brandType: brandType
+        brandType: brandType,
+        invoiceConfig: formData.invoiceConfig
       };
 
       const isEdit = !!editPartyData;
@@ -549,25 +554,26 @@ export default function PartyModal({ isOpen, onClose, onSave, initialPartyName =
       
       const data = await res.json();
       if (res.ok) {
-        onSave({ id: isEdit ? editPartyData.id : data.partyId, ...payload, name: payload.partyName, brand_type: payload.brandType });
+        onSave({ id: isEdit ? editPartyData.id : data.partyId, ...payload, name: payload.partyName, brand_type: payload.brandType, invoice_config: payload.invoiceConfig });
         setFormData({
           partyName: '', shortName: '', type: 'Sundry Creditor (Vendor)', openingBalance: 0,
           gstin: '', panNumber: '', state: '', stateCode: '',
           addressLine1: '', addressLine2: '', addressLine3: '', pincode: '', city: '', taluka: '', district: '',
           contactPerson: '', mobileNumber: '', email: '', contactPerson2: '', mobileNumber2: '', contactPerson3: '', mobileNumber3: '',
           accountName: '', bankName: '', accountNumber: '', ifscCode: '', branch: '', accountType: 'Savings',
-          gstRawData: null
+          gstRawData: null,
+          invoiceConfig: { designNo: false, colourNo: false, showSize: false, showPurchaseDiscount: false, showMarkdown: false }
         });
         setGstStatusError(null);
         setCategories([]);
         setBrands([]);
         setBrandType('Multi');
       } else {
-        alert('Error: ' + data.error);
+        toast.error('Error: ' + data.error);
       }
     } catch (err) {
       console.error(err);
-      alert('Failed to create party');
+      toast.error('Failed to create party');
     } finally {
       setLoading(false);
     }
@@ -1005,7 +1011,7 @@ export default function PartyModal({ isOpen, onClose, onSave, initialPartyName =
                     onClick={() => {
                       const b = availableBrands.find(b => b.name.toLowerCase() === tempBrand.toLowerCase());
                       if (b) addBrand(b.name);
-                      else alert('Please select a valid brand or press Alt+C to create one.');
+                      else toast.warning('Please select a valid brand or press Alt+C to create one.');
                     }}
                     className="bg-[#eef5ed] border border-[#a3c3be] px-2 py-[2px] font-bold text-black hover:bg-[#ffe000] text-[11px] shadow-[inset_1px_1px_0_rgba(255,255,255,0.8)]"
                   >
@@ -1038,6 +1044,28 @@ export default function PartyModal({ isOpen, onClose, onSave, initialPartyName =
                   </div>
                 )}
               </div>
+              
+              <div className="mt-4 border border-slate-300 p-2 bg-[#fcfaf2]">
+                <h4 className="text-[12px] font-bold text-[#1b5e58] border-b border-slate-300 mb-2 pb-1">Invoice UI Defaults</h4>
+                <div className="flex flex-wrap items-center gap-4 text-[11px] font-bold">
+                  <label className="flex items-center gap-1 cursor-pointer">
+                     <input type="checkbox" checked={formData.invoiceConfig?.designNo || false} onChange={e => setFormData({...formData, invoiceConfig: {...formData.invoiceConfig, designNo: e.target.checked}})} className="accent-[#1b5e58]" /> Design No
+                  </label>
+                  <label className="flex items-center gap-1 cursor-pointer">
+                     <input type="checkbox" checked={formData.invoiceConfig?.colourNo || false} onChange={e => setFormData({...formData, invoiceConfig: {...formData.invoiceConfig, colourNo: e.target.checked}})} className="accent-[#1b5e58]" /> Colour No
+                  </label>
+                  <label className="flex items-center gap-1 cursor-pointer">
+                     <input type="checkbox" checked={formData.invoiceConfig?.showSize || false} onChange={e => setFormData({...formData, invoiceConfig: {...formData.invoiceConfig, showSize: e.target.checked}})} className="accent-[#1b5e58]" /> Size
+                  </label>
+                  <label className="flex items-center gap-1 cursor-pointer">
+                     <input type="checkbox" checked={formData.invoiceConfig?.showPurchaseDiscount || false} onChange={e => setFormData({...formData, invoiceConfig: {...formData.invoiceConfig, showPurchaseDiscount: e.target.checked}})} className="accent-[#1b5e58]" /> Discount %
+                  </label>
+                  <label className="flex items-center gap-1 cursor-pointer">
+                     <input type="checkbox" checked={formData.invoiceConfig?.showMarkdown || false} onChange={e => setFormData({...formData, invoiceConfig: {...formData.invoiceConfig, showMarkdown: e.target.checked}})} className="accent-[#1b5e58]" /> MRP Markdown
+                  </label>
+                </div>
+              </div>
+
             </div>
           </div>
         </div>

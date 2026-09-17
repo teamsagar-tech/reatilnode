@@ -1,3 +1,5 @@
+import { confirmDialog } from '../../store/useConfirmStore';
+import { toast } from '../../store/useToastStore';
 import React, { useState, useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
 import SearchableDropdown from '../SearchableDropdown';
@@ -105,7 +107,7 @@ export default function SizeAllocationModal({ isOpen, onClose, onSave, itemName,
     }
   }, [isOpen, brandId, initialSizeSet]);
 
-  const generateGrid = (group: any, bRate = baseRate, rStep = rateStep, bMrp = baseMrp, mStep = mrpStep, focusTarget: 'none' | 'base-rate' | 'first-qty' = 'none') => {
+  const generateGrid = async (group: any, bRate = baseRate, rStep = rateStep, bMrp = baseMrp, mStep = mrpStep, focusTarget: 'none' | 'base-rate' | 'first-qty' = 'none') => {
     let sizesArray: any[] = [];
     const sizesData = group.sizes_list || group.sizes || [];
     
@@ -185,14 +187,14 @@ export default function SizeAllocationModal({ isOpen, onClose, onSave, itemName,
   };
 
   
-  const handleQtyChange = (index: number, value: string) => {
+  const handleQtyChange = async (index: number, value: string) => {
     const updated = [...matrixData];
     updated[index].qty = value;
     setMatrixData(updated);
   };
   
   
-  const handleBaseRateChange = (value: string) => {
+  const handleBaseRateChange = async (value: string) => {
     setBaseRate(value);
     const stepVal = parseFloat(rateStep) || 0;
     const currentBase = parseFloat(value) || 0;
@@ -206,7 +208,7 @@ export default function SizeAllocationModal({ isOpen, onClose, onSave, itemName,
     });
   };
 
-  const handleBaseMrpChange = (value: string) => {
+  const handleBaseMrpChange = async (value: string) => {
     setBaseMrp(value);
     const stepVal = parseFloat(mrpStep) || 0;
     const currentBase = parseFloat(value) || 0;
@@ -220,7 +222,7 @@ export default function SizeAllocationModal({ isOpen, onClose, onSave, itemName,
     });
   };
 
-  const handleRateStepChange = (value: string) => {
+  const handleRateStepChange = async (value: string) => {
     setRateStep(value);
     const stepVal = parseFloat(value) || 0;
     const currentBase = parseFloat(baseRate) || 0;
@@ -234,7 +236,7 @@ export default function SizeAllocationModal({ isOpen, onClose, onSave, itemName,
     });
   };
 
-  const handleMrpStepChange = (value: string) => {
+  const handleMrpStepChange = async (value: string) => {
     setMrpStep(value);
     const stepVal = parseFloat(value) || 0;
     const currentBase = parseFloat(baseMrp) || 0;
@@ -248,19 +250,19 @@ export default function SizeAllocationModal({ isOpen, onClose, onSave, itemName,
     });
   };
 
-const handleRateChange = (index: number, value: string) => {
+const handleRateChange = async (index: number, value: string) => {
     const updated = [...matrixData];
     updated[index].rate = parseFloat(value) || 0;
     setMatrixData(updated);
   };
   
-  const handleMrpChange = (index: number, value: string) => {
+  const handleMrpChange = async (index: number, value: string) => {
     const updated = [...matrixData];
     updated[index].mrp = parseFloat(value) || 0;
     setMatrixData(updated);
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent, type: 'qty' | 'rate' | 'mrp', index: number) => {
+  const handleKeyDown = async (e: React.KeyboardEvent, type: 'qty' | 'rate' | 'mrp', index: number) => {
     if (e.key === 'Tab' || e.key === 'Enter') {
       // Allow default tab behavior to move horizontally!
       // If we want Enter to also move horizontally:
@@ -291,7 +293,7 @@ const handleRateChange = (index: number, value: string) => {
 
   // Global Ctrl+A listener for saving
   useEffect(() => {
-    const handleGlobalKey = (e: KeyboardEvent) => {
+    const handleGlobalKey = async (e: KeyboardEvent) => {
       if (!isOpen) return;
       if (e.key === 'Escape') {
         e.preventDefault();
@@ -305,12 +307,12 @@ const handleRateChange = (index: number, value: string) => {
     return () => window.removeEventListener('keydown', handleGlobalKey);
   });
 
-  const processSave = () => {
+  const processSave = async () => {
     // Filter out sizes that have no quantity
     const finalAllocations = matrixData.filter(row => row.qty && parseFloat(row.qty) > 0);
     
     if (finalAllocations.length === 0) {
-      if (window.confirm('No quantities entered. Close without saving?')) {
+      if (await confirmDialog('No quantities entered. Close without saving?')) {
         onClose();
       }
       return;
@@ -329,7 +331,7 @@ const handleRateChange = (index: number, value: string) => {
     });
 
     if (expectedTotalQty && totalQty !== expectedTotalQty) {
-      alert(`Validation Error: The total quantity in the matrix (${totalQty}) does not match the quantity entered in the main row (${expectedTotalQty}). Please correct it.`);
+      toast.error(`Validation Error: The total quantity in the matrix (${totalQty}) does not match the quantity entered in the main row (${expectedTotalQty}). Please correct it.`);
       return;
     }
 

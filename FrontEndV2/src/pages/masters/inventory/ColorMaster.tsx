@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import ConfirmModal from '../../../components/ui/ConfirmModal';
+import { toast } from "../../../store/useToastStore";
 
 const SectionTitle = ({ children }: { children: React.ReactNode }) => (
   <div className="font-bold text-[#1b5e58] text-[12px] border-b border-[#a3c3be] mb-2 mt-2 pb-1 uppercase tracking-wider bg-[#eef5ed] px-1">
@@ -60,7 +61,7 @@ export default function ColorMaster() {
 
   const handleSaveColor = async () => {
     if (!formData.name) {
-      alert('Color Name is required');
+      toast.error('Color Name is required');
       return;
     }
     try {
@@ -81,11 +82,11 @@ export default function ColorMaster() {
         setMode('list');
         fetchColors();
       } else {
-        alert('Failed to save color');
+        toast.error('Failed to save color');
       }
     } catch (err) {
       console.error(err);
-      alert('Error saving color');
+      toast.error('Error saving color');
     }
   };
 
@@ -101,11 +102,11 @@ export default function ColorMaster() {
         setDeleteId(null);
         fetchColors();
       } else {
-        alert('Failed to delete color');
+        toast.error('Failed to delete color');
       }
     } catch (err) {
       console.error(err);
-      alert('Error deleting color');
+      toast.error('Error deleting color');
     }
   };
 

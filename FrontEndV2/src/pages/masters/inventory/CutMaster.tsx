@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import ConfirmModal from '../../../components/ui/ConfirmModal';
+import { toast } from "../../../store/useToastStore";
 
 const SectionTitle = ({ children }: { children: React.ReactNode }) => (
     <div className="font-bold text-[#1b5e58] text-[12px] border-b border-[#a3c3be] mb-2 mt-2 pb-1 uppercase tracking-wider bg-[#eef5ed] px-1">
@@ -52,7 +53,7 @@ export default function CutMaster() {
 
   const handleSaveCut = async () => {
     if (!formData.cut_name || !formData.cut_size) {
-      alert('Cut Name and Cut Size are required');
+      toast.error('Cut Name and Cut Size are required');
       return;
     }
     try {
@@ -81,11 +82,11 @@ export default function CutMaster() {
           const errData = await res.json();
           if (errData.error) errText = errData.error;
         } catch(e) {}
-        alert(errText);
+        toast.warning(errText);
       }
     } catch (err) {
       console.error(err);
-      alert('Error saving cut');
+      toast.error('Error saving cut');
     }
   };
 
@@ -101,11 +102,11 @@ export default function CutMaster() {
         setDeleteId(null);
         fetchCuts();
       } else {
-        alert('Failed to delete cut');
+        toast.error('Failed to delete cut');
       }
     } catch (err) {
       console.error(err);
-      alert('Error deleting cut');
+      toast.error('Error deleting cut');
     }
   };
 

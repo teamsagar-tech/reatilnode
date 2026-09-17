@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import ConfirmModal from '../../../components/ui/ConfirmModal';
-
+import { toast } from "../../../store/useToastStore";
 
 const SectionTitle = ({ children }: { children: React.ReactNode }) => (
     <div className="font-bold text-[#1b5e58] text-[12px] border-b border-[#a3c3be] mb-2 mt-2 pb-1 uppercase tracking-wider bg-[#eef5ed] px-1">
@@ -50,7 +50,7 @@ export default function LocationMaster() {
 
   const handleSaveLocation = async () => {
     if (!formData.name) {
-      alert('Name is required');
+      toast.error('Name is required');
       return;
     }
     try {
@@ -76,11 +76,11 @@ export default function LocationMaster() {
           const errData = await res.json();
           if (errData.error) errText = errData.error;
         } catch(e) {}
-        alert(errText);
+        toast.warning(errText);
       }
     } catch (err) {
       console.error(err);
-      alert('Error saving location');
+      toast.error('Error saving location');
     }
   };
 

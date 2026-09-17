@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import ConfirmModal from '../../../components/ui/ConfirmModal';
-
+import { toast } from "../../../store/useToastStore";
 
 const SectionTitle = ({ children }: { children: React.ReactNode }) => (
     <div className="font-bold text-[#1b5e58] text-[12px] border-b border-[#a3c3be] mb-2 mt-2 pb-1 uppercase tracking-wider bg-[#eef5ed] px-1">
@@ -61,7 +61,7 @@ export default function SectionMaster() {
 
   const handleSaveSection = async () => {
     if (!formData.name) {
-      alert('Section Name is required');
+      toast.error('Section Name is required');
       return;
     }
     try {
@@ -82,11 +82,11 @@ export default function SectionMaster() {
         setMode('list');
         fetchSections();
       } else {
-        alert('Failed to save section');
+        toast.error('Failed to save section');
       }
     } catch (err) {
       console.error(err);
-      alert('Error saving section');
+      toast.error('Error saving section');
     }
   };
 
@@ -102,11 +102,11 @@ export default function SectionMaster() {
         setDeleteId(null);
         fetchSections();
       } else {
-        alert('Failed to delete section');
+        toast.error('Failed to delete section');
       }
     } catch (err) {
       console.error(err);
-      alert('Error deleting section');
+      toast.error('Error deleting section');
     }
   };
 

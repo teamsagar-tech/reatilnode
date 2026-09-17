@@ -1,3 +1,5 @@
+import { confirmDialog } from '../../store/useConfirmStore';
+import { toast } from '../../store/useToastStore';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
@@ -20,6 +22,7 @@ export default function PurchaseInvoice() {
   const [invoiceLrStatus, setInvoiceLrStatus] = useState<string>('');
   const [editInvoiceId, setEditInvoiceId] = useState<number | null>(null);
   const [lrMessage, setLrMessage] = useState<string>('');
+  const [unlinkedLRs, setUnlinkedLRs] = useState<any[]>([]);
 
   const [invoiceData, setInvoiceData] = useState({
     invoiceDate: new Date().toISOString().split('T')[0],
@@ -170,11 +173,12 @@ export default function PurchaseInvoice() {
   }, [location.state]);
 
   const [activeSuggestionRow, setActiveSuggestionRow] = useState<number | null>(null);
+  const [activeRowIndex, setActiveRowIndex] = useState<number | null>(null);
   const [suggestionIndex, setSuggestionIndex] = useState<number>(0);
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
-  const requestSort = (key: string) => {
+  const requestSort = async (key: string) => {
     let direction: 'asc'|'desc' = 'asc';
     if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
       direction = 'desc';
@@ -223,23 +227,17 @@ export default function PurchaseInvoice() {
   
   const handleSaveInvoice = async () => {
     if (!invoiceData.supplier) {
-      alert('Party is required');
+      toast.error('Party is required');
       return;
     }
     
     const matchedVendor = vendors.find(v => (v.name || '').toLowerCase() === (invoiceData.supplier || '').toLowerCase());
     if (!matchedVendor) {
-      alert('Invalid Party selected. Please ensure the Party exists.');
+      toast.warning('Invalid Party selected. Please ensure the Party exists.');
       return;
     }
 
-    try {
-      localStorage.setItem(`party_pref_${invoiceData.supplier}`, JSON.stringify({
-        designNo: invoiceData.designNo,
-        colourNo: invoiceData.colourNo,
-        showSize: invoiceData.showSize
-      }));
-    } catch(e) {}
+
 
     const subtotal = products.reduce((acc: any, p: any) => acc + ((p.qty || 0) * (p.rate || 0) * (1 - (p.disc || 0) / 100)), 0);
     const taxableAmount = subtotal;
@@ -251,19 +249,39 @@ export default function PurchaseInvoice() {
       ? (afterDiscount * invoiceData.commissionPercent / 100)
       : invoiceData.commissionAmount;
     const afterCommission = afterDiscount + calcCommission;
+    
+    const totalPreTaxCharges = preTaxCharges.freight + preTaxCharges.insurance + preTaxCharges.packing;
+
     let tax = 0;
     if (invoiceData.gstOn === 'items') {
-      const ratio = subtotal > 0 ? (afterCommission / subtotal) : 1;
       tax = products.reduce((acc: any, p: any) => {
         const lineAmount = invoiceData.showMarkdown ? ((p.qty || 0) * (p.rate || 0)) : ((p.qty || 0) * (p.rate || 0) * (1 - (p.disc || 0) / 100));
-        const lineTaxable = lineAmount * ratio;
+        
+        let rowDiscount = 0;
+        if (invoiceData.discountPercent > 0) rowDiscount = lineAmount * invoiceData.discountPercent / 100;
+        else if (invoiceData.discountAmount > 0 && subtotal > 0) rowDiscount = (lineAmount / subtotal) * invoiceData.discountAmount;
+        
+        let rowComm = 0;
+        if (invoiceData.commissionPercent > 0) rowComm = (lineAmount - rowDiscount) * invoiceData.commissionPercent / 100;
+        else if (invoiceData.commissionAmount > 0 && subtotal > 0) rowComm = (lineAmount / subtotal) * invoiceData.commissionAmount;
+
+        let rowPreTax = 0;
+        if (totalPreTaxCharges > 0) {
+           if (subtotal > 0) rowPreTax = (lineAmount / subtotal) * totalPreTaxCharges;
+           else {
+              const validItems = products.filter((i: any) => i.item_id).length || 1;
+              if (p.item_id) rowPreTax = totalPreTaxCharges / validItems;
+           }
+        }
+
+        const lineTaxable = lineAmount - rowDiscount + rowComm + rowPreTax;
         return acc + (lineTaxable * (p.gst || 0) / 100);
       }, 0);
     } else {
-      tax = afterCommission * (invoiceData.taxPercent || 0) / 100;
+      tax = (afterCommission + totalPreTaxCharges) * (invoiceData.taxPercent || 0) / 100;
     }
     const otherCharges = (invoiceData.otherChargesType === '-' ? -1 : 1) * invoiceData.otherChargesAmount;
-    const grandTotal = Math.round(afterCommission + tax + otherCharges);
+    const grandTotal = Math.round(afterCommission + totalPreTaxCharges + tax + otherCharges);
 
     const payload = {
       vendor_id: matchedVendor.id,
@@ -305,7 +323,7 @@ export default function PurchaseInvoice() {
     };
 
     if (payload.items.length === 0) {
-      alert('At least one valid item is required to save. Debug payload: ' + JSON.stringify(products.map(p => ({ item: p.item, item_id: p.item_id, brand: p.brand, brand_id: p.brand_id }))));
+      toast.error('At least one valid item is required to save. Debug payload: ' + JSON.stringify(products.map(p => ({ item: p.item, item_id: p.item_id, brand: p.brand, brand_id: p.brand_id }))));
       return;
     }
 
@@ -329,7 +347,43 @@ export default function PurchaseInvoice() {
         throw new Error(data.error || 'Failed to save invoice');
       }
 
-      alert(`Purchase Invoice Saved Successfully! GRN No: ${data.grn_no}`);
+      toast.success(`Purchase Invoice Saved Successfully! GRN No: ${data.grn_no}`);
+
+      // Auto-Learn Invoice Config if not present
+      if (matchedVendor && !matchedVendor.invoice_config) {
+        try {
+          await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/party/${matchedVendor.id}/invoice-config`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
+            body: JSON.stringify({
+              invoiceConfig: {
+                designNo: invoiceData.designNo,
+                colourNo: invoiceData.colourNo,
+                showSize: invoiceData.showSize,
+                showPurchaseDiscount: invoiceData.showPurchaseDiscount,
+                showMarkdown: invoiceData.showMarkdown
+              }
+            })
+          });
+          // Update the vendor in local state so it doesn't auto-save repeatedly if they don't refresh
+          setVendors(prev => prev.map(v => v.id === matchedVendor.id ? {
+            ...v, 
+            invoice_config: JSON.stringify({
+                designNo: invoiceData.designNo,
+                colourNo: invoiceData.colourNo,
+                showSize: invoiceData.showSize,
+                showPurchaseDiscount: invoiceData.showPurchaseDiscount,
+                showMarkdown: invoiceData.showMarkdown
+            })
+          } : v));
+        } catch (e) {
+          console.error('Failed to auto-save invoice config to party master', e);
+        }
+      }
+
       if (importQueue.length > 0) {
         loadNextInQueue();
       } else {
@@ -346,11 +400,11 @@ export default function PurchaseInvoice() {
       }
     } catch (err: any) {
       console.error(err);
-      alert(err.message || 'An error occurred while saving the invoice.');
+      toast.error(err.message || 'An error occurred while saving the invoice.');
     }
   };
 
-  const processInvoiceGroup = (groupData: any[]) => {
+  const processInvoiceGroup = async (groupData: any[]) => {
     let errors: any[] = [];
     if (groupData.length > 0) {
       // Extract header level fields from the first row
@@ -432,7 +486,7 @@ export default function PurchaseInvoice() {
       let hasDisc = false;
 
       const importedProducts = groupData.map((row: any, idx) => {
-        const getVal = (keys: string[]) => {
+        const getVal = async (keys: string[]) => {
           for (const k of keys) {
             if (row[k] !== undefined && row[k] !== '') return row[k];
           }
@@ -528,7 +582,7 @@ export default function PurchaseInvoice() {
           sumQty += parseFloat(p.qty) || 0;
       }
       for (const row of groupData) {
-          const getVal = (keys: string[]) => {
+          const getVal = async (keys: string[]) => {
             for (const k of keys) {
               if (row[k] !== undefined && row[k] !== '') return row[k];
             }
@@ -549,14 +603,14 @@ export default function PurchaseInvoice() {
     }
   };
 
-  const loadNextInQueue = () => {
+  const loadNextInQueue = async () => {
     if (importQueue.length > 0) {
         processInvoiceGroup(importQueue[0]);
         setImportQueue(prev => prev.slice(1));
     }
   };
 
-  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setSkippedCount(0);
@@ -571,7 +625,7 @@ export default function PurchaseInvoice() {
         const data = XLSX.utils.sheet_to_json(ws, { defval: '' });
 
         if (data.length > 0) {
-            const getValStr = (row: any, keys: string[]) => {
+            const getValStr = async (row: any, keys: string[]) => {
                 for (const k of keys) {
                     if (row[k] !== undefined && row[k] !== '') return String(row[k]);
                 }
@@ -641,12 +695,12 @@ export default function PurchaseInvoice() {
                     setImportQueue(groups.slice(1));
                 }
             } else {
-                alert('No new invoices to import (all invoices in the CSV were already saved).');
+                toast.success('No new invoices to import (all invoices in the CSV were already saved).');
             }
         }
       } catch (err) {
         console.error('Error parsing file:', err);
-        alert('Failed to parse the file. Ensure it is a valid Excel or CSV.');
+        toast.error('Failed to parse the file. Ensure it is a valid Excel or CSV.');
       }
       // Reset input
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -823,43 +877,78 @@ export default function PurchaseInvoice() {
     }, 100);
   }, []);
 
+  const latestState = useRef({
+    masterModal,
+    showPartyModal,
+    showTransporterModal,
+    showAdditionalChargesModal,
+    masterCreationState,
+    showSupplierDropdown,
+    showPurchaserDropdown,
+    activeSuggestionRow,
+    activeHsnRow,
+    activeSizeMatrixRow,
+    isReadOnly,
+    invoiceLrStatus,
+    handleSaveInvoice
+  });
+
   useEffect(() => {
-    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+    latestState.current = {
+      masterModal,
+      showPartyModal,
+      showTransporterModal,
+      showAdditionalChargesModal,
+      masterCreationState,
+      showSupplierDropdown,
+      showPurchaserDropdown,
+      activeSuggestionRow,
+      activeHsnRow,
+      activeSizeMatrixRow,
+      isReadOnly,
+      invoiceLrStatus,
+      handleSaveInvoice
+    };
+  });
+
+  useEffect(() => {
+    const handleGlobalKeyDown = async (e: KeyboardEvent) => {
+      const state = latestState.current;
       if (e.key === 'Escape') {
         e.preventDefault();
-        if (masterModal) {
+        if (state.masterModal) {
           setMasterModal(null);
           return;
         }
-        if (showPartyModal) setShowPartyModal(false);
-        else if (showTransporterModal) setShowTransporterModal(false);
-        else if (showAdditionalChargesModal) setShowAdditionalChargesModal(false);
-        else if (masterCreationState.isOpen) setMasterCreationState({ ...masterCreationState, isOpen: false });
-        else if (showSupplierDropdown) setShowSupplierDropdown(false);
-        else if (showPurchaserDropdown) setShowPurchaserDropdown(false);
-        else if (activeSuggestionRow !== null) setActiveSuggestionRow(null);
-        else if (activeHsnRow !== null) setActiveHsnRow(null);
-        else if (activeSizeMatrixRow !== null) setActiveSizeMatrixRow(null);
+        if (state.showPartyModal) setShowPartyModal(false);
+        else if (state.showTransporterModal) setShowTransporterModal(false);
+        else if (state.showAdditionalChargesModal) setShowAdditionalChargesModal(false);
+        else if (state.masterCreationState.isOpen) setMasterCreationState({ ...state.masterCreationState, isOpen: false });
+        else if (state.showSupplierDropdown) setShowSupplierDropdown(false);
+        else if (state.showPurchaserDropdown) setShowPurchaserDropdown(false);
+        else if (state.activeSuggestionRow !== null) setActiveSuggestionRow(null);
+        else if (state.activeHsnRow !== null) setActiveHsnRow(null);
+        else if (state.activeSizeMatrixRow !== null) setActiveSizeMatrixRow(null);
         else navigate(-1);
       }
       
       if (e.altKey) {
         if (e.code === 'KeyS') {
           e.preventDefault();
-          handleSaveInvoice();
+          state.handleSaveInvoice();
         } else if (e.code === 'KeyD') {
           e.preventDefault();
           console.log('Save Draft');
         } else if (e.code === 'KeyB') {
           e.preventDefault();
           setInvoiceData(prev => ({ ...prev, requireBoxPacking: !prev.requireBoxPacking }));
-        } else if (e.code === 'KeyI' && !isReadOnly) {
+        } else if (e.code === 'KeyI' && !state.isReadOnly) {
           e.preventDefault();
           fileInputRef.current?.click();
-        } else if (e.code === 'KeyE' && isReadOnly) {
+        } else if (e.code === 'KeyE' && state.isReadOnly) {
           e.preventDefault();
-          if (invoiceLrStatus?.toLowerCase() === 'delivered' || invoiceLrStatus?.toLowerCase() === 'lr delivered') {
-            alert('This invoice cannot be edited because it is marked as Delivered.');
+          if (state.invoiceLrStatus?.toLowerCase() === 'delivered' || state.invoiceLrStatus?.toLowerCase() === 'lr delivered') {
+            toast.error('This invoice cannot be edited because it is marked as Delivered.');
             return;
           }
           setIsReadOnly(false);
@@ -871,14 +960,28 @@ export default function PurchaseInvoice() {
     };
     window.addEventListener('keydown', handleGlobalKeyDown);
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-  }, [showSupplierDropdown, showPurchaserDropdown, activeSuggestionRow, showPartyModal, showTransporterModal, showAdditionalChargesModal, navigate]);
+  }, [navigate]);
+
+  useEffect(() => {
+    // Fetch unlinked LRs to populate the LR No dropdown
+    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/logistics/unlinked-lrs`, {
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token') || sessionStorage.getItem('token')}` }
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success && data.data) {
+        setUnlinkedLRs(data.data);
+      }
+    })
+    .catch(err => console.error('Error fetching unlinked LRs', err));
+  }, []);
 
 
-  const handleInvoiceChange = (field: string, value: any) => {
+  const handleInvoiceChange = async (field: string, value: any) => {
     if (field === 'supplier' && value !== invoiceData.supplier) {
       const hasData = products.some(p => (p.item && p.item.trim() !== '') || Number(p.qty) > 0);
       if (hasData) {
-        const confirmReset = window.confirm('Changing the Party will clear the current items in the table. Do you want to continue?');
+        const confirmReset = await confirmDialog('Changing the Party will clear the current items in the table. Do you want to continue?');
         if (!confirmReset) {
           return;
         }
@@ -886,20 +989,26 @@ export default function PurchaseInvoice() {
       // Always reset the table to clear stray data like brand/hsn even if hasData is false
       setProducts([{ id: Date.now(), item_id: null, item: '', hsn: '', brand_id: null, brand: '', qty: '', cut_size: '', pieces: '', rate: '', last_rate: null, disc: 0, gst: 0, design: '', colour: '', size: '', mrp: 0, disc2: 0, sale_rate: '' }]);
 
-      try {
-        const prefStr = localStorage.getItem(`party_pref_${value}`);
-        if (prefStr) {
-          const pref = JSON.parse(prefStr);
+      const selectedVendor = vendors.find(v => (v.name || '').toLowerCase() === (value || '').toLowerCase());
+      if (selectedVendor && selectedVendor.invoice_config) {
+        try {
+          const config = typeof selectedVendor.invoice_config === 'string' 
+            ? JSON.parse(selectedVendor.invoice_config) 
+            : selectedVendor.invoice_config;
           setInvoiceData(prev => ({
             ...prev,
             [field]: value,
-            designNo: pref.designNo ?? prev.designNo,
-            colourNo: pref.colourNo ?? prev.colourNo,
-            showSize: pref.showSize ?? prev.showSize
+            designNo: config.designNo ?? prev.designNo,
+            colourNo: config.colourNo ?? prev.colourNo,
+            showSize: config.showSize ?? prev.showSize,
+            showPurchaseDiscount: config.showPurchaseDiscount ?? prev.showPurchaseDiscount,
+            showMarkdown: config.showMarkdown ?? prev.showMarkdown
           }));
           return;
+        } catch (e) {
+          console.error("Error parsing invoice config:", e);
         }
-      } catch (e) {}
+      }
     }
     setInvoiceData(prev => {
       const next = { ...prev, [field]: value };
@@ -907,7 +1016,7 @@ export default function PurchaseInvoice() {
     });
   };
 
-  const updateProduct = (index: number, field: string, value: any) => {
+  const updateProduct = async (index: number, field: string, value: any) => {
     setProducts(prev => {
       const newProducts = [...prev];
       let p = { ...newProducts[index], [field]: value };
@@ -945,7 +1054,7 @@ export default function PurchaseInvoice() {
       return newProducts;
     });
   };
-  const handleInputBlur = (index: number, field: string) => {
+  const handleInputBlur = async (index: number, field: string) => {
     setProducts(prev => {
       const newProducts = [...prev];
       const val = parseFloat(newProducts[index][field]);
@@ -958,7 +1067,7 @@ export default function PurchaseInvoice() {
     });
   };
 
-  const addProduct = () => {
+  const addProduct = async () => {
     setProducts(prev => {
       const last = prev.length > 0 ? prev[prev.length - 1] : null;
       return [...prev, { 
@@ -973,11 +1082,32 @@ export default function PurchaseInvoice() {
   };
 
   const removeProduct = (index: number) => {
-    if (products.length > 1) {
-      const newProducts = [...products];
-      newProducts.splice(index, 1);
-      setProducts(newProducts);
-    }
+    setProducts(prev => {
+      if (prev.length > 1) {
+        const newProducts = [...prev];
+        newProducts.splice(index, 1);
+        return newProducts;
+      } else {
+        return [{ 
+          id: Date.now(), 
+          item: '', 
+          hsn: '', 
+          brand: '', 
+          brand_id: null,
+          qty: '', cut_size: '', pieces: '', rate: '', last_rate: null, disc: 0, gst: 0, design: '', colour: '', size: '', mrp: 0, disc2: 0, sale_rate: '', attributes: [], category: null 
+        }];
+      }
+    });
+  };
+
+  const cleanUpGrid = () => {
+    setProducts(prev => {
+      const cleaned = prev.filter(p => Number(p.qty) > 0);
+      if (cleaned.length === 0) {
+        return [{ id: Date.now(), item: '', hsn: '', brand: '', brand_id: null, qty: '', cut_size: '', pieces: '', rate: '', last_rate: null, disc: 0, gst: 0, design: '', colour: '', size: '', mrp: 0, disc2: 0, sale_rate: '', attributes: [], category: null }];
+      }
+      return cleaned;
+    });
   };
 
   const fetchLastRate = async (itemId: number, index: number) => {
@@ -1040,7 +1170,7 @@ export default function PurchaseInvoice() {
           if (res.ok) {
             const data = await res.json();
             if (data.exists) {
-              alert(`Warning: LR No ${invoiceData.lrNo} already exists for this transporter in invoice ${data.invoice_number}!`);
+              toast.warning(`Warning: LR No ${invoiceData.lrNo} already exists for this transporter in invoice ${data.invoice_number}!`);
             }
           }
         } catch (err) {
@@ -1050,7 +1180,7 @@ export default function PurchaseInvoice() {
     }
   };
 
-  const handleHeaderKeyDown = (e: React.KeyboardEvent<HTMLInputElement | HTMLSelectElement>, nextFieldId: string) => {
+  const handleHeaderKeyDown = async (e: React.KeyboardEvent<HTMLInputElement | HTMLSelectElement>, nextFieldId: string) => {
     if (e.key === 'Enter') {
       e.preventDefault();
       document.getElementById(nextFieldId)?.focus();
@@ -1101,7 +1231,7 @@ export default function PurchaseInvoice() {
 
 
   // Determine Category Config Helper
-  const getCategoryConfig = (itemStr: string) => {
+  const getCategoryConfig = async (itemStr: string) => {
     const matchedItem = availableItems.find(i => (i.name || i.item_name || '').toLowerCase() === (itemStr || '').toLowerCase());
     if (!matchedItem) return { isReadywear: false, isInnerwear: false, isSuiting: false, isSaree: true };
     const matchedCat = categories.find(c => c.id === matchedItem.category_id);
@@ -1117,7 +1247,17 @@ export default function PurchaseInvoice() {
     };
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, index: number, field: string) => {
+  const handleKeyDown = async (e: React.KeyboardEvent<HTMLInputElement>, index: number, field: string) => {
+    if (e.key === 'F10') {
+      e.preventDefault();
+      removeProduct(index);
+      const focusIndex = Math.max(0, index - 1);
+      setTimeout(() => {
+        document.getElementById(`row-${focusIndex}-brand`)?.focus();
+      }, 50);
+      return;
+    }
+
     const p = products[index];
     const catConfig = getCategoryConfig(p.item);
 
@@ -1131,7 +1271,7 @@ export default function PurchaseInvoice() {
     const showCutCol = isAnyRowSuiting || invoiceData.showCutSize;
     const showSizeCol = isAnyRowReadywear || isAnyRowInnerwear || invoiceData.showSize;
     const showMRPCol = isAnyRowReadywear || isAnyRowInnerwear || invoiceData.showMarkdown;
-    const showDiscCol = isAnyRowNotSaree || invoiceData.showPurchaseDiscount;
+    const showDiscCol = invoiceData.showPurchaseDiscount;
 
     const fields = ['brand', 'item', 'hsn'];
     
@@ -1158,7 +1298,7 @@ export default function PurchaseInvoice() {
       e.preventDefault();
       if (['brand', 'size', 'item', 'gst', 'hsn', 'design', 'colour'].includes(field)) {
         if (field === 'brand' && vendorAllowedBrands !== null) {
-          alert('This party has specific brands assigned. You cannot create a new brand on the fly.');
+          toast.error('This party has specific brands assigned. You cannot create a new brand on the fly.');
           return;
         }
         setMasterModal({ 
@@ -1178,7 +1318,7 @@ export default function PurchaseInvoice() {
     if (field === 'brand' && activeBrandRow === index) {
       const query = (products[index].brand || '').toLowerCase();
       let baseBrands = availableBrands;
-      if (vendorAllowedBrands !== null) {
+      if (Array.isArray(vendorAllowedBrands)) {
         baseBrands = baseBrands.filter(b => vendorAllowedBrands.some(vb => vb.toLowerCase() === (String(b.name) || '').toLowerCase()));
       }
       if (isSingleBrandVendor && lockedBrand) {
@@ -1388,7 +1528,7 @@ export default function PurchaseInvoice() {
       const filtered = availableItems.filter(s => {
         const textMatch = (s.name || s.item_name || '').toLowerCase().includes(query);
         if (rowBrandId) return textMatch && String(s.brand_id) === String(rowBrandId);
-        if (vendorAllowedBrands !== null) {
+        if (Array.isArray(vendorAllowedBrands)) {
            const isAllowed = vendorAllowedBrands.some(vb => vb.toLowerCase() === (s.brand || '').toLowerCase());
            return textMatch && isAllowed;
         }
@@ -1468,6 +1608,17 @@ export default function PurchaseInvoice() {
         }
       }
 
+      if (e.key === 'Enter' && (field === 'qty' || field === 'rate' || field === 'item')) {
+        const val = products[index][field];
+        if (!val || Number(val) === 0) {
+          cleanUpGrid();
+          setTimeout(() => {
+            document.getElementById('footer-discount')?.focus();
+          }, 10);
+          return;
+        }
+      }
+
       if (currentFieldIndex < fields.length - 1 && document.getElementById(`row-${index}-${fields[currentFieldIndex + 1]}`)) {
         document.getElementById(`row-${index}-${fields[currentFieldIndex + 1]}`)?.focus();
       } else {
@@ -1498,17 +1649,17 @@ export default function PurchaseInvoice() {
     }
   };
 
-  const handleItemFocus = (e: React.FocusEvent<HTMLInputElement>, index: number) => {
+  const handleItemFocus = async (e: React.FocusEvent<HTMLInputElement>, index: number) => {
     e.target.select();
     setActiveSuggestionRow(index);
     setSuggestionIndex(0);
   };
 
-  const handleItemBlur = () => {
+  const handleItemBlur = async () => {
     setTimeout(() => setActiveSuggestionRow(null), 200);
   };
 
-  const handleBrandFocus = (e: React.FocusEvent<HTMLInputElement>, index: number) => {
+  const handleBrandFocus = async (e: React.FocusEvent<HTMLInputElement>, index: number) => {
     if (isSingleBrandVendor && lockedBrand) {
       setTimeout(() => {
         document.getElementById(`row-${index}-item`)?.focus();
@@ -1520,37 +1671,37 @@ export default function PurchaseInvoice() {
     setBrandSuggestionIndex(0);
   };
 
-  const handleBrandBlur = () => {
+  const handleBrandBlur = async () => {
     setTimeout(() => setActiveBrandRow(null), 200);
   };
 
-  const handleHsnFocus = (e: React.FocusEvent<HTMLInputElement>, index: number) => {
+  const handleHsnFocus = async (e: React.FocusEvent<HTMLInputElement>, index: number) => {
     e.target.select();
     setActiveHsnRow(index);
     setHsnSuggestionIndex(0);
   };
 
-  const handleHsnBlur = () => {
+  const handleHsnBlur = async () => {
     setTimeout(() => setActiveHsnRow(null), 200);
   };
 
-  const handleDesignFocus = (e: React.FocusEvent<HTMLInputElement>, index: number) => {
+  const handleDesignFocus = async (e: React.FocusEvent<HTMLInputElement>, index: number) => {
     e.target.select();
     setActiveDesignRow(index);
     setDesignSuggestionIndex(0);
   };
 
-  const handleDesignBlur = () => {
+  const handleDesignBlur = async () => {
     setTimeout(() => setActiveDesignRow(null), 200);
   };
 
-  const handleColourFocus = (e: React.FocusEvent<HTMLInputElement>, index: number) => {
+  const handleColourFocus = async (e: React.FocusEvent<HTMLInputElement>, index: number) => {
     e.target.select();
     setActiveColourRow(index);
     setColourSuggestionIndex(0);
   };
 
-  const handleColourBlur = () => {
+  const handleColourBlur = async () => {
     setTimeout(() => setActiveColourRow(null), 200);
   };
 
@@ -1570,7 +1721,7 @@ export default function PurchaseInvoice() {
           setImportErrors(prev => prev.filter(e => !(e.type === 'brand' && e.brand === err.brand)));
           setProducts(prev => prev.map(p => p.brand === err.brand ? { ...p, brand_id: newBrand.id || newBrand.insertId } : p));
         } else {
-          alert('Failed to create brand ' + err.brand);
+          toast.error('Failed to create brand ' + err.brand);
         }
       } else if (err.type === 'item') {
         let bId = null;
@@ -1598,14 +1749,14 @@ export default function PurchaseInvoice() {
           setImportErrors(prev => prev.filter(e => !(e.type === 'item' && e.item === err.item)));
           setProducts(prev => prev.map(p => p.item === err.item ? { ...p, item_id: createdId } : p));
         } else {
-          alert('Failed to create item ' + err.item);
+          toast.error('Failed to create item ' + err.item);
         }
       } else if (err.type === 'vendor') {
         setShowPartyModal(true);
       }
     } catch (error) {
       console.error(error);
-      alert('Error creating ' + err.type);
+      toast.error('Error creating ' + err.type);
     }
     setIsCreating(false);
   };
@@ -1628,7 +1779,7 @@ export default function PurchaseInvoice() {
   
   const totalPreTaxCharges = preTaxCharges.freight + preTaxCharges.insurance + preTaxCharges.packing;
   
-  const taxableAmount = subtotal + totalPreTaxCharges;
+  const taxableAmount = subtotal;
   
   // Discount
   const calcDiscount = invoiceData.discountPercent > 0 
@@ -1665,10 +1816,15 @@ export default function PurchaseInvoice() {
          rowComm = (lineAmount / subtotal) * invoiceData.commissionAmount;
       }
 
-      // Add proportional pre-tax charges (apportioned by base amount)
+      // Add proportional pre-tax charges (apportioned by base amount, or equally if subtotal is 0)
       let rowPreTaxCharges = 0;
-      if (totalPreTaxCharges > 0 && subtotal > 0) {
-         rowPreTaxCharges = (lineAmount / subtotal) * totalPreTaxCharges;
+      if (totalPreTaxCharges > 0) {
+         if (subtotal > 0) {
+            rowPreTaxCharges = (lineAmount / subtotal) * totalPreTaxCharges;
+         } else {
+            const validItemsCount = products.filter(i => i.item_id).length || 1;
+            if (p.item_id) rowPreTaxCharges = totalPreTaxCharges / validItemsCount;
+         }
       }
 
       const lineTaxable = lineAfterDisc + rowComm + rowPreTaxCharges;
@@ -1676,11 +1832,21 @@ export default function PurchaseInvoice() {
       return acc + (lineTaxable * (p.gst || 0) / 100);
     }, 0);
   } else {
-    tax = afterCommission * (invoiceData.taxPercent || 0) / 100;
+    tax = (afterCommission + totalPreTaxCharges) * (invoiceData.taxPercent || 0) / 100;
   }
 
-  const priceAfterTax = afterCommission + tax;
+  const priceAfterTax = afterCommission + totalPreTaxCharges + tax;
   const finalAmount = priceAfterTax + (invoiceData.charges || 0) + (invoiceData.roundOff || 0);
+
+  let effectiveTaxPercent = 0;
+  if (invoiceData.gstOn === 'items') {
+    const totalTaxableBase = afterCommission + totalPreTaxCharges;
+    if (totalTaxableBase > 0) {
+      effectiveTaxPercent = (tax / totalTaxableBase) * 100;
+    }
+  } else {
+    effectiveTaxPercent = invoiceData.taxPercent || 0;
+  }
 
   // Auto-calculate Round Off to match Bill Amount (if small diff) or round to nearest integer
   useEffect(() => {
@@ -1717,7 +1883,7 @@ export default function PurchaseInvoice() {
   const showCutCol = isAnyRowSuiting || invoiceData.showCutSize;
   const showSizeCol = isAnyRowReadywear || isAnyRowInnerwear || invoiceData.showSize;
   const showMRPCol = isAnyRowReadywear || isAnyRowInnerwear || invoiceData.showMarkdown;
-  const showDiscCol = isAnyRowNotSaree || invoiceData.showPurchaseDiscount;
+  const showDiscCol = invoiceData.showPurchaseDiscount;
 
   return (
     <>
@@ -1743,7 +1909,7 @@ export default function PurchaseInvoice() {
           <div className="bg-white rounded shadow-lg flex flex-col w-[800px] max-h-[80vh] overflow-hidden border-2 border-red-500">
             <div className="bg-red-600 text-white font-bold p-3 flex justify-between items-center shrink-0">
               <span>Import Validation Errors - Resolution Hub</span>
-              <button onClick={() => setImportErrors([])} className="text-white hover:text-red-200 text-xl font-bold">&times;</button>
+              <button onClick={async () => setImportErrors([])} className="text-white hover:text-red-200 text-xl font-bold">&times;</button>
             </div>
             
             <div className="p-4 flex justify-between items-center bg-red-50 shrink-0 border-b">
@@ -1779,7 +1945,7 @@ export default function PurchaseInvoice() {
                       </td>
                       <td className="p-2 text-right">
                         <button 
-                          onClick={() => handleCreateMissingMaster(err)} 
+                          onClick={async () => handleCreateMissingMaster(err)} 
                           disabled={isCreating}
                           className="bg-blue-600 text-white px-2 py-1 rounded text-[11px] font-bold hover:bg-blue-700 disabled:opacity-50 cursor-pointer"
                         >
@@ -1806,7 +1972,7 @@ export default function PurchaseInvoice() {
              <div>Accounting Voucher Creation</div>
              <div className="flex gap-4 items-center">
                 {!isReadOnly && (
-                  <button onClick={() => fileInputRef.current?.click()} className="bg-yellow-400 text-black px-2 py-0.5 rounded text-xs hover:bg-yellow-500 transition-colors voucher-action-btn">Import (Alt+I)</button>
+                  <button onClick={async () => fileInputRef.current?.click()} className="bg-yellow-400 text-black px-2 py-0.5 rounded text-xs hover:bg-yellow-500 transition-colors voucher-action-btn">Import (Alt+I)</button>
                 )}
                 <div className="text-yellow-300">Purchase</div>
              </div>
@@ -1822,7 +1988,7 @@ export default function PurchaseInvoice() {
                   
                   <div className="flex items-center">
                     <span className="w-[100px] text-slate-800 font-bold mr-2">P.O. No :</span>
-                    <input type="text" id="input-orderNo" value={invoiceData.orderNo} onChange={e => setInvoiceData({...invoiceData, orderNo: e.target.value})} onKeyDown={e => handleHeaderKeyDown(e, 'input-purchaser')} className="border border-slate-500 bg-white px-1 flex-1 focus:outline-none focus:border-black focus:bg-[#ffffe0]" />
+                    <input type="text" id="input-orderNo" value={invoiceData.orderNo} onChange={e => setInvoiceData({...invoiceData, orderNo: e.target.value})} onKeyDown={e => handleHeaderKeyDown(e, 'input-purchaser')} className="border border-slate-500 bg-white px-1 flex-1 focus:outline-none focus:border-black focus:bg-[#ffe000]" />
                   </div>
 
                   <div className="flex items-center">
@@ -1846,7 +2012,7 @@ export default function PurchaseInvoice() {
                           options={activeUsers}
                           displayKey="name"
                           searchKeys={['name', 'employee_id']}
-                          className="border border-slate-500 bg-white px-1 w-full focus:outline-none focus:border-black focus:bg-[#ffffe0]"
+                          className="border border-slate-500 bg-white px-1 w-full focus:outline-none focus:border-black focus:bg-[#ffe000]"
                           width="100%"
                         />
                       </div>
@@ -1874,7 +2040,7 @@ export default function PurchaseInvoice() {
                         }}
                         options={transporters}
                         displayKey="name"
-                        className="border border-slate-500 bg-white px-1 w-full focus:outline-none focus:border-black focus:bg-[#ffffe0]"
+                        className="border border-slate-500 bg-white px-1 w-full focus:outline-none focus:border-black focus:bg-[#ffe000]"
                         width="100%"
                       />
                     </div>
@@ -1902,7 +2068,7 @@ export default function PurchaseInvoice() {
                             options={activeUsers}
                             displayKey="name"
                             searchKeys={['name', 'employee_id']}
-                            className="border border-slate-500 bg-white px-1 w-full focus:outline-none focus:border-black focus:bg-[#ffffe0]"
+                            className="border border-slate-500 bg-white px-1 w-full focus:outline-none focus:border-black focus:bg-[#ffe000]"
                             width="100%"
                           />
                         </div>
@@ -1911,7 +2077,40 @@ export default function PurchaseInvoice() {
                       <>
                         <span className="w-[100px] text-slate-800 font-bold mr-2">L R No :</span>
                         <div className="flex-1 flex flex-col relative">
-                          <input type="text" id="input-lrNo" value={invoiceData.lrNo} onBlur={handleLRNoBlur} onChange={e => setInvoiceData({...invoiceData, lrNo: e.target.value})} onKeyDown={e => handleHeaderKeyDown(e, 'input-bale')} className="border border-slate-500 bg-white px-1 w-full focus:outline-none focus:border-black focus:bg-[#ffffe0]" />
+                          {isReadOnly ? (
+                            <input type="text" id="input-lrNo" value={invoiceData.lrNo} readOnly className="border border-slate-500 bg-[#e5e7eb] px-1 w-full focus:outline-none focus:border-black" />
+                          ) : (
+                            <SearchableDropdown
+                              id="input-lrNo"
+                              value={invoiceData.lrNo}
+                              onChange={val => {
+                                const selectedLR = unlinkedLRs.find((lr: any) => lr.lr_no === val && (invoiceData.transporter ? lr.transporter_name === invoiceData.transporter : true));
+                                setInvoiceData(prev => ({
+                                  ...prev, 
+                                  lrNo: val,
+                                  ...(selectedLR && selectedLR.bale ? { bale: selectedLR.bale.toString() } : {})
+                                }));
+                              }}
+                              onBlur={handleLRNoBlur}
+                              onKeyDown={e => handleHeaderKeyDown(e, 'input-bale')}
+                              onSelect={opt => {
+                                handleLRNoBlur();
+                                setTimeout(() => document.getElementById('input-bale')?.focus(), 10);
+                              }}
+                              options={unlinkedLRs.filter((lr: any) => invoiceData.transporter ? lr.transporter_name === invoiceData.transporter : true)}
+                              displayKey="lr_no"
+                              searchKeys={['lr_no']}
+                              renderOption={(opt: any, isSelected: boolean) => (
+                                <div className="flex justify-between items-center w-full">
+                                  <span>{opt.lr_no}</span>
+                                  {opt.transporter_name && <span className="text-[10px] text-slate-500 bg-slate-100 px-1 rounded ml-2 whitespace-nowrap overflow-hidden text-ellipsis flex-1 text-right">{opt.transporter_name}</span>}
+                                  {opt.bale && <span className="text-[10px] bg-blue-100 text-blue-800 px-1 rounded ml-1 font-mono">{opt.bale} bales</span>}
+                                </div>
+                              )}
+                              className="border border-slate-500 bg-white px-1 w-full focus:outline-none focus:border-black focus:bg-[#ffe000]"
+                              width="100%"
+                            />
+                          )}
                           {lrMessage && (
                             <span className="text-[10px] text-green-600 font-bold absolute -bottom-[14px] whitespace-nowrap">{lrMessage}</span>
                           )}
@@ -1922,7 +2121,7 @@ export default function PurchaseInvoice() {
 
                   <div className="flex items-center">
                     <span className="w-[100px] text-slate-800 font-bold mr-2">Bale :</span>
-                    <input type="text" id="input-bale" value={invoiceData.bale} onChange={e => setInvoiceData({...invoiceData, bale: e.target.value})} onKeyDown={e => handleHeaderKeyDown(e, 'input-supplier')} className="border border-slate-500 bg-white px-1 flex-1 focus:outline-none focus:border-black focus:bg-[#ffffe0]" />
+                    <input type="text" id="input-bale" value={invoiceData.bale} onChange={e => setInvoiceData({...invoiceData, bale: e.target.value})} onKeyDown={e => handleHeaderKeyDown(e, 'input-supplier')} className="border border-slate-500 bg-white px-1 flex-1 focus:outline-none focus:border-black focus:bg-[#ffe000]" />
                   </div>
 
                 </div>
@@ -1958,7 +2157,7 @@ export default function PurchaseInvoice() {
                           }}
                           options={vendors}
                           displayKey="name"
-                          className="border border-slate-500 bg-white px-1 w-full focus:outline-none focus:border-black focus:bg-[#ffffe0] font-bold"
+                          className="border border-slate-500 bg-white px-1 w-full focus:outline-none focus:border-black focus:bg-[#ffe000] font-bold"
                           width="100%"
                         />
                       </div>
@@ -1973,11 +2172,11 @@ export default function PurchaseInvoice() {
                   <div className="flex items-center gap-4">
                     <div className="flex items-center flex-1">
                       <span className="w-[80px] text-slate-800 font-bold mr-2">Bill No :</span>
-                      <input type="text" id="input-billNo" value={invoiceData.billNo} onChange={e => setInvoiceData({...invoiceData, billNo: e.target.value})} onKeyDown={e => handleHeaderKeyDown(e, 'input-billDate')} className="border border-slate-500 bg-white px-1 flex-1 focus:outline-none focus:border-black focus:bg-[#ffffe0]" />
+                      <input type="text" id="input-billNo" value={invoiceData.billNo} onChange={e => setInvoiceData({...invoiceData, billNo: e.target.value})} onKeyDown={e => handleHeaderKeyDown(e, 'input-billDate')} className="border border-slate-500 bg-white px-1 flex-1 focus:outline-none focus:border-black focus:bg-[#ffe000]" />
                     </div>
                     <div className="flex items-center flex-1">
                       <span className="w-[80px] text-slate-800 font-bold mr-2">Bill Date :</span>
-                      <input type="date" id="input-billDate" value={invoiceData.billDate} onChange={e => setInvoiceData({...invoiceData, billDate: e.target.value})} onKeyDown={e => handleHeaderKeyDown(e, 'input-totalQty')} className="border border-slate-500 bg-white px-1 flex-1 focus:outline-none focus:border-black focus:bg-[#ffffe0]" />
+                      <input type="date" id="input-billDate" value={invoiceData.billDate} onChange={e => setInvoiceData({...invoiceData, billDate: e.target.value})} onKeyDown={e => handleHeaderKeyDown(e, 'input-totalQty')} className="border border-slate-500 bg-white px-1 flex-1 focus:outline-none focus:border-black focus:bg-[#ffe000]" />
                     </div>
                   </div>
 
@@ -1985,15 +2184,15 @@ export default function PurchaseInvoice() {
                   <div className="flex items-center gap-4">
                     <div className="flex items-center flex-1">
                       <span className="w-[80px] text-slate-800 font-bold mr-2">Total Qty :</span>
-                      <input type="number" id="input-totalQty" value={invoiceData.totalQuantity} onChange={e => setInvoiceData({...invoiceData, totalQuantity: e.target.value})} onKeyDown={e => handleHeaderKeyDown(e, 'input-billAmount')} className="border border-slate-500 bg-white px-1 flex-1 focus:outline-none focus:border-black focus:bg-[#ffffe0]" />
+                      <input type="number" id="input-totalQty" value={invoiceData.totalQuantity} onChange={e => setInvoiceData({...invoiceData, totalQuantity: e.target.value})} onKeyDown={e => handleHeaderKeyDown(e, 'input-billAmount')} className="border border-slate-500 bg-white px-1 flex-1 focus:outline-none focus:border-black focus:bg-[#ffe000]" />
                     </div>
                     <div className="flex items-center flex-[1.5]">
                       <span className="w-[80px] text-slate-800 font-bold mr-2">Bill Amount :</span>
-                      <input type="number" id="input-billAmount" value={invoiceData.billAmount} onChange={e => setInvoiceData({...invoiceData, billAmount: e.target.value})} onKeyDown={e => handleHeaderKeyDown(e, 'input-gstOn')} className="border border-slate-500 bg-white px-1 flex-1 focus:outline-none focus:border-black focus:bg-[#ffffe0]" />
+                      <input type="number" id="input-billAmount" value={invoiceData.billAmount} onChange={e => setInvoiceData({...invoiceData, billAmount: e.target.value})} onKeyDown={e => handleHeaderKeyDown(e, 'input-gstOn')} className="border border-slate-500 bg-white px-1 flex-1 focus:outline-none focus:border-black focus:bg-[#ffe000]" />
                     </div>
                     <div className="flex items-center flex-[1.5]">
                       <span className="w-[100px] text-slate-800 font-bold mr-2">GST On :</span>
-                      <select id="input-gstOn" value={invoiceData.gstOn} onChange={e => setInvoiceData({...invoiceData, gstOn: e.target.value as any})} onKeyDown={e => handleHeaderKeyDown(e, 'row-0-brand')} className="border border-slate-500 bg-white px-1 flex-1 focus:outline-none focus:border-black focus:bg-[#ffffe0]">
+                      <select id="input-gstOn" value={invoiceData.gstOn} onChange={e => setInvoiceData({...invoiceData, gstOn: e.target.value as any})} onKeyDown={e => handleHeaderKeyDown(e, 'row-0-brand')} className="border border-slate-500 bg-white px-1 flex-1 focus:outline-none focus:border-black focus:bg-[#ffe000]">
                         <option value="total">Entire Invoice</option>
                         <option value="items">Individual Line Items</option>
                       </select>
@@ -2021,10 +2220,10 @@ export default function PurchaseInvoice() {
                     </div>
 
                     <div className="flex items-center gap-3">
-                      <select value={invoiceData.firm} onChange={e => handleInvoiceChange('firm', e.target.value)} className="border border-slate-500 bg-white px-1 text-xs font-bold focus:outline-none focus:border-black focus:bg-[#ffffe0]">
+                      <select value={invoiceData.firm} onChange={e => handleInvoiceChange('firm', e.target.value)} className="border border-slate-500 bg-white px-1 text-xs font-bold focus:outline-none focus:border-black focus:bg-[#ffe000]">
                         <option value="1">VRP</option>
                       </select>
-                      <select value={invoiceData.location} onChange={e => handleInvoiceChange('location', e.target.value)} className="border border-slate-500 bg-white px-1 text-xs font-bold focus:outline-none focus:border-black focus:bg-[#ffffe0]">
+                      <select value={invoiceData.location} onChange={e => handleInvoiceChange('location', e.target.value)} className="border border-slate-500 bg-white px-1 text-xs font-bold focus:outline-none focus:border-black focus:bg-[#ffe000]">
                         <option value="">Select Location</option>
                         {locations.map((loc: any) => (
                           <option key={loc.id} value={loc.name}>{loc.name}</option>
@@ -2038,28 +2237,28 @@ export default function PurchaseInvoice() {
 
               {/* Items Table */}
               <div className="flex-1 border-b-2 border-black bg-[#fcfaf2] overflow-y-auto custom-scroll min-h-0">
-                <table className="w-full text-left border-separate border-spacing-0 relative">
+                <table className="w-full h-full text-left border-separate border-spacing-0 relative">
                   <thead className="shadow-[0_1px_2px_rgba(0,0,0,0.1)]">
                     <tr className="text-slate-900 font-bold text-[12px] select-none">
-                      <th className="sticky top-0 z-20 bg-emerald-50 bg-clip-padding border-b-2 border-black px-1 py-1 border-r border-slate-300 w-8 text-center cursor-pointer" onClick={() => requestSort('id')}>#{renderSortIndicator('id')}</th>
-                      <th className="sticky top-0 z-20 bg-emerald-50 bg-clip-padding border-b-2 border-black px-1 py-1 border-r border-slate-300 w-[100px] text-center cursor-pointer hover:bg-slate-200" onClick={() => requestSort('brand')}>Brand{renderSortIndicator('brand')}</th>
-                      <th className="sticky top-0 z-20 bg-emerald-50 bg-clip-padding border-b-2 border-black px-1 py-1 border-r border-slate-300 w-[200px] text-center cursor-pointer hover:bg-slate-200" onClick={() => requestSort('item')}>Name of Item{renderSortIndicator('item')}</th>
-                      <th className="sticky top-0 z-20 bg-emerald-50 bg-clip-padding border-b-2 border-black px-1 py-1 border-r border-slate-300 w-[80px] text-center cursor-pointer hover:bg-slate-200" onClick={() => requestSort('hsn')}>HSN/SAC{renderSortIndicator('hsn')}</th>
-                      {showDesignCol && <th className="sticky top-0 z-20 bg-emerald-50 bg-clip-padding border-b-2 border-black px-1 py-1 border-r border-slate-300 w-[80px] text-center cursor-pointer hover:bg-slate-200" onClick={() => requestSort('design')}>Design{renderSortIndicator('design')}</th>}
-                      {showColourCol && <th className="sticky top-0 z-20 bg-emerald-50 bg-clip-padding border-b-2 border-black px-1 py-1 border-r border-slate-300 w-[80px] text-center cursor-pointer hover:bg-slate-200" onClick={() => requestSort('colour')}>Colour{renderSortIndicator('colour')}</th>}
-                      {showSizeCol && <th className="sticky top-0 z-20 bg-emerald-50 bg-clip-padding border-b-2 border-black px-1 py-1 border-r border-slate-300 w-[60px] text-center cursor-pointer hover:bg-slate-200" onClick={() => requestSort('size')}>Size{renderSortIndicator('size')}</th>}
-                      {showCutCol && <th className="sticky top-0 z-20 bg-emerald-50 bg-clip-padding border-b-2 border-black px-1 py-1 border-r border-slate-300 w-[70px] text-center cursor-pointer hover:bg-slate-200" onClick={() => requestSort('cut_size')}>Cut Size{renderSortIndicator('cut_size')}</th>}
-                      {showCutCol && <th className="sticky top-0 z-20 bg-emerald-50 bg-clip-padding border-b-2 border-black px-1 py-1 border-r border-slate-300 w-[60px] text-center cursor-pointer hover:bg-slate-200" onClick={() => requestSort('pieces')}>Pieces{renderSortIndicator('pieces')}</th>}
-                      <th className="sticky top-0 z-20 bg-emerald-50 bg-clip-padding border-b-2 border-black px-1 py-1 border-r border-slate-300 w-[70px] text-center cursor-pointer hover:bg-slate-200" onClick={() => requestSort('qty')}>Quantity{renderSortIndicator('qty')}</th>
-                      {!invoiceData.showMarkdown && <th className="sticky top-0 z-20 bg-emerald-50 bg-clip-padding border-b-2 border-black px-1 py-1 border-r border-slate-300 w-[80px] text-center cursor-pointer hover:bg-slate-200" onClick={() => requestSort('rate')}>Rate{renderSortIndicator('rate')}</th>}
-                      {!invoiceData.showMarkdown && showDiscCol && <th className="sticky top-0 z-20 bg-emerald-50 bg-clip-padding border-b-2 border-black px-1 py-1 border-r border-slate-300 w-[60px] text-center cursor-pointer hover:bg-slate-200" onClick={() => requestSort('disc')}>Disc%{renderSortIndicator('disc')}</th>}
+                      <th className="sticky top-0 z-20 bg-emerald-50 bg-clip-padding border-b-2 border-black px-1 py-1 border-r border-slate-300 w-8 text-center cursor-pointer" onClick={async () => requestSort('id')}>#{renderSortIndicator('id')}</th>
+                      <th className="sticky top-0 z-20 bg-emerald-50 bg-clip-padding border-b-2 border-black px-1 py-1 border-r border-slate-300 w-[100px] text-center cursor-pointer hover:bg-slate-200" onClick={async () => requestSort('brand')}>Brand{renderSortIndicator('brand')}</th>
+                      <th className="sticky top-0 z-20 bg-emerald-50 bg-clip-padding border-b-2 border-black px-1 py-1 border-r border-slate-300 w-[200px] text-center cursor-pointer hover:bg-slate-200" onClick={async () => requestSort('item')}>Name of Item{renderSortIndicator('item')}</th>
+                      <th className="sticky top-0 z-20 bg-emerald-50 bg-clip-padding border-b-2 border-black px-1 py-1 border-r border-slate-300 w-[80px] text-center cursor-pointer hover:bg-slate-200" onClick={async () => requestSort('hsn')}>HSN/SAC{renderSortIndicator('hsn')}</th>
+                      {showDesignCol && <th className="sticky top-0 z-20 bg-emerald-50 bg-clip-padding border-b-2 border-black px-1 py-1 border-r border-slate-300 w-[80px] text-center cursor-pointer hover:bg-slate-200" onClick={async () => requestSort('design')}>Design{renderSortIndicator('design')}</th>}
+                      {showColourCol && <th className="sticky top-0 z-20 bg-emerald-50 bg-clip-padding border-b-2 border-black px-1 py-1 border-r border-slate-300 w-[80px] text-center cursor-pointer hover:bg-slate-200" onClick={async () => requestSort('colour')}>Colour{renderSortIndicator('colour')}</th>}
+                      {showSizeCol && <th className="sticky top-0 z-20 bg-emerald-50 bg-clip-padding border-b-2 border-black px-1 py-1 border-r border-slate-300 w-[60px] text-center cursor-pointer hover:bg-slate-200" onClick={async () => requestSort('size')}>Size{renderSortIndicator('size')}</th>}
+                      {showCutCol && <th className="sticky top-0 z-20 bg-emerald-50 bg-clip-padding border-b-2 border-black px-1 py-1 border-r border-slate-300 w-[70px] text-center cursor-pointer hover:bg-slate-200" onClick={async () => requestSort('cut_size')}>Cut Size{renderSortIndicator('cut_size')}</th>}
+                      {showCutCol && <th className="sticky top-0 z-20 bg-emerald-50 bg-clip-padding border-b-2 border-black px-1 py-1 border-r border-slate-300 w-[60px] text-center cursor-pointer hover:bg-slate-200" onClick={async () => requestSort('pieces')}>Pieces{renderSortIndicator('pieces')}</th>}
+                      <th className="sticky top-0 z-20 bg-emerald-50 bg-clip-padding border-b-2 border-black px-1 py-1 border-r border-slate-300 w-[70px] text-center cursor-pointer hover:bg-slate-200" onClick={async () => requestSort('qty')}>Quantity{renderSortIndicator('qty')}</th>
+                      {!invoiceData.showMarkdown && <th className="sticky top-0 z-20 bg-emerald-50 bg-clip-padding border-b-2 border-black px-1 py-1 border-r border-slate-300 w-[80px] text-center cursor-pointer hover:bg-slate-200" onClick={async () => requestSort('rate')}>Rate{renderSortIndicator('rate')}</th>}
+                      {!invoiceData.showMarkdown && showDiscCol && <th className="sticky top-0 z-20 bg-emerald-50 bg-clip-padding border-b-2 border-black px-1 py-1 border-r border-slate-300 w-[60px] text-center cursor-pointer hover:bg-slate-200" onClick={async () => requestSort('disc')}>Disc%{renderSortIndicator('disc')}</th>}
                       
-                      {invoiceData.showMarkdown && <th className="sticky top-0 z-20 bg-emerald-50 bg-clip-padding border-b-2 border-black px-1 py-1 border-r border-slate-300 w-[70px] text-center cursor-pointer hover:bg-slate-200" onClick={() => requestSort('mrp')}>MRP{renderSortIndicator('mrp')}</th>}
-                      {invoiceData.showMarkdown && <th className="sticky top-0 z-20 bg-emerald-50 bg-clip-padding border-b-2 border-black px-1 py-1 border-r border-slate-300 w-[60px] text-center cursor-pointer hover:bg-slate-200" onClick={() => requestSort('disc')}>Disc1%{renderSortIndicator('disc')}</th>}
-                      {invoiceData.showMarkdown && <th className="sticky top-0 z-20 bg-emerald-50 bg-clip-padding border-b-2 border-black px-1 py-1 border-r border-slate-300 w-[80px] text-center cursor-pointer hover:bg-slate-200" onClick={() => requestSort('rate')}>Rate{renderSortIndicator('rate')}</th>}
+                      {invoiceData.showMarkdown && <th className="sticky top-0 z-20 bg-emerald-50 bg-clip-padding border-b-2 border-black px-1 py-1 border-r border-slate-300 w-[70px] text-center cursor-pointer hover:bg-slate-200" onClick={async () => requestSort('mrp')}>MRP{renderSortIndicator('mrp')}</th>}
+                      {invoiceData.showMarkdown && <th className="sticky top-0 z-20 bg-emerald-50 bg-clip-padding border-b-2 border-black px-1 py-1 border-r border-slate-300 w-[60px] text-center cursor-pointer hover:bg-slate-200" onClick={async () => requestSort('disc')}>Disc1%{renderSortIndicator('disc')}</th>}
+                      {invoiceData.showMarkdown && <th className="sticky top-0 z-20 bg-emerald-50 bg-clip-padding border-b-2 border-black px-1 py-1 border-r border-slate-300 w-[80px] text-center cursor-pointer hover:bg-slate-200" onClick={async () => requestSort('rate')}>Rate{renderSortIndicator('rate')}</th>}
                       
-                      {invoiceData.gstOn === 'items' && <th className="sticky top-0 z-20 bg-emerald-50 bg-clip-padding border-b-2 border-black px-1 py-1 border-r border-slate-300 w-[60px] text-center cursor-pointer hover:bg-slate-200" onClick={() => requestSort('gst')}>GST%{renderSortIndicator('gst')}</th>}
-                      <th className="sticky top-0 z-20 bg-emerald-50 bg-clip-padding border-b-2 border-black px-1 py-1 border-r border-slate-300 w-[100px] text-center cursor-pointer hover:bg-slate-200" onClick={() => requestSort('amount')}>Amount{renderSortIndicator('amount')}</th>
+                      {invoiceData.gstOn === 'items' && <th className="sticky top-0 z-20 bg-emerald-50 bg-clip-padding border-b-2 border-black px-1 py-1 border-r border-slate-300 w-[60px] text-center cursor-pointer hover:bg-slate-200" onClick={async () => requestSort('gst')}>GST%{renderSortIndicator('gst')}</th>}
+                      <th className="sticky top-0 z-20 bg-emerald-50 bg-clip-padding border-b-2 border-black px-1 py-1 border-r border-slate-300 w-[100px] text-center cursor-pointer hover:bg-slate-200" onClick={async () => requestSort('amount')}>Amount{renderSortIndicator('amount')}</th>
                       
                       {invoiceData.showMarkdown && <th className="sticky top-0 z-20 bg-emerald-50 bg-clip-padding border-b-2 border-black px-1 py-1 border-r border-slate-300 w-[70px] text-center">MRP</th>}
                       {invoiceData.showMarkdown && <th className="sticky top-0 z-20 bg-emerald-50 bg-clip-padding border-b-2 border-black px-1 py-1 border-r border-slate-300 w-[60px] text-center">Disc2%</th>}
@@ -2067,11 +2266,24 @@ export default function PurchaseInvoice() {
                     </tr>
                   </thead>
                   <tbody>
-                    {products.filter((item, index) => item.item || Number(item.qty) > 0 || index === products.length - 1).map((item, index) => (
-                      <tr key={item.id} className="text-[13px] border-b border-slate-300">
+                    {(() => {
+                      const renderedProducts = products.filter((item, index) => item.item || Number(item.qty) > 0 || index === products.length - 1);
+                      const blankRowsCount = Math.max(0, 15 - renderedProducts.length);
+                      
+                      return (
+                        <>
+                          {renderedProducts.map((item, index) => (
+                            <tr 
+                              key={item.id} 
+                              onFocus={() => setActiveRowIndex(index)} 
+                              onBlur={(e) => { 
+                                if (!e.currentTarget.contains(e.relatedTarget as Node)) setActiveRowIndex(null); 
+                              }} 
+                              className={`text-[13px] border-b border-slate-300 hover:bg-slate-200 transition-colors ${activeRowIndex === index ? 'bg-[#ffe000]' : (index % 2 === 0 ? 'bg-white' : 'bg-[#f1f5f9]')}`}
+                            >
                         <td className="border-r border-slate-300 px-1 py-[2px] text-center font-bold text-slate-500">{item.serialNo !== undefined ? item.serialNo : index + 1}</td>
                         <td className="border-r border-slate-300 px-1 py-[2px] relative">
-                          <input id={`row-${index}-brand`} type="text" value={item.brand} onChange={e => { updateProduct(index, 'brand', e.target.value); setBrandSuggestionIndex(0); }} onFocus={(e) => handleBrandFocus(e, index)} onBlur={handleBrandBlur} onKeyDown={(e) => handleKeyDown(e, index, 'brand')} className="w-full bg-transparent focus:bg-[#ffffe0] focus:outline-none px-1" autoComplete="off" />
+                          <input id={`row-${index}-brand`} type="text" value={item.brand} onChange={e => { updateProduct(index, 'brand', e.target.value); setBrandSuggestionIndex(0); }} onFocus={(e) => handleBrandFocus(e, index)} onBlur={handleBrandBlur} onKeyDown={(e) => handleKeyDown(e, index, 'brand')} className="w-full bg-transparent focus:bg-[#ffe000] focus:outline-none px-1" autoComplete="off" />
                           {activeBrandRow === index && (
                             <div className="absolute top-full left-0 mt-0 bg-white border-2 border-black z-50 w-[200px] shadow-md max-h-[150px] overflow-y-auto">
                               {(() => {
@@ -2079,7 +2291,7 @@ export default function PurchaseInvoice() {
                                 
                                 // Filter based on selected party
                                 let filteredBrands = availableBrands;
-                                if (vendorAllowedBrands !== null) {
+                                if (Array.isArray(vendorAllowedBrands)) {
                                   filteredBrands = filteredBrands.filter(b => vendorAllowedBrands.some(vb => vb.toLowerCase() === (String(b.name) || '').toLowerCase()));
                                 }
                                 if (isSingleBrandVendor && lockedBrand) {
@@ -2089,7 +2301,7 @@ export default function PurchaseInvoice() {
                                 const filtered = filteredBrands.filter(b => (String(b.name) || '').toLowerCase().includes(query)).slice(0, 8);
                                 if (filtered.length > 0) {
                                   return filtered.map((suggestion, sIdx) => (
-                                    <div key={suggestion.id} className={`px-2 py-1 flex justify-between cursor-pointer ${sIdx === brandSuggestionIndex ? 'bg-[#ffe000] text-black font-bold' : 'hover:bg-slate-200'}`} onClick={() => {
+                                    <div key={suggestion.id} className={`px-2 py-1 flex justify-between cursor-pointer ${sIdx === brandSuggestionIndex ? 'bg-[#ffe000] text-black font-bold' : 'hover:bg-slate-200'}`} onClick={async () => {
                                       const newProducts = [...products];
                                       newProducts[index] = { ...newProducts[index], brand_id: suggestion.id, brand: suggestion.name || '' };
                                       setProducts(newProducts);
@@ -2112,7 +2324,7 @@ export default function PurchaseInvoice() {
                           )}
                         </td>
                         <td className="border-r border-slate-300 px-1 py-[2px] relative">
-                          <input id={`row-${index}-item`} type="text" value={item.item} onChange={e => { updateProduct(index, 'item', e.target.value); setSuggestionIndex(0); }} onFocus={(e) => handleItemFocus(e, index)} onBlur={handleItemBlur} onKeyDown={(e) => handleKeyDown(e, index, 'item')} className="w-full bg-transparent focus:bg-[#ffffe0] focus:outline-none px-1" autoComplete="off" />
+                          <input id={`row-${index}-item`} type="text" value={item.item} onChange={e => { updateProduct(index, 'item', e.target.value); setSuggestionIndex(0); }} onFocus={(e) => handleItemFocus(e, index)} onBlur={handleItemBlur} onKeyDown={(e) => handleKeyDown(e, index, 'item')} className="w-full bg-transparent focus:bg-[#ffe000] focus:outline-none px-1" autoComplete="off" />
                           {activeSuggestionRow === index && (
                             <div className="absolute top-full left-0 mt-0 bg-white border-2 border-black z-50 w-[300px] shadow-md max-h-[150px] overflow-y-auto">
                               {(() => {
@@ -2121,7 +2333,7 @@ export default function PurchaseInvoice() {
                                   const textMatch = (s.name || s.item_name || '').toLowerCase().includes(q);
                                   const bId = products[index].brand_id;
                                   if (bId) return textMatch && String(s.brand_id) === String(bId);
-                                  if (vendorAllowedBrands !== null) {
+                                  if (Array.isArray(vendorAllowedBrands)) {
                                      const isAllowed = vendorAllowedBrands.some(vb => vb.toLowerCase() === (s.brand || '').toLowerCase());
                                      return textMatch && isAllowed;
                                   }
@@ -2129,7 +2341,7 @@ export default function PurchaseInvoice() {
                                 }).slice(0, 8);
                                 if (filtered.length > 0) {
                                   return filtered.map((suggestion, sIdx) => (
-                                    <div key={suggestion.id} className={`px-2 py-1 flex justify-between cursor-pointer ${sIdx === suggestionIndex ? 'bg-[#ffe000] text-black font-bold' : 'hover:bg-slate-200'}`} onClick={() => {
+                                    <div key={suggestion.id} className={`px-2 py-1 flex justify-between cursor-pointer ${sIdx === suggestionIndex ? 'bg-[#ffe000] text-black font-bold' : 'hover:bg-slate-200'}`} onClick={async () => {
                                       const newProducts = [...products];
                                       newProducts[index] = { 
                                         ...newProducts[index], 
@@ -2164,7 +2376,7 @@ export default function PurchaseInvoice() {
                           )}
                         </td>
                         <td className="border-r border-slate-300 px-1 py-[2px] relative">
-                          <input id={`row-${index}-hsn`} type="text" value={item.hsn || ''} onChange={e => { updateProduct(index, 'hsn', e.target.value); setHsnSuggestionIndex(0); }} onFocus={(e) => handleHsnFocus(e, index)} onBlur={handleHsnBlur} onKeyDown={(e) => handleKeyDown(e, index, 'hsn')} className="w-full bg-transparent focus:bg-[#ffffe0] focus:outline-none px-1" autoComplete="off" />
+                          <input id={`row-${index}-hsn`} type="text" value={item.hsn || ''} onChange={e => { updateProduct(index, 'hsn', e.target.value); setHsnSuggestionIndex(0); }} onFocus={(e) => handleHsnFocus(e, index)} onBlur={handleHsnBlur} onKeyDown={(e) => handleKeyDown(e, index, 'hsn')} className="w-full bg-transparent focus:bg-[#ffe000] focus:outline-none px-1" autoComplete="off" />
                           {activeHsnRow === index && (
                             <div className="absolute top-full left-0 mt-0 bg-white border-2 border-black z-50 w-[300px] shadow-md max-h-[150px] overflow-y-auto">
                               {(() => {
@@ -2172,7 +2384,7 @@ export default function PurchaseInvoice() {
                                 const filtered = availableHsns.filter(s => (String(s.name) || '').toLowerCase().includes(query)).slice(0, 8);
                                 if (filtered.length > 0) {
                                   return filtered.map((suggestion, sIdx) => (
-                                    <div key={suggestion.id} className={`px-2 py-1 flex flex-col cursor-pointer ${sIdx === hsnSuggestionIndex ? 'bg-[#ffe000] text-black font-bold' : 'hover:bg-slate-200'}`} onClick={() => {
+                                    <div key={suggestion.id} className={`px-2 py-1 flex flex-col cursor-pointer ${sIdx === hsnSuggestionIndex ? 'bg-[#ffe000] text-black font-bold' : 'hover:bg-slate-200'}`} onClick={async () => {
                                       const newProducts = [...products];
                                       newProducts[index] = { 
                                         ...newProducts[index], 
@@ -2206,7 +2418,7 @@ export default function PurchaseInvoice() {
                         </td>
                         {showDesignCol && (
                           <td className="border-r border-slate-300 px-1 py-[2px] relative">
-                            <input id={`row-${index}-design`} type="text" value={item.design} onChange={e => { updateProduct(index, 'design', e.target.value); setDesignSuggestionIndex(0); }} onFocus={(e) => handleDesignFocus(e, index)} onBlur={handleDesignBlur} onKeyDown={(e) => handleKeyDown(e, index, 'design')} className="w-full bg-transparent focus:bg-[#ffffe0] focus:outline-none px-1" autoComplete="off" />
+                            <input id={`row-${index}-design`} type="text" value={item.design} onChange={e => { updateProduct(index, 'design', e.target.value); setDesignSuggestionIndex(0); }} onFocus={(e) => handleDesignFocus(e, index)} onBlur={handleDesignBlur} onKeyDown={(e) => handleKeyDown(e, index, 'design')} className="w-full bg-transparent focus:bg-[#ffe000] focus:outline-none px-1" autoComplete="off" />
                             {activeDesignRow === index && (
                               <div className="absolute top-full left-0 mt-0 bg-white border-2 border-black z-50 w-[200px] shadow-md max-h-[150px] overflow-y-auto">
                                 {(() => {
@@ -2214,7 +2426,7 @@ export default function PurchaseInvoice() {
                                   const filtered = availableDesigns.filter(s => (String(s.name) || '').toLowerCase().includes(query)).slice(0, 8);
                                   if (filtered.length > 0) {
                                     return filtered.map((suggestion, sIdx) => (
-                                      <div key={suggestion.id} className={`px-2 py-1 cursor-pointer ${sIdx === designSuggestionIndex ? 'bg-[#ffe000] text-black font-bold' : 'hover:bg-slate-200'}`} onClick={() => {
+                                      <div key={suggestion.id} className={`px-2 py-1 cursor-pointer ${sIdx === designSuggestionIndex ? 'bg-[#ffe000] text-black font-bold' : 'hover:bg-slate-200'}`} onClick={async () => {
                                         const newProducts = [...products];
                                         newProducts[index] = { ...newProducts[index], design: suggestion.name || '' };
                                         setProducts(newProducts);
@@ -2243,7 +2455,7 @@ export default function PurchaseInvoice() {
                         )}
                         {showColourCol && (
                           <td className="border-r border-slate-300 px-1 py-[2px] relative">
-                            <input id={`row-${index}-colour`} type="text" value={item.colour} onChange={e => { updateProduct(index, 'colour', e.target.value); setColourSuggestionIndex(0); }} onFocus={(e) => handleColourFocus(e, index)} onBlur={handleColourBlur} onKeyDown={(e) => handleKeyDown(e, index, 'colour')} className="w-full bg-transparent focus:bg-[#ffffe0] focus:outline-none px-1" autoComplete="off" />
+                            <input id={`row-${index}-colour`} type="text" value={item.colour} onChange={e => { updateProduct(index, 'colour', e.target.value); setColourSuggestionIndex(0); }} onFocus={(e) => handleColourFocus(e, index)} onBlur={handleColourBlur} onKeyDown={(e) => handleKeyDown(e, index, 'colour')} className="w-full bg-transparent focus:bg-[#ffe000] focus:outline-none px-1" autoComplete="off" />
                             {activeColourRow === index && (
                               <div className="absolute top-full left-0 mt-0 bg-white border-2 border-black z-50 w-[200px] shadow-md max-h-[150px] overflow-y-auto">
                                 {(() => {
@@ -2251,7 +2463,7 @@ export default function PurchaseInvoice() {
                                   const filtered = availableColours.filter(s => (String(s.name) || '').toLowerCase().includes(query)).slice(0, 8);
                                   if (filtered.length > 0) {
                                     return filtered.map((suggestion, sIdx) => (
-                                      <div key={suggestion.id} className={`px-2 py-1 cursor-pointer ${sIdx === colourSuggestionIndex ? 'bg-[#ffe000] text-black font-bold' : 'hover:bg-slate-200'}`} onClick={() => {
+                                      <div key={suggestion.id} className={`px-2 py-1 cursor-pointer ${sIdx === colourSuggestionIndex ? 'bg-[#ffe000] text-black font-bold' : 'hover:bg-slate-200'}`} onClick={async () => {
                                         const newProducts = [...products];
                                         newProducts[index] = { ...newProducts[index], colour: suggestion.name || '' };
                                         setProducts(newProducts);
@@ -2279,7 +2491,7 @@ export default function PurchaseInvoice() {
                         )}
                         {showSizeCol && (
                           <td className="border-r border-slate-300 px-1 py-[2px] relative">
-                            <input id={`row-${index}-size`} type="text" value={item.size} onChange={e => { updateProduct(index, 'size', e.target.value); setActiveSizeRow(index); setSizeSuggestionIndex(0); }} onKeyDown={(e) => handleKeyDown(e, index, 'size')} onClick={() => { setActiveSizeRow(index); setSizeSuggestionIndex(0); }} onBlur={() => setTimeout(() => setActiveSizeRow(null), 200)} className="w-full bg-transparent focus:bg-[#ffffe0] focus:outline-none px-1 font-bold text-center" autoComplete="off" />
+                            <input id={`row-${index}-size`} type="text" value={item.size} onChange={e => { updateProduct(index, 'size', e.target.value); setActiveSizeRow(index); setSizeSuggestionIndex(0); }} onKeyDown={(e) => handleKeyDown(e, index, 'size')} onClick={async () => { setActiveSizeRow(index); setSizeSuggestionIndex(0); }} onBlur={() => setTimeout(() => setActiveSizeRow(null), 200)} className="w-full bg-transparent focus:bg-[#ffe000] focus:outline-none px-1 font-bold text-center" autoComplete="off" />
                             {activeSizeRow === index && (
                               <div className="absolute top-full left-0 mt-0 bg-white border-2 border-black z-50 w-[250px] shadow-md max-h-[150px] overflow-y-auto">
                                 {(() => {
@@ -2287,7 +2499,7 @@ export default function PurchaseInvoice() {
                                   const filtered = availableSizes.filter(s => (String(s.name) || '').toLowerCase().includes(query)).slice(0, 8);
                                   if (filtered.length > 0) {
                                     return filtered.map((suggestion, sIdx) => (
-                                      <div key={suggestion.id} className={`px-2 py-1 flex justify-between cursor-pointer ${sIdx === sizeSuggestionIndex ? 'bg-[#ffe000] text-black font-bold' : 'hover:bg-slate-200'}`} onClick={() => {
+                                      <div key={suggestion.id} className={`px-2 py-1 flex justify-between cursor-pointer ${sIdx === sizeSuggestionIndex ? 'bg-[#ffe000] text-black font-bold' : 'hover:bg-slate-200'}`} onClick={async () => {
                                         updateProduct(index, 'size', suggestion.name);
                                         setActiveSizeRow(null);
                                         const fields = ['brand', 'item', 'hsn'];
@@ -2339,7 +2551,7 @@ export default function PurchaseInvoice() {
                                   newP[index] = { ...newP[index], cut_size: cutSize, pieces: pieces };
                                   return newP;
                                 });
-                              }} onKeyDown={(e) => handleKeyDown(e, index, 'cut_size')} className="w-full bg-transparent focus:bg-[#ffffe0] focus:outline-none px-1 text-center" />
+                              }} onKeyDown={(e) => handleKeyDown(e, index, 'cut_size')} className="w-full bg-transparent focus:bg-[#ffe000] focus:outline-none px-1 text-center" />
                             </td>
                             <td className="border-r border-slate-300 px-1 py-[2px] bg-slate-100">
                               <input type="number" value={item.pieces} readOnly className="w-full bg-transparent outline-none px-1 text-center text-slate-500 font-bold" />
@@ -2392,35 +2604,35 @@ export default function PurchaseInvoice() {
                                 handleKeyDown(e, index, 'qty');
                               }
                             }}
-                            className="w-full bg-transparent focus:bg-[#ffffe0] focus:outline-none px-1 text-right font-bold" 
+                            className="w-full bg-transparent focus:bg-[#ffe000] focus:outline-none px-1 text-right font-bold" 
                           />
                         </td>
 {!invoiceData.showMarkdown && (
                           <td className="border-r border-slate-300 px-1 py-[2px]">
-                            <input id={`row-${index}-rate`} type="number" value={item.rate} onChange={e => updateProduct(index, 'rate', e.target.value)} onBlur={() => handleInputBlur(index, 'rate')} onKeyDown={(e) => handleKeyDown(e, index, 'rate')} className={`w-full bg-transparent focus:bg-[#ffffe0] focus:outline-none px-1 text-right font-bold ${item.last_rate ? (parseFloat(item.rate) > item.last_rate ? 'text-red-600 bg-red-50' : parseFloat(item.rate) < item.last_rate ? 'text-green-600 bg-green-50' : '') : ''}`} title={item.last_rate ? `Last Rate: ₹${item.last_rate}` : ''} />
+                            <input id={`row-${index}-rate`} type="number" value={item.rate} onChange={e => updateProduct(index, 'rate', e.target.value)} onBlur={() => handleInputBlur(index, 'rate')} onKeyDown={(e) => handleKeyDown(e, index, 'rate')} className={`w-full bg-transparent focus:bg-[#ffe000] focus:outline-none px-1 text-right font-bold ${item.last_rate ? (parseFloat(item.rate) > item.last_rate ? 'text-red-600 bg-red-50' : parseFloat(item.rate) < item.last_rate ? 'text-green-600 bg-green-50' : '') : ''}`} title={item.last_rate ? `Last Rate: ₹${item.last_rate}` : ''} />
                           </td>
                         )}
                         {!invoiceData.showMarkdown && showDiscCol && (
                           <td className="border-r border-slate-300 px-1 py-[2px]">
-                            <input id={`row-${index}-disc`} type="number" value={item.disc || ''} onChange={e => updateProduct(index, 'disc', e.target.value)} onBlur={() => handleInputBlur(index, 'disc')} onKeyDown={(e) => handleKeyDown(e, index, 'disc')} className="w-full bg-transparent focus:bg-[#ffffe0] focus:outline-none px-1 text-right font-bold" />
+                            <input id={`row-${index}-disc`} type="number" value={item.disc || ''} onChange={e => updateProduct(index, 'disc', e.target.value)} onBlur={() => handleInputBlur(index, 'disc')} onKeyDown={(e) => handleKeyDown(e, index, 'disc')} className="w-full bg-transparent focus:bg-[#ffe000] focus:outline-none px-1 text-right font-bold" />
                           </td>
                         )}
                         {invoiceData.showMarkdown && (
                           <>
                             <td className="border-r border-slate-300 px-1 py-[2px]">
-                              <input id={`row-${index}-mrp`} type="number" value={item.mrp || ''} onChange={e => updateProduct(index, 'mrp', e.target.value)} onBlur={() => handleInputBlur(index, 'mrp')} onKeyDown={(e) => handleKeyDown(e, index, 'mrp')} className="w-full bg-transparent focus:bg-[#ffffe0] focus:outline-none px-1 text-right font-bold" />
+                              <input id={`row-${index}-mrp`} type="number" value={item.mrp || ''} onChange={e => updateProduct(index, 'mrp', e.target.value)} onBlur={() => handleInputBlur(index, 'mrp')} onKeyDown={(e) => handleKeyDown(e, index, 'mrp')} className="w-full bg-transparent focus:bg-[#ffe000] focus:outline-none px-1 text-right font-bold" />
                             </td>
                             <td className="border-r border-slate-300 px-1 py-[2px]">
-                              <input id={`row-${index}-disc`} type="number" value={item.disc || ''} onChange={e => updateProduct(index, 'disc', e.target.value)} onBlur={() => handleInputBlur(index, 'disc')} onKeyDown={(e) => handleKeyDown(e, index, 'disc')} className="w-full bg-transparent focus:bg-[#ffffe0] focus:outline-none px-1 text-right font-bold text-red-600" />
+                              <input id={`row-${index}-disc`} type="number" value={item.disc || ''} onChange={e => updateProduct(index, 'disc', e.target.value)} onBlur={() => handleInputBlur(index, 'disc')} onKeyDown={(e) => handleKeyDown(e, index, 'disc')} className="w-full bg-transparent focus:bg-[#ffe000] focus:outline-none px-1 text-right font-bold text-red-600" />
                             </td>
                             <td className="border-r border-slate-300 px-1 py-[2px]">
-                              <input id={`row-${index}-rate`} type="number" value={item.rate} onChange={e => updateProduct(index, 'rate', e.target.value)} onBlur={() => handleInputBlur(index, 'rate')} onKeyDown={(e) => handleKeyDown(e, index, 'rate')} className={`w-full bg-transparent focus:bg-[#ffffe0] focus:outline-none px-1 text-right font-bold text-green-700 ${item.last_rate ? (parseFloat(item.rate) > item.last_rate ? 'text-red-600 bg-red-50' : parseFloat(item.rate) < item.last_rate ? 'text-green-600 bg-green-50' : '') : ''}`} title={item.last_rate ? `Last Rate: ₹${item.last_rate}` : ''} />
+                              <input id={`row-${index}-rate`} type="number" value={item.rate} onChange={e => updateProduct(index, 'rate', e.target.value)} onBlur={() => handleInputBlur(index, 'rate')} onKeyDown={(e) => handleKeyDown(e, index, 'rate')} className={`w-full bg-transparent focus:bg-[#ffe000] focus:outline-none px-1 text-right font-bold text-green-700 ${item.last_rate ? (parseFloat(item.rate) > item.last_rate ? 'text-red-600 bg-red-50' : parseFloat(item.rate) < item.last_rate ? 'text-green-600 bg-green-50' : '') : ''}`} title={item.last_rate ? `Last Rate: ₹${item.last_rate}` : ''} />
                             </td>
                           </>
                         )}
                         {invoiceData.gstOn === 'items' && (
                           <td className="border-r border-slate-300 px-1 py-[2px]">
-                            <input id={`row-${index}-gst`} type="number" value={item.gst || ''} onChange={e => updateProduct(index, 'gst', e.target.value)} onBlur={() => handleInputBlur(index, 'gst')} onKeyDown={(e) => handleKeyDown(e, index, 'gst')} className="w-full bg-transparent focus:bg-[#ffffe0] focus:outline-none px-1 text-right font-bold" />
+                            <input id={`row-${index}-gst`} type="number" value={item.gst || ''} onChange={e => updateProduct(index, 'gst', e.target.value)} onBlur={() => handleInputBlur(index, 'gst')} onKeyDown={(e) => handleKeyDown(e, index, 'gst')} className="w-full bg-transparent focus:bg-[#ffe000] focus:outline-none px-1 text-right font-bold" />
                           </td>
                         )}
                         <td className={`px-1 py-[2px] ${invoiceData.showMarkdown ? 'border-r border-slate-300' : ''}`}>
@@ -2429,18 +2641,91 @@ export default function PurchaseInvoice() {
                         {invoiceData.showMarkdown && (
                           <>
                             <td className="border-r border-slate-300 px-1 py-[2px]">
-                              <input id={`row-${index}-mrp_2`} type="number" value={item.mrp || ''} onChange={e => updateProduct(index, 'mrp', e.target.value)} onBlur={() => handleInputBlur(index, 'mrp')} onKeyDown={(e) => handleKeyDown(e, index, 'mrp_2')} className="w-full bg-transparent focus:bg-[#ffffe0] focus:outline-none px-1 text-right font-bold text-gray-500" />
+                              <input id={`row-${index}-mrp_2`} type="number" value={item.mrp || ''} onChange={e => updateProduct(index, 'mrp', e.target.value)} onBlur={() => handleInputBlur(index, 'mrp')} onKeyDown={(e) => handleKeyDown(e, index, 'mrp_2')} className="w-full bg-transparent focus:bg-[#ffe000] focus:outline-none px-1 text-right font-bold text-gray-500" />
                             </td>
                             <td className="border-r border-slate-300 px-1 py-[2px]">
-                              <input id={`row-${index}-disc2`} type="number" value={item.disc2 || ''} onChange={e => updateProduct(index, 'disc2', e.target.value)} onBlur={() => handleInputBlur(index, 'disc2')} onKeyDown={(e) => handleKeyDown(e, index, 'disc2')} className="w-full bg-transparent focus:bg-[#ffffe0] focus:outline-none px-1 text-right font-bold text-red-600" />
+                              <input id={`row-${index}-disc2`} type="number" value={item.disc2 || ''} onChange={e => updateProduct(index, 'disc2', e.target.value)} onBlur={() => handleInputBlur(index, 'disc2')} onKeyDown={(e) => handleKeyDown(e, index, 'disc2')} className="w-full bg-transparent focus:bg-[#ffe000] focus:outline-none px-1 text-right font-bold text-red-600" />
                             </td>
                             <td className="px-1 py-[2px]">
-                              <input id={`row-${index}-sale_rate`} type="number" value={item.sale_rate} onChange={e => updateProduct(index, 'sale_rate', e.target.value)} onBlur={() => handleInputBlur(index, 'sale_rate')} onKeyDown={(e) => handleKeyDown(e, index, 'sale_rate')} className="w-full bg-transparent focus:bg-[#ffffe0] focus:outline-none px-1 text-right font-bold text-blue-700" />
+                              <input id={`row-${index}-sale_rate`} type="number" value={item.sale_rate} onChange={e => updateProduct(index, 'sale_rate', e.target.value)} onBlur={() => handleInputBlur(index, 'sale_rate')} onKeyDown={(e) => handleKeyDown(e, index, 'sale_rate')} className="w-full bg-transparent focus:bg-[#ffe000] focus:outline-none px-1 text-right font-bold text-blue-700" />
                             </td>
                           </>
                         )}
                       </tr>
-                    ))}
+                          ))}
+                          
+                          {/* Fake blank rows to fill up to 15 rows */}
+                          {Array.from({ length: blankRowsCount }).map((_, i) => {
+                            const actualIndex = renderedProducts.length + i;
+                            return (
+                              <tr key={`blank-${i}`} className={`h-[28px] border-b border-slate-300 ${actualIndex % 2 === 0 ? 'bg-white' : 'bg-[#f1f5f9]'}`}>
+                                <td className="border-r border-slate-300"></td>
+                                <td className="border-r border-slate-300"></td>
+                                <td className="border-r border-slate-300"></td>
+                                <td className="border-r border-slate-300"></td>
+                                {showDesignCol && <td className="border-r border-slate-300"></td>}
+                                {showColourCol && <td className="border-r border-slate-300"></td>}
+                                {showSizeCol && <td className="border-r border-slate-300"></td>}
+                                {showCutCol && <td className="border-r border-slate-300"></td>}
+                                {showCutCol && <td className="border-r border-slate-300"></td>}
+                                <td className="border-r border-slate-300"></td>
+                                
+                                {!invoiceData.showMarkdown && <td className="border-r border-slate-300"></td>}
+                                {!invoiceData.showMarkdown && showDiscCol && <td className="border-r border-slate-300"></td>}
+                                
+                                {invoiceData.showMarkdown && <td className="border-r border-slate-300"></td>}
+                                {invoiceData.showMarkdown && <td className="border-r border-slate-300"></td>}
+                                {invoiceData.showMarkdown && <td className="border-r border-slate-300"></td>}
+                                
+                                {invoiceData.gstOn === 'items' && <td className="border-r border-slate-300"></td>}
+                                <td className={`${invoiceData.showMarkdown ? 'border-r border-slate-300' : ''}`}></td>
+                                
+                                {invoiceData.showMarkdown && (
+                                  <>
+                                    <td className="border-r border-slate-300"></td>
+                                    <td className="border-r border-slate-300"></td>
+                                    <td></td>
+                                  </>
+                                )}
+                              </tr>
+                            );
+                          })}
+                          
+                          {/* Filler Row to stretch vertical borders to the bottom */}
+                          <tr className="h-full">
+                      <td className="border-r border-slate-300"></td>
+                      <td className="border-r border-slate-300"></td>
+                      <td className="border-r border-slate-300"></td>
+                      <td className="border-r border-slate-300"></td>
+                      {showDesignCol && <td className="border-r border-slate-300"></td>}
+                      {showColourCol && <td className="border-r border-slate-300"></td>}
+                      {showSizeCol && <td className="border-r border-slate-300"></td>}
+                      {showCutCol && <td className="border-r border-slate-300"></td>}
+                      {showCutCol && <td className="border-r border-slate-300"></td>}
+                      {/* Quantity */}
+                      <td className="border-r border-slate-300"></td>
+                      
+                      {!invoiceData.showMarkdown && <td className="border-r border-slate-300"></td>}
+                      {!invoiceData.showMarkdown && showDiscCol && <td className="border-r border-slate-300"></td>}
+                      
+                      {invoiceData.showMarkdown && <td className="border-r border-slate-300"></td>}
+                      {invoiceData.showMarkdown && <td className="border-r border-slate-300"></td>}
+                      {invoiceData.showMarkdown && <td className="border-r border-slate-300"></td>}
+                      
+                      {invoiceData.gstOn === 'items' && <td className="border-r border-slate-300"></td>}
+                      <td className={`${invoiceData.showMarkdown ? 'border-r border-slate-300' : ''}`}></td>
+                      
+                      {invoiceData.showMarkdown && (
+                        <>
+                          <td className="border-r border-slate-300"></td>
+                          <td className="border-r border-slate-300"></td>
+                          <td></td>
+                        </>
+                      )}
+                    </tr>
+                    </>
+                    );
+                  })()}
                   </tbody>
                 </table>
               </div>
@@ -2465,36 +2750,40 @@ export default function PurchaseInvoice() {
                   <div className="flex border-b border-slate-300 bg-white">
                     <div className="w-[45%] border-r border-slate-300 px-1 py-0 bg-[#fcfaf2]">Discount %</div>
                     <div className="w-[20%] border-r border-slate-300 px-0 py-0">
-                      <input type="number" value={invoiceData.discountPercent || ''} onChange={e => handleInvoiceChange('discountPercent', parseFloat(e.target.value) || 0)} className="w-full bg-transparent focus:bg-[#ffffe0] focus:outline-none px-1 text-center" />
+                      <input id="footer-discount" type="number" value={invoiceData.discountPercent || ''} onChange={e => handleInvoiceChange('discountPercent', parseFloat(e.target.value) || 0)} onFocus={cleanUpGrid} className="w-full bg-transparent focus:bg-[#ffe000] focus:outline-none px-1 text-center" />
                     </div>
                     <div className="w-[35%] px-0 py-0">
-                      <input type="number" value={invoiceData.discountPercent > 0 ? Number(calcDiscount.toFixed(2)) : (invoiceData.discountAmount || '')} onChange={e => handleInvoiceChange('discountAmount', parseFloat(e.target.value) || 0)} readOnly={invoiceData.discountPercent > 0} className="w-full bg-transparent focus:bg-[#ffffe0] focus:outline-none px-1 text-right" />
+                      <input type="number" value={invoiceData.discountPercent > 0 ? Number(calcDiscount.toFixed(2)) : (invoiceData.discountAmount || '')} onChange={e => handleInvoiceChange('discountAmount', parseFloat(e.target.value) || 0)} onFocus={cleanUpGrid} readOnly={invoiceData.discountPercent > 0} className="w-full bg-transparent focus:bg-[#ffe000] focus:outline-none px-1 text-right" />
                     </div>
-                  </div>
-
-                  {/* After Discount */}
-                  <div className="flex border-b border-slate-300">
-                    <div className="w-[45%] border-r border-slate-300 px-1 py-0">After Discount</div>
-                    <div className="w-[20%] border-r border-slate-300 px-1 py-0 text-center">—</div>
-                    <div className="w-[35%] px-1 py-0 text-right">{afterDiscount.toFixed(2)}</div>
                   </div>
 
                   {/* Commission */}
                   <div className="flex border-b border-slate-300 bg-white">
                     <div className="w-[45%] border-r border-slate-300 px-1 py-0 bg-[#fcfaf2]">Commission %</div>
                     <div className="w-[20%] border-r border-slate-300 px-0 py-0">
-                      <input type="number" value={invoiceData.commissionPercent || ''} onChange={e => handleInvoiceChange('commissionPercent', parseFloat(e.target.value) || 0)} className="w-full bg-transparent focus:bg-[#ffffe0] focus:outline-none px-1 text-center" />
+                      <input type="number" value={invoiceData.commissionPercent || ''} onChange={e => handleInvoiceChange('commissionPercent', parseFloat(e.target.value) || 0)} className="w-full bg-transparent focus:bg-[#ffe000] focus:outline-none px-1 text-center" />
                     </div>
                     <div className="w-[35%] px-0 py-0">
-                      <input type="number" value={invoiceData.commissionPercent > 0 ? Number(calcCommission.toFixed(2)) : (invoiceData.commissionAmount || '')} onChange={e => handleInvoiceChange('commissionAmount', parseFloat(e.target.value) || 0)} readOnly={invoiceData.commissionPercent > 0} className="w-full bg-transparent focus:bg-[#ffffe0] focus:outline-none px-1 text-right" />
+                      <input type="number" value={invoiceData.commissionPercent > 0 ? Number(calcCommission.toFixed(2)) : (invoiceData.commissionAmount || '')} onChange={e => handleInvoiceChange('commissionAmount', parseFloat(e.target.value) || 0)} readOnly={invoiceData.commissionPercent > 0} className="w-full bg-transparent focus:bg-[#ffe000] focus:outline-none px-1 text-right" />
                     </div>
                   </div>
 
-                  {/* After Commission */}
-                  <div className="flex border-b border-slate-300">
-                    <div className="w-[45%] border-r border-slate-300 px-1 py-0">After Commission</div>
-                    <div className="w-[20%] border-r border-slate-300 px-1 py-0 text-center">—</div>
-                    <div className="w-[35%] px-1 py-0 text-right">{afterCommission.toFixed(2)}</div>
+                  {/* Freight Charges */}
+                  <div className="flex border-b border-slate-300 bg-white">
+                    <div className="w-[45%] border-r border-slate-300 px-1 py-0 bg-[#fcfaf2]">Freight Charges</div>
+                    <div className="w-[20%] border-r border-slate-300 px-1 py-0 text-center text-slate-300">—</div>
+                    <div className="w-[35%] px-0 py-0">
+                      <input type="number" value={preTaxCharges.freight || ''} onChange={e => setPreTaxCharges(prev => ({...prev, freight: parseFloat(e.target.value) || 0}))} className="w-full bg-transparent focus:bg-[#ffe000] focus:outline-none px-1 text-right" />
+                    </div>
+                  </div>
+
+                  {/* Insurance Charges */}
+                  <div className="flex border-b border-slate-300 bg-white">
+                    <div className="w-[45%] border-r border-slate-300 px-1 py-0 bg-[#fcfaf2]">Insurance Charges</div>
+                    <div className="w-[20%] border-r border-slate-300 px-1 py-0 text-center text-slate-300">—</div>
+                    <div className="w-[35%] px-0 py-0">
+                      <input type="number" value={preTaxCharges.insurance || ''} onChange={e => setPreTaxCharges(prev => ({...prev, insurance: parseFloat(e.target.value) || 0}))} className="w-full bg-transparent focus:bg-[#ffe000] focus:outline-none px-1 text-right" />
+                    </div>
                   </div>
 
                   {/* IGST / CGST / SGST */}
@@ -2503,9 +2792,9 @@ export default function PurchaseInvoice() {
                       <div className="w-[45%] border-r border-slate-300 px-1 py-0 bg-[#fcfaf2]">IGST %</div>
                       <div className="w-[20%] border-r border-slate-300 px-0 py-0">
                         {invoiceData.gstOn === 'total' ? (
-                          <input type="number" value={invoiceData.taxPercent || ''} onChange={e => handleInvoiceChange('taxPercent', parseFloat(e.target.value) || 0)} className="w-full bg-transparent focus:bg-[#ffffe0] focus:outline-none px-1 text-center" />
+                          <input type="number" value={invoiceData.taxPercent || ''} onChange={e => handleInvoiceChange('taxPercent', parseFloat(e.target.value) || 0)} className="w-full bg-transparent focus:bg-[#ffe000] focus:outline-none px-1 text-center" />
                         ) : (
-                          <div className="text-center text-slate-500 font-normal">Auto</div>
+                          <div className="text-center text-slate-500 font-normal">{effectiveTaxPercent > 0 ? Number(effectiveTaxPercent.toFixed(2)) : 'Auto'}</div>
                         )}
                       </div>
                       <div className="w-[35%] px-1 py-0 text-right bg-[#fcfaf2]">{tax.toFixed(2)}</div>
@@ -2518,7 +2807,7 @@ export default function PurchaseInvoice() {
                           {invoiceData.gstOn === 'total' ? (
                             <input type="number" value={(invoiceData.taxPercent || 0)/2} readOnly className="w-full bg-transparent px-1 text-center text-slate-500 font-normal outline-none" />
                           ) : (
-                            <div className="text-center text-slate-500 font-normal">Auto</div>
+                            <div className="text-center text-slate-500 font-normal">{effectiveTaxPercent > 0 ? Number((effectiveTaxPercent/2).toFixed(2)) : 'Auto'}</div>
                           )}
                         </div>
                         <div className="w-[35%] px-1 py-0 text-right bg-[#fcfaf2]">{(tax/2).toFixed(2)}</div>
@@ -2529,7 +2818,7 @@ export default function PurchaseInvoice() {
                           {invoiceData.gstOn === 'total' ? (
                             <input type="number" value={(invoiceData.taxPercent || 0)/2} readOnly className="w-full bg-transparent px-1 text-center text-slate-500 font-normal outline-none" />
                           ) : (
-                            <div className="text-center text-slate-500 font-normal">Auto</div>
+                            <div className="text-center text-slate-500 font-normal">{effectiveTaxPercent > 0 ? Number((effectiveTaxPercent/2).toFixed(2)) : 'Auto'}</div>
                           )}
                         </div>
                         <div className="w-[35%] px-1 py-0 text-right bg-[#fcfaf2]">{(tax/2).toFixed(2)}</div>
@@ -2537,35 +2826,16 @@ export default function PurchaseInvoice() {
                     </>
                   )}
 
-                  {/* Price After Tax */}
-                  <div className="flex border-b border-slate-300">
-                    <div className="w-[45%] border-r border-slate-300 px-1 py-0">Price After Tax</div>
-                    <div className="w-[20%] border-r border-slate-300 px-1 py-0 text-center">—</div>
-                    <div className="w-[35%] px-1 py-0 text-right">{priceAfterTax.toFixed(2)}</div>
-                  </div>
-
                   {/* Other Charges */}
                   <div className="flex border-b border-slate-300 bg-white">
-                    <div className="w-[45%] border-r border-slate-300 px-1 py-0 bg-[#fcfaf2] flex items-center justify-between">
-                      <span>Other Charges</span>
-                      {totalPreTaxCharges > 0 && <span className="text-[10px] bg-emerald-100 text-emerald-700 px-1 rounded font-bold" title="Pre-Tax Additions (F2)">+{totalPreTaxCharges}</span>}
-                    </div>
-                    <div className="w-[20%] border-r border-slate-300 px-1 py-0 text-center text-blue-600 bg-[#fcfaf2]">
-                       <span className="border border-blue-200 text-blue-500 rounded px-1 bg-white text-[9px] font-bold shadow-sm" title="Press F2 to add Pre-Tax Charges">F2</span>
-                    </div>
+                    <div className="w-[45%] border-r border-slate-300 px-1 py-0 bg-[#fcfaf2]">Other Charges</div>
+                    <div className="w-[20%] border-r border-slate-300 px-1 py-0 text-center text-slate-300">—</div>
                     <div className="w-[35%] px-0 py-0">
                       <input 
                         type="number" 
                         value={invoiceData.charges || ''} 
                         onChange={e => handleInvoiceChange('charges', parseFloat(e.target.value) || 0)} 
-                        onKeyDown={e => {
-                          if (e.key === 'F2') {
-                            e.preventDefault();
-                            setShowAdditionalChargesModal(true);
-                          }
-                        }}
-                        title="Enter post-tax charges here, or press F2 for pre-tax charges (Freight/Insurance)"
-                        className="w-full bg-transparent focus:bg-[#ffffe0] focus:outline-none px-1 text-right" 
+                        className="w-full bg-transparent focus:bg-[#ffe000] focus:outline-none px-1 text-right" 
                       />
                     </div>
                   </div>
@@ -2575,12 +2845,12 @@ export default function PurchaseInvoice() {
                     <div className="w-[45%] border-r border-slate-300 px-1 py-0 bg-[#fcfaf2]">Round Off</div>
                     <div className="w-[20%] border-r border-slate-300 px-0 py-0"></div>
                     <div className="w-[35%] px-0 py-0">
-                      <input type="number" value={invoiceData.roundOff || ''} onChange={e => handleInvoiceChange('roundOff', parseFloat(e.target.value) || 0)} className="w-full bg-transparent focus:bg-[#ffffe0] focus:outline-none px-1 text-right" />
+                      <input type="number" value={invoiceData.roundOff || ''} onChange={e => handleInvoiceChange('roundOff', parseFloat(e.target.value) || 0)} className="w-full bg-transparent focus:bg-[#ffe000] focus:outline-none px-1 text-right" />
                     </div>
                   </div>
 
                   {/* Final Amount */}
-                  <div className="flex bg-[#ffffe0] border-t border-black">
+                  <div className="flex bg-[#ffe000] border-t border-black">
                     <div className="w-[45%] border-r border-slate-300 px-1 py-[2px]">Total Qty: {totalQty.toFixed(2)}</div>
                     <div className="w-[20%] border-r border-slate-300 px-1 py-[2px]">Final Amount</div>
                     <div className="w-[35%] px-1 py-[2px] text-right text-[12px]">{finalAmount.toFixed(2)}</div>
@@ -2628,9 +2898,9 @@ export default function PurchaseInvoice() {
 
              {isReadOnly ? (
                <button 
-                 onClick={() => {
+                 onClick={async () => {
                    if (invoiceLrStatus?.toLowerCase() === 'delivered' || invoiceLrStatus?.toLowerCase() === 'lr delivered') {
-                     alert('This invoice cannot be edited because it is marked as Delivered.');
+                     toast.error('This invoice cannot be edited because it is marked as Delivered.');
                      return;
                    }
                    setIsReadOnly(false);
@@ -2650,7 +2920,7 @@ export default function PurchaseInvoice() {
                </button>
              )}
              <button 
-               onClick={() => navigate('/dashboard')}
+               onClick={async () => navigate('/dashboard')}
                className="flex flex-row items-center px-2 py-1 bg-[#e0efeb] border border-[#a3c3be] hover:bg-[#c9e1dd] hover:border-[#81a09d] text-left transition-all shadow-[inset_1px_1px_0_rgba(255,255,255,0.8)] w-full"
              >
                  <span className="font-bold text-black text-[11px] w-[25px] underline">Q</span>
@@ -2806,6 +3076,19 @@ export default function PurchaseInvoice() {
             return [...prev, newParty];
           });
           handleInvoiceChange('supplier', newParty.name);
+          if (newParty.invoice_config) {
+             try {
+                 const config = typeof newParty.invoice_config === 'string' ? JSON.parse(newParty.invoice_config) : newParty.invoice_config;
+                 setInvoiceData(prev => ({
+                    ...prev,
+                    designNo: config.designNo ?? prev.designNo,
+                    colourNo: config.colourNo ?? prev.colourNo,
+                    showSize: config.showSize ?? prev.showSize,
+                    showPurchaseDiscount: config.showPurchaseDiscount ?? prev.showPurchaseDiscount,
+                    showMarkdown: config.showMarkdown ?? prev.showMarkdown
+                 }));
+             } catch(e) {}
+          }
           setShowPartyModal(false);
           
           // Refetch available brands in case the user created new ones inside the modal
@@ -2977,7 +3260,7 @@ export default function PurchaseInvoice() {
                const showCutCol = isAnyRowSuiting || invoiceData.showCutSize;
                const showSizeCol = isAnyRowReadywear || isAnyRowInnerwear || invoiceData.showSize;
                const showMRPCol = isAnyRowReadywear || isAnyRowInnerwear || invoiceData.showMarkdown;
-               const showDiscCol = isAnyRowNotSaree || invoiceData.showPurchaseDiscount;
+               const showDiscCol = invoiceData.showPurchaseDiscount;
            
                const fields = ['brand', 'item', 'hsn'];
                

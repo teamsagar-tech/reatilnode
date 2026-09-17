@@ -5,6 +5,7 @@ import ConfirmModal from '../../../components/ui/ConfirmModal';
 import { useGlobalKeyboard } from '../../../hooks/useGlobalKeyboard';
 import SearchableDropdown from '../../../components/SearchableDropdown';
 import CutAllocationModal from '../../../components/inventory/CutAllocationModal';
+import { toast } from "../../../store/useToastStore";
 
 const SectionTitle = ({ children }: { children: React.ReactNode }) => (
     <div className="font-bold text-[#1b5e58] text-[12px] border-b border-[#a3c3be] mb-2 mt-2 pb-1 uppercase tracking-wider bg-[#eef5ed] px-1">
@@ -76,7 +77,7 @@ export default function CategoryMaster() {
 
   const handleSaveCategory = async () => {
     if (!formData.name) {
-      alert('Name is required');
+      toast.error('Name is required');
       return;
     }
     try {
@@ -101,11 +102,11 @@ export default function CategoryMaster() {
         setMode('list');
         fetchCategories();
       } else {
-        alert('Failed to save category');
+        toast.error('Failed to save category');
       }
     } catch (err) {
       console.error(err);
-      alert('Error saving category');
+      toast.error('Error saving category');
     }
   };
 
@@ -121,11 +122,11 @@ export default function CategoryMaster() {
         setDeleteId(null);
         fetchCategories();
       } else {
-        alert('Failed to delete category');
+        toast.error('Failed to delete category');
       }
     } catch (err) {
       console.error(err);
-      alert('Error deleting category');
+      toast.error('Error deleting category');
     }
   };
 
@@ -419,11 +420,11 @@ export default function CategoryMaster() {
               setIsCutModalOpen(false);
               fetchCategories();
             } else {
-              alert('Failed to save cuts');
+              toast.error('Failed to save cuts');
             }
           } catch(e) {
             console.error(e);
-            alert('Error saving cuts');
+            toast.error('Error saving cuts');
           }
         }}
       />

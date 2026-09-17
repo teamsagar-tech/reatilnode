@@ -1,3 +1,5 @@
+import { confirmDialog } from '../../store/useConfirmStore';
+import { toast } from '../../store/useToastStore';
 import { useState, useEffect } from "react";
 import { ArrowLeft, Users as UsersIcon, Settings, ShieldAlert, Save, LogIn, Key } from "lucide-react";
 import { useParams, Link } from "react-router-dom";
@@ -269,10 +271,10 @@ export default function TenantUsers() {
         body: JSON.stringify({ permissions: userPermissions, expires_at: overrideExpiresAt || null })
       });
       if (!res.ok) throw new Error("Failed to save user permissions");
-      alert("User permissions saved");
+      toast.success("User permissions saved");
       setEditingUser(null);
     } catch (err: any) {
-      alert(err.message);
+      toast.warning(err.message);
     } finally {
       setSaving(false);
     }
@@ -281,7 +283,7 @@ export default function TenantUsers() {
   const handleChangePassword = async () => {
     if (!passwordUser || !newPassword) return;
     if (newPassword.length < 6) {
-      alert("Password must be at least 6 characters.");
+      toast.warning("Password must be at least 6 characters.");
       return;
     }
     setSaving(true);
@@ -293,11 +295,11 @@ export default function TenantUsers() {
         body: JSON.stringify({ password: newPassword })
       });
       if (!res.ok) throw new Error("Failed to change password");
-      alert("Password updated successfully");
+      toast.success("Password updated successfully");
       setPasswordUser(null);
       setNewPassword("");
     } catch (err: any) {
-      alert(err.message);
+      toast.warning(err.message);
     } finally {
       setSaving(false);
     }
@@ -379,7 +381,7 @@ export default function TenantUsers() {
       }));
   
     } catch (err: any) {
-      alert(err.message);
+      toast.warning(err.message);
     }
   };
 
@@ -401,7 +403,7 @@ export default function TenantUsers() {
       window.open(url.toString(), '_blank');
       
     } catch (err: any) {
-      alert(err.message);
+      toast.warning(err.message);
     }
   };
 
@@ -415,9 +417,9 @@ export default function TenantUsers() {
         body: JSON.stringify({ modules: firmModules })
       });
       if (!res.ok) throw new Error("Failed to save modules");
-      alert("Firm modules updated successfully");
+      toast.success("Firm modules updated successfully");
     } catch (err: any) {
-      alert(err.message);
+      toast.warning(err.message);
     } finally {
       setSaving(false);
     }
@@ -440,8 +442,8 @@ export default function TenantUsers() {
               Esc: Back
             </Link>
             <button 
-              onClick={() => {
-                if (window.confirm("Are you sure you want to log out?")) {
+              onClick={async () => {
+                if (await confirmDialog("Are you sure you want to log out?")) {
                   sessionStorage.clear();
                   localStorage.clear();
                   window.location.href = '/login';
@@ -463,7 +465,7 @@ export default function TenantUsers() {
         {/* Tabs */}
         <div className="flex gap-2 mb-4">
           <button 
-            onClick={() => setActiveTab('users')}
+            onClick={async () => setActiveTab('users')}
             className={`px-4 py-1 border-2 border-[#12423d] font-bold text-sm shadow-[2px_2px_0_rgba(0,0,0,0.2)] transition-all ${activeTab === 'users' ? 'bg-[#1b5e58] text-white' : 'bg-[#e0efeb] text-[#1b5e58]'}`}
           >
             Users List
@@ -471,13 +473,13 @@ export default function TenantUsers() {
           {isSuperAdmin && (
             <>
               <button 
-                onClick={() => setActiveTab('modules')}
+                onClick={async () => setActiveTab('modules')}
                 className={`px-4 py-1 border-2 border-[#12423d] font-bold text-sm shadow-[2px_2px_0_rgba(0,0,0,0.2)] transition-all ${activeTab === 'modules' ? 'bg-[#1b5e58] text-white' : 'bg-[#e0efeb] text-[#1b5e58]'}`}
               >
                 Firm Module Access
               </button>
               <button 
-                onClick={() => setActiveTab('roles')}
+                onClick={async () => setActiveTab('roles')}
                 className={`px-4 py-1 border-2 border-[#12423d] font-bold text-sm shadow-[2px_2px_0_rgba(0,0,0,0.2)] transition-all ${activeTab === 'roles' ? 'bg-[#1b5e58] text-white' : 'bg-[#e0efeb] text-[#1b5e58]'}`}
               >
                 Firm Roles
@@ -529,13 +531,13 @@ export default function TenantUsers() {
                           </select>
                           </td>
                           <td className="px-4 py-2 text-center text-xs font-bold text-[#1b5e58] flex justify-center gap-3">
-                            <span onClick={() => handleEditUser(user)} className="underline cursor-pointer hover:text-[#12423d] flex items-center gap-1">
+                            <span onClick={async () => handleEditUser(user)} className="underline cursor-pointer hover:text-[#12423d] flex items-center gap-1">
                               <Settings className="w-3 h-3" /> Edit
                             </span>
-                            <span onClick={() => setPasswordUser(user)} className="underline cursor-pointer hover:text-[#12423d] flex items-center gap-1">
+                            <span onClick={async () => setPasswordUser(user)} className="underline cursor-pointer hover:text-[#12423d] flex items-center gap-1">
                               <Key className="w-3 h-3" /> Password
                             </span>
-                            <span onClick={() => handleImpersonate(user.id)} className="underline cursor-pointer hover:text-[#12423d] flex items-center gap-1">
+                            <span onClick={async () => handleImpersonate(user.id)} className="underline cursor-pointer hover:text-[#12423d] flex items-center gap-1">
                               <LogIn className="w-3 h-3" /> Login As
                             </span>
                           </td>
@@ -577,7 +579,7 @@ export default function TenantUsers() {
             <div className="bg-[#eef5ed] border-2 border-[#12423d] shadow-[4px_4px_0_rgba(0,0,0,0.4)] w-full max-w-lg">
               <div className="bg-[#1b5e58] text-white px-4 py-2 font-bold text-sm border-b-2 border-[#12423d] flex justify-between items-center">
                 <span>Edit User: {editingUser.name}</span>
-                <button onClick={() => setEditingUser(null)} className="text-white hover:text-red-300">X</button>
+                <button onClick={async () => setEditingUser(null)} className="text-white hover:text-red-300">X</button>
               </div>
               <div className="p-4 space-y-4 max-h-[60vh] overflow-y-auto">
 
@@ -595,7 +597,7 @@ export default function TenantUsers() {
                 {renderModuleConfigV2(userPermissions, setUserPermissions, false, firmModules)}
               </div>
               <div className="p-3 border-t-2 border-[#12423d] bg-[#e0efeb] flex justify-end gap-2">
-                <button onClick={() => setEditingUser(null)} className="px-4 py-1.5 bg-white text-[#1b5e58] border border-[#1b5e58] font-bold text-xs uppercase tracking-wider hover:bg-slate-50">Cancel</button>
+                <button onClick={async () => setEditingUser(null)} className="px-4 py-1.5 bg-white text-[#1b5e58] border border-[#1b5e58] font-bold text-xs uppercase tracking-wider hover:bg-slate-50">Cancel</button>
                 <button onClick={saveUserPermissions} disabled={saving} className="px-4 py-1.5 bg-[#1b5e58] text-white border border-[#12423d] font-bold text-xs uppercase tracking-wider shadow-[2px_2px_0_rgba(0,0,0,0.2)] hover:bg-[#12423d] disabled:opacity-50">
                   {saving ? "Saving..." : "Save Access"}
                 </button>
@@ -610,7 +612,7 @@ export default function TenantUsers() {
             <div className="bg-[#eef5ed] border-2 border-[#12423d] shadow-[4px_4px_0_rgba(0,0,0,0.4)] w-full max-w-sm">
               <div className="bg-[#1b5e58] text-white px-4 py-2 font-bold text-sm border-b-2 border-[#12423d] flex justify-between items-center">
                 <span>Change Password: {passwordUser.name}</span>
-                <button onClick={() => { setPasswordUser(null); setNewPassword(""); }} className="text-white hover:text-red-300">X</button>
+                <button onClick={async () => { setPasswordUser(null); setNewPassword(""); }} className="text-white hover:text-red-300">X</button>
               </div>
               <div className="p-4">
                 <div className="text-xs font-bold text-[#1b5e58] mb-2">New Password</div>
@@ -623,7 +625,7 @@ export default function TenantUsers() {
                 />
               </div>
               <div className="p-3 border-t-2 border-[#12423d] bg-[#e0efeb] flex justify-end gap-2">
-                <button onClick={() => { setPasswordUser(null); setNewPassword(""); }} className="px-4 py-1.5 bg-white text-[#1b5e58] border border-[#1b5e58] font-bold text-xs uppercase tracking-wider hover:bg-slate-50">Cancel</button>
+                <button onClick={async () => { setPasswordUser(null); setNewPassword(""); }} className="px-4 py-1.5 bg-white text-[#1b5e58] border border-[#1b5e58] font-bold text-xs uppercase tracking-wider hover:bg-slate-50">Cancel</button>
                 <button onClick={handleChangePassword} disabled={saving} className="px-4 py-1.5 bg-[#1b5e58] text-white border border-[#12423d] font-bold text-xs uppercase tracking-wider shadow-[2px_2px_0_rgba(0,0,0,0.2)] hover:bg-[#12423d] disabled:opacity-50">
                   {saving ? "Saving..." : "Change Password"}
                 </button>

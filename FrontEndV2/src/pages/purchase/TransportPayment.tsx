@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import SearchableDropdown from '../../components/SearchableDropdown';
+import { toast } from "../../store/useToastStore";
 
 export default function TransportPayment() {
   const navigate = useNavigate();
@@ -24,7 +25,7 @@ export default function TransportPayment() {
         navigate(-1);
       } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a') {
         e.preventDefault();
-        alert('Transport Payment Saved Successfully!');
+        toast.success('Transport Payment Saved Successfully!');
         navigate(-1);
       }
     };

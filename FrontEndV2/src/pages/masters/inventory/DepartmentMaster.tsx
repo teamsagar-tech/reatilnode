@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import ConfirmModal from '../../../components/ui/ConfirmModal';
-
+import { toast } from "../../../store/useToastStore";
 
 const SectionTitle = ({ children }: { children: React.ReactNode }) => (
     <div className="font-bold text-[#1b5e58] text-[12px] border-b border-[#a3c3be] mb-2 mt-2 pb-1 uppercase tracking-wider bg-[#eef5ed] px-1">
@@ -61,7 +61,7 @@ export default function DepartmentMaster() {
 
   const handleSaveDepartment = async () => {
     if (!formData.name) {
-      alert('Department Name is required');
+      toast.error('Department Name is required');
       return;
     }
     try {
@@ -82,11 +82,11 @@ export default function DepartmentMaster() {
         setMode('list');
         fetchDepartments();
       } else {
-        alert('Failed to save department');
+        toast.error('Failed to save department');
       }
     } catch (err) {
       console.error(err);
-      alert('Error saving department');
+      toast.error('Error saving department');
     }
   };
 
@@ -102,11 +102,11 @@ export default function DepartmentMaster() {
         setDeleteId(null);
         fetchDepartments();
       } else {
-        alert('Failed to delete department');
+        toast.error('Failed to delete department');
       }
     } catch (err) {
       console.error(err);
-      alert('Error deleting department');
+      toast.error('Error deleting department');
     }
   };
 

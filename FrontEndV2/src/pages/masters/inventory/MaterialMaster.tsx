@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import ConfirmModal from '../../../components/ui/ConfirmModal';
+import { toast } from "../../../store/useToastStore";
 
 const SectionTitle = ({ children }: { children: React.ReactNode }) => (
   <div className="font-bold text-[#1b5e58] text-[12px] border-b border-[#a3c3be] mb-2 mt-2 pb-1 uppercase tracking-wider bg-[#eef5ed] px-1">
@@ -60,7 +61,7 @@ export default function MaterialMaster() {
 
   const handleSaveMaterial = async () => {
     if (!formData.name) {
-      alert('Material Name is required');
+      toast.error('Material Name is required');
       return;
     }
     try {
@@ -81,11 +82,11 @@ export default function MaterialMaster() {
         setMode('list');
         fetchMaterials();
       } else {
-        alert('Failed to save material');
+        toast.error('Failed to save material');
       }
     } catch (err) {
       console.error(err);
-      alert('Error saving material');
+      toast.error('Error saving material');
     }
   };
 
@@ -101,11 +102,11 @@ export default function MaterialMaster() {
         setDeleteId(null);
         fetchMaterials();
       } else {
-        alert('Failed to delete material');
+        toast.error('Failed to delete material');
       }
     } catch (err) {
       console.error(err);
-      alert('Error deleting material');
+      toast.error('Error deleting material');
     }
   };
 

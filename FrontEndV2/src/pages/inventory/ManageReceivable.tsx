@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
+import { toast } from "../../store/useToastStore";
 
 const InputRow = ({ label, value, onChange, placeholder = '', type = 'text', onKeyDown }: any) => (
   <div className="flex items-center text-[12px] mb-1">
@@ -57,7 +58,7 @@ export default function ManageReceivable() {
   };
 
   const handleBulkUpdate = async () => {
-    if (selectedProducts.size === 0) return alert("No products selected");
+    if (selectedProducts.size === 0) return toast.warning("No products selected");
     try {
       const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/manage-receivable/update`, {
         method: 'POST',
@@ -76,7 +77,7 @@ export default function ManageReceivable() {
       });
       const data = await res.json();
       if (data.success) {
-        alert("Products updated successfully");
+        toast.success("Products updated successfully");
         setShowEditModal(false);
         handleSearch(); // Refresh grid
       }
@@ -86,7 +87,7 @@ export default function ManageReceivable() {
   };
 
   const handleSplitProduct = async () => {
-    if (selectedProducts.size !== 1) return alert("Select exactly ONE product to split");
+    if (selectedProducts.size !== 1) return toast.warning("Select exactly ONE product to split");
     const pId = Array.from(selectedProducts)[0];
     try {
       const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/manage-receivable/split`, {
@@ -102,7 +103,7 @@ export default function ManageReceivable() {
       });
       const data = await res.json();
       if (data.success) {
-        alert(data.message);
+        toast.warning(data.message);
         setShowSplitModal(false);
         handleSearch();
       }

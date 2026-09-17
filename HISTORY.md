@@ -356,3 +356,209 @@ These refinements transform the CSV import from a basic shell to a highly reliab
   - Upgraded the `Party (If No Invoice)` column to a `SearchableDropdown` for easy textual searching of vendors when manually entering LRs.
 - **UX Caching**:
   - Added browser-side caching for the `Inward Location` using `localStorage`, defaulting to the user's last selection on reload.
+
+## 2026-09-17: Fixed LR Number Missing in Purchase Invoice View & Added Unlinked LR Linking
+**Agent:** Antigravity (AI)
+**Features Implemented:**
+- **LR Number Visibility Fix:** Addressed a UI issue where the `L R No` input field appeared completely blank in `view` mode (because empty inputs with disabled pointer events lost visual cues). Applied a read-only input with `bg-[#e5e7eb]` in view mode to ensure it's visually apparent.
+- **Unlinked LR Auto-Linking Dropdown:** Modified the `L R No` input on `PurchaseInvoice.tsx` to use a `SearchableDropdown` when creating/editing an invoice.
+- **Data Fetching:** The dropdown fetches data from `/api/logistics/unlinked-lrs` and automatically filters the unlinked LRs based on the chosen Transporter.
+- **Bales Auto-Populate:** Upon selecting an unlinked LR from the dropdown, the corresponding number of `bales` is automatically populated in the Invoice Header.
+
+**Files Modified:**
+- `FrontEndV2/src/pages/inventory/PurchaseInvoice.tsx`
+
+## 2026-09-17: Fixed LRList Enter Key Navigation Bug
+**Agent:** Antigravity (AI)
+**Features Implemented:**
+- **Enter Key Navigation Bug Fix:** Addressed a critical bug in `LRList.tsx` and `LRList2.tsx` where pressing the "Enter" key on a selected row would always open the very first invoice in the table, regardless of which row was currently highlighted.
+- **Cause:** The `useEffect` hook that handles global keyboard events (`keydown`) was capturing a stale closure for `selectedIndex` and `filteredData` because they were missing from the dependency array. 
+- **Solution:** Added `selectedIndex` and `filteredData` to the `useEffect` dependency array so the event listener always uses the latest selected row data.
+
+**Files Modified:**
+- `FrontEndV2/src/pages/purchase/LRList.tsx`
+- `FrontEndV2/src/pages/purchase/LRList2.tsx`
+
+## 2026-09-17: Fixed LR Status Auto-Linking and Navigation
+**Agent:** Antigravity (AI)
+**Features Implemented:**
+- **Auto-Linking Unlinked LRs:** Fixed a bug in `purchaseInvoiceController.js` where inwarded (Unlinked) LRs were never being matched during invoice creation because the logic was incorrectly matching by `vendor_id` (which is always NULL for unlinked LRs). It now correctly finds the `transporter_id` and matches by `transporter_id` and `lr_no`. This fix was applied to both invoice creation and updates.
+- **Delivered Status in LR List:** Modified `logisticsController.js` `getPendingLRs` to also return 'Delivered' invoices, not just 'LR PENDING'. This allows the user to see recently delivered LRs with their designated green background color (`bg-green-200`) on the Pending LRs screen.
+- **Direct Navigation to Label Print:** Updated `LRList.tsx` and `LRList2.tsx` so that pressing the Enter key on an already 'Delivered' LR row automatically redirects the user to the Label Print page (`/inventory/barcodes/label-print-page`) instead of opening the purchase invoice viewer.
+
+**Files Modified:**
+- `Backend/controllers/purchaseInvoiceController.js`
+- `Backend/controllers/logisticsController.js`
+- `FrontEndV2/src/pages/purchase/LRList.tsx`
+- `FrontEndV2/src/pages/purchase/LRList2.tsx`
+
+## 2026-09-17: Fixed LR Bulk Inward Errors
+**Agent:** Antigravity (AI)
+**Features Implemented:**
+- **Fixed `t.transporter_name` syntax bug:** Addressed a 500 error in `getUnlinkedLRs` where the query incorrectly referenced `t.transporter_name` instead of `t.name` for the `Transporters` table.
+- **Handled Duplicate LR 400 Errors:** Changed the `INSERT` query in `createBulkUnlinkedLR` to use `INSERT IGNORE`. Previously, if a user tried to bulk inward an LR that was already inwarded, it threw a `ER_DUP_ENTRY` error and returned a 400 Bad Request. Now, it elegantly ignores duplicates without failing the entire batch, allowing the UI to show a success message.
+
+**Files Modified:**
+- `Backend/controllers/logisticsController.js`
+
+## 2026-09-17: Fixed Label Print Page Items Fetch
+**Agent:** Antigravity (AI)
+**Features Implemented:**
+- **Fixed `getInvoiceItemsByLR` SQL Columns:** When navigating to the Label Print Page (`/inventory/barcodes/label-print-page`), the backend tries to fetch the items corresponding to the passed LR number. The query had hallucinated/incorrect column names (e.g., `ip.item_name`, `ip.net_rate`, etc.) for the `PurchaseInvoiceItems` table. I rewrote the SQL query to correctly `JOIN Items i ON ip.item_id = i.id` and fetch the correct columns (like `i.name as item_name`, `i.selling_price as sale_rate`).
+
+**Files Modified:**
+- `Backend/controllers/labelPrintController.js`
+
+## 2026-09-17: Fixed 'Cannot read properties of undefined (reading 'some')' crash
+**Agent:** Antigravity (AI)
+**Features Implemented:**
+- **Fixed `vendorAllowedBrands` check in PurchaseInvoice:** The user experienced a crash when the `allowed_brands` field was undefined for a vendor. The code checked `if (vendorAllowedBrands !== null)`, which evaluated to true for `undefined`, and then called `.some()` on it, crashing the React app. Changed this logic to cleanly check `if (Array.isArray(vendorAllowedBrands))` before calling array methods across the entire `PurchaseInvoice.tsx` component.
+
+**Files Modified:**
+- `FrontEndV2/src/pages/inventory/PurchaseInvoice.tsx`
+
+## 2026-09-17: Reverted Async Bug in getVendorBrandConfig
+**Agent:** Antigravity (AI)
+**Features Implemented:**
+- **Reverted `getVendorBrandConfig` Function:** A previous agent did a mass-replacement of `() => {` to `async () => {` across `PurchaseInvoice.tsx`. This inadvertently broke `getVendorBrandConfig()`, which was now returning a Promise instead of an Object, resulting in `vendorAllowedBrands` being `undefined`. This broke the `null` logic used for determining whether a user is allowed to create new brands on the fly (via Alt+C). I've removed the `async` keyword so the function correctly returns its object synchronously.
+
+**Files Modified:**
+- `FrontEndV2/src/pages/inventory/PurchaseInvoice.tsx`
+
+## 2026-09-17: Removed LR Status sorting
+**Agent:** Antigravity (AI)
+**Features Implemented:**
+- **Modified LR Sorting:** The user requested the LRs to be shown "with ID in series only", instead of pushing all "LR PENDING" items to the top out of sequence. I removed the `.sort()` logic prioritizing pending items in both `LRList.tsx` and `LRList2.tsx` and replaced it with a strict descending `b.id - a.id` sort so that everything appears strictly in numerical ID order.
+
+**Files Modified:**
+- `FrontEndV2/src/pages/purchase/LRList.tsx`
+- `FrontEndV2/src/pages/purchase/LRList2.tsx`
+
+## 2026-09-17: Label Print Taxonomy Hierarchy & UI
+**Agent:** Antigravity (AI)
+**Features Implemented:**
+- **Taxonomy Dependency Sync:** In the Label Print page, when you select a "Department", the "Category" dropdown now automatically filters to only show Categories belonging to that Department. Similarly, selecting a "Category" will filter the "Sub Category" dropdown.
+- **Added Style & Sub Style to UI:** Added "Style" and "Sub Style" to the enrichment section in the Label Print page. The "Sub Style" dropdown automatically filters based on the selected "Style".
+- **Database Schema Updates:** Added `category_id` column to the `SubCategories` table to support the new parent-child relationship. Executed `010_inventory_schema.sql` on the live server to ensure the `Products` table exists, which is required for saving the generated barcodes.
+- **Backend API Updates:** Modified the `labelPrintController.js` barcode generation endpoint to also persist `style_id` and `sub_style_id` into the `Products` table alongside the rest of the taxonomy.
+
+**Files Modified:**
+- `FrontEndV2/src/pages/inventory/LabelPrintPage.tsx`
+- `Backend/controllers/labelPrintController.js`
+- `Database Schema (Live server executed)`
+
+## 2026-09-17: Fixed Label Print Colour Field
+**Agent:** Antigravity (AI)
+**Features Implemented:**
+- **Taxonomy UI Update:** Added the missing `Colour` dropdown field back into the Enrichment UI (next to Item Name).
+- **Backend Sync Fix:** Fixed `labelPrintController.js` which was hard-coding `null` for the `color_id` during barcode generation. It now properly captures the user's selected colour.
+
+**Files Modified:**
+- `FrontEndV2/src/pages/inventory/LabelPrintPage.tsx`
+- `Backend/controllers/labelPrintController.js`
+
+## 2026-09-17: Purchase Invoice Summary Table UI Layout Updates
+**Agent:** Antigravity (AI)
+**Features Implemented:**
+- **Cleaned Up Summary Display:** Removed "After Discount", "After Commission", and "Price After Tax" rows from the bottom-right summary section in the Purchase Invoice page.
+- **Moved Freight & Insurance to Main Layout:** Added "Freight Charges" and "Insurance Charges" directly into the summary table below "Commission %", allowing you to enter them without needing to press F2.
+- **Removed F2 Modals:** Disabled the `F2` keyboard shortcut and removed the F2 icon from the "Other Charges" field, as requested.
+
+**Files Modified:**
+- `FrontEndV2/src/pages/inventory/PurchaseInvoice.tsx`
+
+## 2026-09-17: Item Grid Column Borders & Taxable Amount Calculation
+**Agent:** Antigravity (AI)
+**Features Implemented:**
+- **Full Column Height in Grid:** Fixed the UI issue in `PurchaseInvoice.tsx` where the column borders would stop immediately after the last item row, leaving a large blank yellow space. Added a `h-full` filler row that dynamically stretches to fill the remaining height of the scroll container, drawing continuous vertical lines down to the summary table.
+- **Taxable Amount Display:** Changed the "Taxable Amount" in the UI to ONLY reflect the `subtotal` of the items, removing the pre-tax additions (freight/insurance) from this specific display line to make it less confusing.
+- **Freight/Insurance GST Apportionment Fix:** Addressed a subtle bug in the backend payload generation. Previously, although the UI correctly apportioned Freight and Insurance amounts over the items to calculate GST, the generated `payload` logic completely omitted Freight and Insurance when calculating the total `tax` sent to the server. The payload logic now correctly apportions Freight/Insurance across the items to attract the same proportionate GST%, matching the UI exactly.
+
+**Files Modified:**
+- `FrontEndV2/src/pages/inventory/PurchaseInvoice.tsx`
+
+## 2026-09-17: Item Grid Column Borders & Discount Column Toggle Fix
+**Agent:** Antigravity (AI)
+**Features Implemented:**
+- **Missing Column Borders Fix:** Corrected an issue where the new filler rows were missing vertical borders for the `Rate` and `Disc%` columns depending on whether the Markdown format was enabled, causing gaps in the grid structure.
+- **Discount Checkbox Toggle:** Fixed a visual bug where the `Disc%` column would still appear in the grid even if the `Discount %` top checkbox was unchecked. It now correctly disappears when the checkbox is deselected, properly reacting to user toggles.
+
+**Files Modified:**
+- `FrontEndV2/src/pages/inventory/PurchaseInvoice.tsx`
+
+## 2026-09-17: Global Hotkey Stale Closure Bug Fix (Escape Navigation)
+**Agent:** Antigravity (AI)
+**Features Implemented:**
+- **Escape Key Bug:** Fixed a "stale closure" bug in `PurchaseInvoice.tsx` where pressing `Escape` while a modal was open would ignore the modal and navigate to the main menu (due to the `useEffect` evaluating stale modal states from mount time).
+- **Global Hotkey Refactor:** Rewrote the `handleGlobalKeyDown` logic (including `Alt+S` for Save) to use a React `useRef` for tracking the latest component state. This guarantees that all global shortcuts (Escape, Alt+S, Alt+E, etc.) always have access to the real-time invoice state without triggering frequent event listener detach/reattach cycles (which can drop keystrokes).
+
+**Files Modified:**
+- `FrontEndV2/src/pages/inventory/PurchaseInvoice.tsx`
+
+## 2026-09-17: Item Grid UI Enhancements (Blank Rows & Alternating Colors)
+**Agent:** Antigravity (AI)
+**Features Implemented:**
+- **Visual Blank Rows:** Refactored the `PurchaseInvoice` item grid to render fake, non-interactive blank rows (up to a minimum of 15 rows) below the active inputs. This creates a traditional spreadsheet/ledger feel where the table visually fills the space even if only 1 item is entered, replacing the single giant empty space.
+- **Alternating Row Colors:** Added alternating background colors (`bg-white` and `bg-[#f8f9fa]`) for both the active item rows and the fake blank rows, significantly improving readability and visual structure in the grid.
+
+**Files Modified:**
+- `FrontEndV2/src/pages/inventory/PurchaseInvoice.tsx`
+
+## 2026-09-17: Active Row Highlighting
+**Agent:** Antigravity (AI)
+**Features Implemented:**
+- **Active Row Tracking:** Added a new state `activeRowIndex` to precisely track which row currently has focus inside the grid.
+- **Dynamic Highlighting:** The active row now overrides its default background color (white/gray) with a distinct pale yellow (`bg-[#ffffe0]`) across all its columns. This makes tracking your current location in the master grid effortless while doing fast data entry.
+
+**Files Modified:**
+- `FrontEndV2/src/pages/inventory/PurchaseInvoice.tsx`
+
+## 2026-09-17: Item Grid Exit Shortcut (Enter on Empty Fields)
+**Agent:** Antigravity (AI)
+**Features Implemented:**
+- **Fast Navigation:** Implemented the standard accounting software shortcut to quickly exit the item grid: pressing `Enter` on a blank `Qty`, `Rate`, or `Item` field now instantly jumps focus to the global `Discount %` field in the invoice footer. This saves the user from having to hit Tab multiple times or grab the mouse when they are finished entering items.
+
+**Files Modified:**
+- `FrontEndV2/src/pages/inventory/PurchaseInvoice.tsx`
+
+## 2026-09-17: F10 Row Deletion & Grid Cleanup
+**Agent:** Antigravity (AI)
+**Features Implemented:**
+- **F10 Row Deletion:** Implemented the `F10` keyboard shortcut to instantly delete the currently active row from the invoice grid. Focus is intelligently preserved by moving the cursor to the previous row.
+- **Auto-Cleanup on Exit:** When jumping to the footer (e.g. `Discount %`), the grid now automatically performs a cleanup pass, permanently deleting any "half-entered" rows (e.g. rows where a brand was typed but no item or quantity) so they don't clutter the grid UI upon return.
+- **Darker Alternating Colors:** Changed the alternating row background color from a very faint `#f8f9fa` to a darker slate `#f1f5f9` to make the zebra striping significantly more distinct on all displays.
+
+**Files Modified:**
+- `FrontEndV2/src/pages/inventory/PurchaseInvoice.tsx`
+
+## 2026-09-17: Active Row/Input Color Darkening
+**Agent:** Antigravity (AI)
+**Features Implemented:**
+- **Active Color Adjustment:** Changed the focus background color across all grid inputs and the active row from a very pale yellow (`#ffffe0`) to a much darker, punchy yellow (`#fef08a`, Tailwind's `yellow-200`). This ensures the active row and field are unambiguously visible, completely resolving contrast issues on lighter monitors.
+
+**Files Modified:**
+- `FrontEndV2/src/pages/inventory/PurchaseInvoice.tsx`
+
+## 2026-09-17: Global Bold Font
+**Agent:** Antigravity (AI)
+**Features Implemented:**
+- **Global Font Weight:** Added a global CSS rule in `index.css` (`* { font-weight: 700 !important; }`) to force bold text across the entire application, per the user's request for a thicker, more legible "Tally-style" appearance everywhere.
+
+**Files Modified:**
+- `FrontEndV2/src/index.css`
+
+## 2026-09-17: Party Invoice UI Defaults & Grid Cleanup Strictness
+**Agent:** Antigravity (AI)
+**Features Implemented:**
+- **Invoice UI Defaults added to Party Master:** The `designNo`, `colourNo`, `showSize`, `showPurchaseDiscount`, and `showMarkdown` UI settings have been permanently added to the `Parties` table as a JSON column (`invoice_config`).
+- **UI Integration in Master & Modal:** These checkboxes are now visible and editable in both `PartyMaster.tsx` (the main page) and `PartyModal.tsx` (the modal popup in invoices). They are equipped with React Optional Chaining `?.` to strictly prevent `undefined` crashes when creating new ledgers.
+- **Immediate Config Propagation:** When editing or creating a vendor inside the `PurchaseInvoice.tsx` modal, the new `invoice_config` values are instantly injected into the active Invoice UI state upon save, bypassing the React background array update delay to provide real-time updates.
+- **Strict Half-Entered Row Cleanup:** Upgraded the `cleanUpGrid` function in `PurchaseInvoice.tsx` to completely eradicate rows if their `qty` is not > 0 when focus exits the grid (such as clicking the Discount or Freight fields). Furthermore, `cleanUpGrid` will no longer append a blank row when cleaning up, satisfying the "no need of 2nd row" requirement.
+
+**Files Modified:**
+- `FrontEndV2/src/pages/masters/accounting/PartyMaster.tsx`
+- `FrontEndV2/src/components/inventory/PartyModal.tsx`
+- `FrontEndV2/src/pages/inventory/PurchaseInvoice.tsx`
+- `Backend/routes/partyRoutes.js`
+- `Backend/controllers/partyController.js`
+- `Backend/database/008_parties_schema.sql` (Executed on live DB)

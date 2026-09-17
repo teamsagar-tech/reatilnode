@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
+import { toast } from "../../../store/useToastStore";
 
 const SectionTitle = ({ children }: { children: React.ReactNode }) => (
   <div className="font-bold text-[#1b5e58] text-[12px] border-b border-[#a3c3be] mb-2 mt-2 pb-1 uppercase tracking-wider bg-[#eef5ed] px-1">
@@ -141,7 +142,7 @@ export default function UserMaster() {
 
   const handleSaveUser = async () => {
     if (!userForm.name) {
-      alert('Name is required');
+      toast.error('Name is required');
       return;
     }
     
@@ -160,22 +161,22 @@ export default function UserMaster() {
         body: JSON.stringify(userForm)
       });
       if (res.ok) {
-        alert('User Saved Successfully!');
+        toast.success('User Saved Successfully!');
         setUserForm({ id: null, name: '', email: '', mobile_no: '', password: '', employee_id: '', role: 'user', role_id: null, locations: [] });
         setMode('list');
         fetchData();
       } else {
         const err = await res.json();
-        alert(err.error || 'Failed to save user');
+        toast.error(err.error || 'Failed to save user');
       }
     } catch (err) {
-      alert('Network error');
+      toast.error('Network error');
     }
   };
 
   const handleSaveSeries = async () => {
     if (!seriesForm.series_name || !seriesForm.start_num || !seriesForm.end_num) {
-      alert('All fields are required');
+      toast.error('All fields are required');
       return;
     }
     try {
@@ -190,16 +191,16 @@ export default function UserMaster() {
         body: JSON.stringify(seriesForm)
       });
       if (res.ok) {
-        alert('Series Saved Successfully!');
+        toast.success('Series Saved Successfully!');
         setSeriesForm({ id: null, series_name: '', start_num: '', end_num: '' });
         setMode('list');
         fetchData();
       } else {
         const err = await res.json();
-        alert(err.error || 'Failed to save series');
+        toast.error(err.error || 'Failed to save series');
       }
     } catch (err) {
-      alert('Network error');
+      toast.error('Network error');
     }
   };
 

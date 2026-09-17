@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import ConfirmModal from '../../../components/ui/ConfirmModal';
 import SearchableDropdown from '../../../components/SearchableDropdown';
+import { toast } from "../../../store/useToastStore";
 
 const SectionTitle = ({ children }: { children: React.ReactNode }) => (
     <div className="font-bold text-[#1b5e58] text-[12px] border-b border-[#a3c3be] mb-2 mt-2 pb-1 uppercase tracking-wider bg-[#eef5ed] px-1">
@@ -72,11 +73,11 @@ export default function SubStyleMaster() {
 
   const handleSaveSubStyle = async () => {
     if (!formData.name) {
-      alert('Name is required');
+      toast.error('Name is required');
       return;
     }
     if (!formData.style_id) {
-      alert('Parent Style is required');
+      toast.error('Parent Style is required');
       return;
     }
     try {
@@ -97,11 +98,11 @@ export default function SubStyleMaster() {
         setMode('list');
         fetchSubStyles();
       } else {
-        alert('Failed to save sub style');
+        toast.error('Failed to save sub style');
       }
     } catch (err) {
       console.error(err);
-      alert('Error saving sub style');
+      toast.error('Error saving sub style');
     }
   };
 
@@ -117,11 +118,11 @@ export default function SubStyleMaster() {
         setDeleteId(null);
         fetchSubStyles();
       } else {
-        alert('Failed to delete sub style');
+        toast.error('Failed to delete sub style');
       }
     } catch (err) {
       console.error(err);
-      alert('Error deleting sub style');
+      toast.error('Error deleting sub style');
     }
   };
 

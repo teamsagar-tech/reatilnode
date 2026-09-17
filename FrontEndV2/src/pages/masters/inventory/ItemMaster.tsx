@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import MasterCreationModal from '../../../components/inventory/MasterCreationModal';
 import ConfirmModal from '../../../components/ui/ConfirmModal';
+import { toast } from "../../../store/useToastStore";
 
 const SectionTitle = ({ children }: { children: React.ReactNode }) => (
     <div className="font-bold text-[#1b5e58] text-[12px] border-b border-[#a3c3be] mb-2 mt-2 pb-1 uppercase tracking-wider bg-[#eef5ed] px-1">
@@ -126,7 +127,7 @@ export default function ItemMaster() {
 
   const handleSaveItem = async () => {
     if (!formData.itemName) {
-      alert("Item Name is required");
+      toast.error("Item Name is required");
       return;
     }
 
@@ -166,10 +167,10 @@ export default function ItemMaster() {
         setMode('list');
         fetchItems();
       } else {
-        alert('Failed to save item: ' + await response.text());
+        toast.error('Failed to save item: ' + await response.text());
       }
     } catch (err: any) {
-      alert('Error saving item: ' + err.message);
+      toast.error('Error saving item: ' + err.message);
     }
   };
 

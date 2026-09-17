@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import ConfirmModal from '../../../components/ui/ConfirmModal';
+import { toast } from "../../../store/useToastStore";
+
 const SectionTitle = ({ children }: { children: React.ReactNode }) => (
   <div className="font-bold text-[#1b5e58] text-[12px] border-b border-[#a3c3be] mb-2 mt-2 pb-1 uppercase tracking-wider bg-[#eef5ed] px-1">
     {children}
@@ -100,7 +102,7 @@ export default function HSNSACMaster() {
   }, [navigate, mode]);
 
   const handleSave = async () => {
-    if (!formData.name) return alert('HSN/SAC Code is required');
+    if (!formData.name) return toast.error('HSN/SAC Code is required');
     try {
       const url = editId ? `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/generic/hsnsacs/${editId}` : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/generic/hsnsacs`;
       const res = await fetch(url, {
@@ -117,18 +119,18 @@ export default function HSNSACMaster() {
         })
       });
       if (res.ok) {
-        alert(editId ? 'HSN Updated Successfully!' : 'HSN Saved Successfully!');
+        toast.success(editId ? 'HSN Updated Successfully!' : 'HSN Saved Successfully!');
         setMode('list');
         setEditId(null);
         setFormData({});
         fetchData(searchQuery);
       } else {
         const err = await res.json();
-        alert(err.error || 'Failed to save');
+        toast.error(err.error || 'Failed to save');
       }
     } catch (err) {
       console.error(err);
-      alert('Error saving HSN');
+      toast.error('Error saving HSN');
     }
   };
 

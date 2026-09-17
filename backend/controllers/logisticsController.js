@@ -105,7 +105,7 @@ exports.getUnlinkedLRs = async (req, res) => {
   try {
     const firmId = req.firm_id;
     const [rows] = await db.query(`
-      SELECT ulr.*, t.transporter_name, h.hundekari_name 
+      SELECT ulr.*, t.name as transporter_name, h.hundekari_name 
       FROM Unlinked_LRs ulr
       LEFT JOIN Transporters t ON ulr.transporter_id = t.id
       LEFT JOIN Hundekari h ON ulr.hundekari_id = h.id
@@ -129,7 +129,7 @@ exports.createUnlinkedLR = async (req, res) => {
     }
 
     const [result] = await db.query(
-      'INSERT INTO Unlinked_LRs (firm_id, transporter_id, hundekari_id, lr_no, bale, inward_at_location_id, lr_inward_date, inwarded_by_user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      'INSERT IGNORE INTO Unlinked_LRs (firm_id, transporter_id, hundekari_id, lr_no, bale, inward_at_location_id, lr_inward_date, inwarded_by_user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
       [firmId, transporter_id, hundekari_id, lr_no, bale, inward_at_location_id, lr_inward_date, req.user?.id || null]
     );
 
@@ -160,7 +160,7 @@ exports.createBulkUnlinkedLR = async (req, res) => {
         if (!row.lr_no || !row.received_bales) continue;
 
         await connection.query(
-          'INSERT INTO Unlinked_LRs (firm_id, vendor_id, transporter_id, hundekari_id, lr_no, bale, inward_at_location_id, lr_inward_date, inwarded_by_user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+          'INSERT IGNORE INTO Unlinked_LRs (firm_id, vendor_id, transporter_id, hundekari_id, lr_no, bale, inward_at_location_id, lr_inward_date, inwarded_by_user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
           [firmId, row.vendor_id || null, transporter_id, hundekari_id, row.lr_no, row.received_bales, inward_at_location_id, lr_inward_date, req.user?.id || null]
         );
       }
@@ -191,7 +191,7 @@ exports.verifyLRBales = async (req, res) => {
     const [rows] = await db.query(
       `SELECT p.id, p.bales 
        FROM PurchaseInvoices p 
-       WHERE p.firm_id = ? AND p.lr_no = ? AND (p.lr_status = 'LR PENDING' OR p.lr_status = 'Pending') 
+       WHERE p.firm_id = ? AND p.lr_no = ? AND (p.lr_status IN ('LR PENDING', 'Pending', 'Delivered') OR p.lr_status = 'Pending') 
        ORDER BY p.created_at DESC LIMIT 1`,
       [req.firm_id, lr_no]
     );
@@ -230,7 +230,7 @@ exports.getPendingLRs = async (req, res) => {
         DATE_FORMAT(p.bill_date, '%Y-%m-%d') as billDate
       FROM PurchaseInvoices p
       LEFT JOIN Vendors v ON p.vendor_id = v.id
-      WHERE p.firm_id = ? AND p.lr_status = 'LR PENDING'
+      WHERE p.firm_id = ? AND p.lr_status IN ('LR PENDING', 'Pending', 'Delivered')
       ORDER BY p.created_at DESC
     `, [req.firm_id]);
     res.json(rows);
@@ -260,5 +260,104 @@ exports.verifyUnlinkedLR = async (req, res) => {
   } catch (error) {
     console.error('Error verifying unlinked LR:', error);
     res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+};
+
+exports.getHundekariPendingLRs = async (req, res) => {
+  try {
+    const firmId = req.firm_id;
+    const { hundekari_id } = req.params;
+
+    const [rows] = await db.query(`
+      SELECT 
+        u.id, 
+        u.lr_no, 
+        DATE_FORMAT(u.lr_inward_date, '%Y-%m-%d') as inward_date,
+        u.bale as bales,
+        t.name as transporter_name as transporter
+      FROM Unlinked_LRs u
+      LEFT JOIN Transporters t ON u.transporter_id = t.id
+      WHERE u.firm_id = ? AND u.hundekari_id = ? AND u.hundekari_payment_status = 'PENDING'
+      ORDER BY u.lr_inward_date ASC
+    `, [firmId, hundekari_id]);
+
+    const total_pending_bales = rows.reduce((sum, row) => sum + parseInt(row.bales || 0), 0);
+
+    res.json({
+      success: true,
+      pending_lrs: rows,
+      total_pending_bales
+    });
+  } catch (error) {
+    console.error('Error fetching Hundekari pending LRs:', error);
+    res.status(500).json({ success: false, message: 'Server Error' });
+  }
+};
+
+exports.createHundekariPayment = async (req, res) => {
+  try {
+    const firmId = req.firm_id;
+    const { payment_no, payment_date, hundekari_id, payment_mode, ledger_id, amount, ref_no, remarks, lr_ids } = req.body;
+
+    if (!payment_no || !payment_date || !hundekari_id || !payment_mode || !amount || !Array.isArray(lr_ids)) {
+      return res.status(400).json({ success: false, message: 'Missing required fields' });
+    }
+
+    const connection = await db.getConnection();
+    await connection.beginTransaction();
+
+    try {
+      const [insertResult] = await connection.query(`
+        INSERT INTO Hundekari_Payments (firm_id, payment_no, payment_date, hundekari_id, payment_mode, ledger_id, amount, ref_no, remarks, created_by)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `, [firmId, payment_no, payment_date, hundekari_id, payment_mode, ledger_id || null, amount, ref_no || null, remarks || null, req.user?.id || 1]);
+      
+      const paymentId = insertResult.insertId;
+
+      if (lr_ids.length > 0) {
+        await connection.query(`
+          UPDATE Unlinked_LRs 
+          SET hundekari_payment_status = 'PAID', hundekari_payment_id = ? 
+          WHERE firm_id = ? AND id IN (?)
+        `, [paymentId, firmId, lr_ids]);
+      }
+
+      await connection.commit();
+      connection.release();
+      res.json({ success: true, message: 'Hundekari Payment Saved', payment_id: paymentId });
+    } catch (err) {
+      await connection.rollback();
+      connection.release();
+      throw err;
+    }
+  } catch (error) {
+    console.error('Error creating Hundekari Payment:', error);
+    res.status(500).json({ success: false, message: 'Server Error' });
+  }
+};
+
+exports.getHundekariPayments = async (req, res) => {
+  try {
+    const firmId = req.firm_id;
+    const [rows] = await db.query(`
+      SELECT 
+        hp.id,
+        hp.payment_no,
+        DATE_FORMAT(hp.payment_date, '%d/%m/%Y') as payment_date,
+        h.hundekari_name,
+        hp.amount,
+        hp.payment_mode,
+        hp.ref_no,
+        hp.remarks
+      FROM Hundekari_Payments hp
+      JOIN Hundekari h ON hp.hundekari_id = h.id
+      WHERE hp.firm_id = ?
+      ORDER BY hp.payment_date DESC, hp.id DESC
+      LIMIT 100
+    `, [firmId]);
+    res.json(rows);
+  } catch (error) {
+    console.error('Error fetching Hundekari payments:', error);
+    res.status(500).json({ success: false, message: 'Server Error' });
   }
 };

@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
+import { toast } from "../../../store/useToastStore";
 
 export default function OrderInvoiceDetails() {
   const navigate = useNavigate();
@@ -14,7 +15,7 @@ export default function OrderInvoiceDetails() {
       } else if (e.altKey && (e.key.toLowerCase() === 'p' || e.key === 'π')) {
         e.preventDefault();
         // Print action
-        alert('Print triggered');
+        toast.warning('Print triggered');
       }
     };
     window.addEventListener('keydown', handleKeyDown);

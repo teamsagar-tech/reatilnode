@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import ConfirmModal from '../../../components/ui/ConfirmModal';
 import SearchableDropdown from '../../../components/SearchableDropdown';
+import { toast } from "../../../store/useToastStore";
+
 const SectionTitle = ({ children }: { children: React.ReactNode }) => (
     <div className="font-bold text-[#1b5e58] text-[12px] border-b border-[#a3c3be] mb-2 mt-2 pb-1 uppercase tracking-wider bg-[#eef5ed] px-1">
       {children}
@@ -65,11 +67,11 @@ export default function SubCategoryMaster() {
 
   const handleSaveSubCategory = async () => {
     if (!formData.name) {
-      alert('Name is required');
+      toast.error('Name is required');
       return;
     }
     if (!formData.parent_id) {
-      alert('Parent Category is required');
+      toast.error('Parent Category is required');
       return;
     }
     try {
@@ -90,11 +92,11 @@ export default function SubCategoryMaster() {
         setMode('list');
         fetchCategories();
       } else {
-        alert('Failed to save sub category');
+        toast.error('Failed to save sub category');
       }
     } catch (err) {
       console.error(err);
-      alert('Error saving sub category');
+      toast.error('Error saving sub category');
     }
   };
 
@@ -110,11 +112,11 @@ export default function SubCategoryMaster() {
         setDeleteId(null);
         fetchCategories();
       } else {
-        alert('Failed to delete sub category');
+        toast.error('Failed to delete sub category');
       }
     } catch (err) {
       console.error(err);
-      alert('Error deleting sub category');
+      toast.error('Error deleting sub category');
     }
   };
 

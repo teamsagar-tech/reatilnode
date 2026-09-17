@@ -1,67 +1,41 @@
-# Separate Hundekaris Table Implementation Plan
+# Dynamic Party Invoice Configuration
 
-The `Hundekari` data was previously being saved into the `Parties` table with `party_type = 'Hundekari'`. However, this was causing errors (`Data truncated for column 'party_type'`) because the `Parties` table's `party_type` column has restrictions (most likely an `ENUM` that doesn't include 'Hundekari').
-
-Instead of modifying the core `Parties` table, we will architecturally separate `Hundekaris` into their own table, just like `Transporters`.
+Allow users to define specific invoice column configurations (Design No, Colour No, Size, Discount %, MRP Markdown) at the Party Master level. When a Party is selected during Purchase Invoice creation, their specific column configuration will be dynamically loaded. If a Party has no configuration saved yet, the system will intuitively learn and save the configuration when the user saves their first invoice for that Party.
 
 ## User Review Required
 
-> [!IMPORTANT]
-> This requires a database migration on the live server. I will create the new `Hundekaris` table directly on the remote database. Any existing Hundekaris that were somehow saved in the `Parties` table will not be migrated (since they were failing to save anyway).
+- This requires adding a JSON column to the `Parties` table to store this configuration flexibly.
+- Are there any other checkboxes on the invoice screen (like "Cut Size") that you want to include in this master config in the future? Storing it as JSON allows us to easily add more later without changing the database schema again.
 
 ## Proposed Changes
 
----
+### Backend Layer
 
-### Backend Schema & Database
+#### [MODIFY] `Backend/controllers/partyController.js`
+- Update `getParties` to select the new `invoice_config` column.
+- Update `createParty` and `updateParty` queries to accept and store `invoice_config`.
+- Create a new dedicated function `updatePartyInvoiceConfig(req, res)` that specifically updates just the `invoice_config` column. This will be used by the background-save feature in the Purchase Invoice screen.
 
-#### [NEW] `Hundekaris` Table
-I will run a SQL script on the server to create the new table:
-```sql
-CREATE TABLE IF NOT EXISTS `Hundekaris` (
-  `id` INT NOT NULL AUTO_INCREMENT,
-  `firm_id` INT NOT NULL,
-  `hundekari_name` VARCHAR(300) NOT NULL,
-  `mobile` VARCHAR(15) NULL,
-  `email` VARCHAR(255) NULL,
-  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `idx_firm_mobile_h` (`firm_id`, `mobile`),
-  UNIQUE KEY `idx_firm_email_h` (`firm_id`, `email`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-```
+#### [MODIFY] `Backend/routes/partyRoutes.js`
+- Expose a new route: `PUT /api/masters/party/:id/invoice-config` pointing to the new controller function.
 
----
+### Frontend Layer
 
-### Backend API Routes
+#### [MODIFY] `FrontEndV2/src/pages/masters/inventory/PartyMaster.tsx`
+- Add a new "Invoice UI Defaults" section to the UI with the 5 checkboxes (Design No, Colour No, Size, Discount %, MRP Markdown).
+- Map these checkboxes to a new `formData.invoice_config` object so they can be viewed and edited by the user.
 
-#### [MODIFY] `Backend/routes/logisticsRoutes.js`
-- Add a `GET /api/logistics/hundekaris` route to fetch all Hundekaris for the tenant.
-- Add a `POST /api/logistics/hundekaris` route to create a new Hundekari.
+#### [MODIFY] `FrontEndV2/src/components/inventory/PartyModal.tsx`
+- Replicate the exact same checkbox UI in the popup Party Modal so users can configure this when creating a party on-the-fly.
 
-#### [MODIFY] `Backend/controllers/logisticsController.js`
-- Implement `getHundekaris` and `createHundekari` controller functions that interact with the new `Hundekaris` table securely using `req.firm_id`.
-
----
-
-### Frontend
-
-#### [MODIFY] `FrontEndV2/src/pages/purchase/LRList.tsx`
-- Update the API call that fetches Hundekaris to use the new `/api/logistics/hundekaris` endpoint instead of `/api/masters/party`.
-
-#### [MODIFY] `FrontEndV2/src/pages/purchase/LRList2.tsx`
-- Update the API call that fetches Hundekaris to use the new `/api/logistics/hundekaris` endpoint instead of `/api/masters/party`.
-
-#### [MODIFY] `FrontEndV2/src/components/inventory/HundekariModal.tsx`
-- Change the `POST` endpoint from `/api/masters/party` to the new `/api/logistics/hundekaris`.
+#### [MODIFY] `FrontEndV2/src/pages/inventory/PurchaseInvoice.tsx`
+- **Dynamic Loading:** Modify `handleInvoiceChange('supplier', val)`. When a supplier is selected, locate the supplier in the `vendors` array. If the vendor has an `invoice_config`, automatically apply those boolean values to `invoiceData` instead of relying on `localStorage`.
+- **Auto-Learning (Background Save):** Modify `handleSaveInvoice()`. After the invoice saves successfully, check if the originally selected vendor had an empty/null `invoice_config`. If it was empty, fire an asynchronous background API request to `PUT /api/masters/party/:id/invoice-config` to permanently save the current checkbox states to that Party Master.
 
 ## Verification Plan
 
-### Automated Tests
-- No automated tests required for these manual views.
-
 ### Manual Verification
-- Verify that `Alt+C` opens the Hundekari Modal.
-- Verify that saving the Hundekari returns success and instantly adds it to the dropdown.
-- Verify the server database properly reflects the new `Hundekaris` records.
+1. Open the Party Master, edit an existing party, check "Size" and "Discount %" in the new section, and Save.
+2. Go to Purchase Invoice, select that Party, and verify that "Size" and "Discount %" checkboxes instantly activate.
+3. Select a completely new party (with no configuration). Check "MRP Markdown" manually on the invoice screen, then Save the Invoice.
+4. Go back to Party Master and verify that the newly saved Party has "MRP Markdown" checked automatically.

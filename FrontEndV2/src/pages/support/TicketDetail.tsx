@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { ArrowLeft, Send, Clock, User, AlertCircle } from "lucide-react";
+import { toast } from "../../store/useToastStore";
 
 export default function TicketDetail() {
   const { id } = useParams<{ id: string }>();
@@ -72,7 +73,7 @@ export default function TicketDetail() {
       setReply("");
       fetchData(); // Refresh messages and ticket status
     } catch (err: any) {
-      alert(err.message);
+      toast.warning(err.message);
     } finally {
       setSending(false);
     }
@@ -92,7 +93,7 @@ export default function TicketDetail() {
       if (!res.ok) throw new Error("Failed to update status");
       setTicket({ ...ticket, status });
     } catch (err: any) {
-      alert(err.message);
+      toast.warning(err.message);
     }
   };
 

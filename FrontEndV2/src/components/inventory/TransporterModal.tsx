@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
+import { toast } from "../../store/useToastStore";
 
 interface TransporterModalProps {
   isOpen: boolean;
@@ -59,7 +60,7 @@ export default function TransporterModal({ isOpen, onClose, onSave, initialTrans
 
   const handleSave = async () => {
     if (!formData.transporter_name) {
-      alert("Transporter Name is required");
+      toast.error("Transporter Name is required");
       return;
     }
     
@@ -93,11 +94,11 @@ export default function TransporterModal({ isOpen, onClose, onSave, initialTrans
           email: formData.email
         });
       } else {
-        alert(data.message || "Failed to create transporter");
+        toast.error(data.message || "Failed to create transporter");
       }
     } catch (err) {
       console.error(err);
-      alert("Error saving transporter");
+      toast.error("Error saving transporter");
     } finally {
       setLoading(false);
     }

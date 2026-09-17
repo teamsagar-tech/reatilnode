@@ -1,5 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { Bell, LayoutDashboard, Package, ShoppingCart, Users, Settings, ChevronDown, LogOut } from "lucide-react";
+import { toast } from "../../store/useToastStore";
 
 export default function Header() {
   const location = useLocation();
@@ -32,11 +33,11 @@ export default function Header() {
         localStorage.setItem('user', JSON.stringify({ ...data.user, available_firms: user.available_firms }));
         window.location.reload();
       } else {
-        alert(data.error || 'Failed to switch firm');
+        toast.error(data.error || 'Failed to switch firm');
       }
     } catch (err) {
       console.error(err);
-      alert('Error switching firm');
+      toast.error('Error switching firm');
     }
   };
 
@@ -54,15 +55,15 @@ export default function Header() {
       });
       const data = await res.json();
       if (res.ok) {
-        alert('Firm created successfully! Switching to new firm...');
+        toast.success('Firm created successfully! Switching to new firm...');
         // Refresh token by switching to it immediately
         handleSwitchFirm(data.firm.id);
       } else {
-        alert(data.error || 'Failed to create firm');
+        toast.error(data.error || 'Failed to create firm');
       }
     } catch (err) {
       console.error(err);
-      alert('Error creating firm');
+      toast.error('Error creating firm');
     }
   };
 

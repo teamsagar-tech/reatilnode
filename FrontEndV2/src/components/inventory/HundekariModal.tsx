@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
+import { toast } from "../../store/useToastStore";
 
 interface HundekariModalProps {
   isOpen: boolean;
@@ -66,7 +67,7 @@ export default function HundekariModal({ isOpen, onClose, onSave, initialName = 
 
   const handleSave = async () => {
     if (!formData.hundekari_name) {
-      alert("Hundekari Name is required");
+      toast.error("Hundekari Name is required");
       return;
     }
     
@@ -95,11 +96,11 @@ export default function HundekariModal({ isOpen, onClose, onSave, initialName = 
           location_id: formData.location_id
         });
       } else {
-        alert(data.message || "Failed to create Hundekari");
+        toast.error(data.message || "Failed to create Hundekari");
       }
     } catch (err) {
       console.error(err);
-      alert("Error saving Hundekari");
+      toast.error("Error saving Hundekari");
     } finally {
       setLoading(false);
     }

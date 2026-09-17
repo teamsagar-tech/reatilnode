@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import SearchableDropdown from '../../components/SearchableDropdown';
 import { useGlobalKeyboard } from '../../hooks/useGlobalKeyboard';
+import { toast } from "../../store/useToastStore";
 
 const SectionTitle = ({ children }: { children: React.ReactNode }) => (
     <div className="font-bold text-[#1b5e58] text-[12px] border-b border-[#a3c3be] mb-2 mt-2 pb-1 uppercase tracking-wider bg-[#eef5ed] px-1">
@@ -38,7 +39,7 @@ export default function PriceListImport() {
 
   const handleImport = async () => {
     if (!file) {
-      alert('Please select a PDF file.');
+      toast.warning('Please select a PDF file.');
       return;
     }
     
@@ -68,16 +69,16 @@ export default function PriceListImport() {
 
       if (res.ok) {
         setImportStats(data.stats);
-        alert('Price List imported successfully!');
+        toast.success('Price List imported successfully!');
         setFile(null);
         if (fileInputRef.current) fileInputRef.current.value = '';
       } else {
-        alert(data.error || 'Failed to import price list');
+        toast.error(data.error || 'Failed to import price list');
         console.error(data.details);
       }
     } catch (error) {
       console.error(error);
-      alert('An error occurred during import.');
+      toast.error('An error occurred during import.');
       setIsLoading(false);
     }
   };

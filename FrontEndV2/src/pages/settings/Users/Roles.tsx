@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { ShieldAlert, Plus, Edit2 } from "lucide-react";
 import { Helmet } from "react-helmet-async";
+import { toast } from "../../../store/useToastStore";
 
 const AVAILABLE_MODULES = [
   { id: 'inventory', label: 'Inventory', submodules: [ { id: 'basic', label: 'Basic', pages: [ { id: 'itemMaster', label: 'Item Master' }, { id: 'categoryMaster', label: 'Category Master' }, { id: 'brandMaster', label: 'Brand Master' }, { id: 'subCategory', label: 'SubCategory' }, { id: 'department', label: 'Department' } ] }, { id: 'advance', label: 'Advanced', pages: [ { id: 'stockTransfer', label: 'Stock Transfer' }, { id: 'purchaseInvoice', label: 'Purchase Invoice' }, { id: 'priceListImport', label: 'Price List Import' }, { id: 'ocrTest', label: 'OCR Prototype' } ] } ] },
@@ -42,7 +43,7 @@ export default function Roles({ firmId, firmModules: propFirmModules }: { firmId
   }, []);
 
   const handleSave = async () => {
-    if (!roleName.trim()) return alert("Role name is required");
+    if (!roleName.trim()) return toast.error("Role name is required");
     setSaving(true);
     try {
       const token = (sessionStorage.getItem('token') || localStorage.getItem('token'));
@@ -60,7 +61,7 @@ export default function Roles({ firmId, firmModules: propFirmModules }: { firmId
       setEditingRole(null);
       fetchRoles();
     } catch (err: any) {
-      alert(err.message);
+      toast.warning(err.message);
     } finally {
       setSaving(false);
     }

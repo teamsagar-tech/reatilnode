@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { Plus, Search, MessageSquare, AlertCircle } from "lucide-react";
+import { toast } from "../../store/useToastStore";
 
 export default function TicketDashboard() {
   const [tickets, setTickets] = useState([]);
@@ -64,7 +65,7 @@ export default function TicketDashboard() {
       setMessage("");
       fetchTickets();
     } catch (err: any) {
-      alert(err.message);
+      toast.warning(err.message);
     } finally {
       setCreating(false);
     }

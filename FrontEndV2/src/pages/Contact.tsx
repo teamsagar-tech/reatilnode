@@ -2,6 +2,7 @@ import React, { useState } from "react"
 import type { FormEvent } from "react"
 import { Phone, Mail, MapPin } from "lucide-react"
 import { Helmet } from "react-helmet-async"
+import { toast } from "../store/useToastStore";
 
 const Contact = () => {
   const [loading, setLoading] = useState(false);
@@ -36,10 +37,10 @@ const Contact = () => {
         setTimeout(() => setSuccess(false), 5000);
       } else {
         const errorData = await response.json().catch(() => ({}));
-        alert(errorData.error || 'Failed to send request. Please try again.');
+        toast.error(errorData.error || 'Failed to send request. Please try again.');
       }
     } catch (err) {
-      alert('An error occurred. Please try again later.');
+      toast.error('An error occurred. Please try again later.');
     } finally {
       setLoading(false);
     }

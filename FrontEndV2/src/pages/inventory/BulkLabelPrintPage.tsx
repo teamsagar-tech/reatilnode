@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
+import { toast } from "../../store/useToastStore";
 
 const SectionTitle = ({ children }: { children: React.ReactNode }) => (
   <div className="font-bold text-[#1b5e58] text-[12px] border-b border-[#a3c3be] mb-2 mt-2 pb-1 uppercase tracking-wider bg-[#eef5ed] px-1">
@@ -65,7 +66,7 @@ export default function BulkLabelPrintPage() {
       } else if (e.key === 'ArrowUp') {
         setFocusedRow(prev => Math.max(prev - 1, 0));
       } else if (e.key === 'Enter') {
-        alert(`Generating bulk labels for invoice: ${invoices[focusedRow]?.bill_no}`);
+        toast.warning(`Generating bulk labels for invoice: ${invoices[focusedRow]?.bill_no}`);
       }
     };
     window.addEventListener('keydown', handleKeyDown);

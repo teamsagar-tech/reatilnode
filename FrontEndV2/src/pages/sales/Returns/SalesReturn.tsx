@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
+import { toast } from "../../../store/useToastStore";
 
 const InputRow = ({ label, value, onChange, placeholder = '', type = 'text', onKeyDown, refProp }: any) => (
   <div className="flex items-center text-[12px] mb-1">
@@ -40,7 +41,7 @@ export default function SalesReturn() {
         const product = searchData.data[0];
         
         if (!product.is_sold) {
-          alert('Cannot return a product that is not sold!');
+          toast.error('Cannot return a product that is not sold!');
           setBarcode('');
           return;
         }
@@ -59,17 +60,17 @@ export default function SalesReturn() {
         setBarcode('');
         setTimeout(() => scannerRef.current?.focus(), 10);
       } else {
-        alert('Product not found');
+        toast.error('Product not found');
         setBarcode('');
       }
     } catch (err) {
       console.error('Scan error', err);
-      alert('Failed to scan product');
+      toast.error('Failed to scan product');
     }
   };
 
   const handleSaveReturn = async () => {
-    if (items.length === 0) return alert("Return list is empty");
+    if (items.length === 0) return toast.error("Return list is empty");
     try {
       const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/returns/sales`, {
         method: 'POST',
@@ -86,17 +87,17 @@ export default function SalesReturn() {
       });
       const data = await res.json();
       if (data.success) {
-        alert(`Sales Return Saved! Note No: ${data.data.return_no}`);
+        toast.success(`Sales Return Saved! Note No: ${data.data.return_no}`);
         setItems([]);
         setBarcode('');
         setRemark('');
         scannerRef.current?.focus();
       } else {
-        alert(data.message || 'Failed to save return');
+        toast.error(data.message || 'Failed to save return');
       }
     } catch (err) {
       console.error('Save error', err);
-      alert('Failed to save return');
+      toast.error('Failed to save return');
     }
   };
 

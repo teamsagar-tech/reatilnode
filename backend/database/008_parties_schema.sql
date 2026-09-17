@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS `Parties` (
   `branch` VARCHAR(100) NULL,
   `bank_account_type` VARCHAR(50) NULL,
   `brand_type` ENUM('Single', 'Multi') DEFAULT 'Multi',
+  `invoice_config` JSON NULL,
   
   `opening_balance` DECIMAL(15, 2) DEFAULT 0.00,
   `is_active` BOOLEAN DEFAULT TRUE,

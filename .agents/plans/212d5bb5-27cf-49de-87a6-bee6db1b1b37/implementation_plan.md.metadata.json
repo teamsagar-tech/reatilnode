@@ -1,6 +1,6 @@
 {
-  "summary": "Plan to create a separate database table for Hundekaris and migrate the associated API endpoints.",
-  "updatedAt": "2026-09-16T14:35:41.818258Z",
+  "summary": "Implementation plan for adding invoice_config (UI checkbox defaults) to the Party Master and dynamically loading/saving them in the Purchase Invoice screen.",
+  "updatedAt": "2026-09-17T11:24:44.027390Z",
   "requestFeedback": true,
   "userFacing": true
 }

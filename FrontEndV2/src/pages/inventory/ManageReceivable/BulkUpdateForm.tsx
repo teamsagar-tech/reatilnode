@@ -1,3 +1,5 @@
+import { confirmDialog } from '../../../store/useConfirmStore';
+import { toast } from '../../../store/useToastStore';
 import React, { useState, useEffect } from 'react';
 
 export default function BulkUpdateForm({ products, goBack }: { products: any[], goBack: () => void }) {
@@ -5,7 +7,7 @@ export default function BulkUpdateForm({ products, goBack }: { products: any[], 
   const [formData, setFormData] = useState<any>({});
 
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
+    const handleKeyDown = async (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.preventDefault();
         goBack();
@@ -15,7 +17,7 @@ export default function BulkUpdateForm({ products, goBack }: { products: any[], 
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [goBack]);
 
-  const handleFieldKeyDown = (e: React.KeyboardEvent, nextFieldId: string) => {
+  const handleFieldKeyDown = async (e: React.KeyboardEvent, nextFieldId: string) => {
     if (e.key === 'Enter') {
       e.preventDefault();
       const nextField = document.getElementById(nextFieldId);
@@ -23,9 +25,9 @@ export default function BulkUpdateForm({ products, goBack }: { products: any[], 
         nextField.focus();
       } else {
         // End of form, simulate save
-        const confirmSave = window.confirm("Save changes? (Y/N)");
+        const confirmSave = await confirmDialog("Save changes? (Y/N)");
         if (confirmSave) {
-          alert("Products updated successfully!");
+          toast.success("Products updated successfully!");
           goBack();
         }
       }

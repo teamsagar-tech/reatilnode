@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { toast } from "../../../store/useToastStore";
 
 export default function ProductsView({ batch, onBulkUpdate, goBack }: { batch: any, onBulkUpdate: (products: any[]) => void, goBack: () => void }) {
   
@@ -46,7 +47,7 @@ export default function ProductsView({ batch, onBulkUpdate, goBack }: { batch: a
         if (selectedProducts.length > 0) {
           onBulkUpdate(selectedProducts);
         } else {
-          alert('Select at least one product using Spacebar before updating.');
+          toast.warning('Select at least one product using Spacebar before updating.');
         }
       }
     };

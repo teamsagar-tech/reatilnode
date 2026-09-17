@@ -10,6 +10,11 @@ const bulkLabelPrintController = require('../controllers/bulkLabelPrintControlle
 router.post('/batch', authenticateToken, tenantMiddleware, requirePermission('inventory', 'Read'), labelPrintController.getPrintableBatch);
 router.get('/settings', authenticateToken, tenantMiddleware, requirePermission('inventory', 'Read'), labelPrintController.getLabelPrintSettings);
 
+// New Inward-to-LabelPrint Workflow Routes
+router.post('/invoice-items', authenticateToken, tenantMiddleware, requirePermission('inventory', 'Read'), labelPrintController.getInvoiceItemsByLR);
+router.post('/generate-barcodes', authenticateToken, tenantMiddleware, requirePermission('inventory', 'Create'), labelPrintController.generateBarcodes);
+router.get('/generated-barcodes/:invoice_product_id', authenticateToken, tenantMiddleware, requirePermission('inventory', 'Read'), labelPrintController.getGeneratedBarcodes);
+
 // Bulk routes
 router.get('/bulk-invoices', authenticateToken, tenantMiddleware, requirePermission('inventory', 'Read'), bulkLabelPrintController.getInvoicesForBulk);
 router.post('/bulk-preview', authenticateToken, tenantMiddleware, requirePermission('inventory', 'Create'), bulkLabelPrintController.previewBulkProducts);

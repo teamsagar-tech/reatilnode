@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import ConfirmModal from '../../../components/ui/ConfirmModal';
+import { toast } from "../../../store/useToastStore";
 
 export default function DesignMaster() {
   const navigate = useNavigate();
@@ -139,7 +140,7 @@ export default function DesignMaster() {
                     </button>
                     <button 
                       onClick={() => {
-                        alert('Saved Successfully!');
+                        toast.success('Saved Successfully!');
                         setMode('list');
                       }}
                       className='bg-[#1b5e58] border border-[#1b5e58] px-6 py-1 text-white font-bold hover:bg-[#144743] shadow-[inset_1px_1px_0_rgba(255,255,255,0.2)] outline-none focus:bg-[#0f3632]'

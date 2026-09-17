@@ -1,0 +1,2 @@
+- [x] Fix the SQL query syntax error `t.transporter_name` -> `t.name as transporter_name` in logisticsController.js
+- [x] Make `INSERT` in `createBulkUnlinkedLR` use `INSERT IGNORE` so duplicate LRs don't throw a 500/400.

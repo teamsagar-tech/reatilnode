@@ -1,3 +1,5 @@
+import { confirmDialog } from '../../../store/useConfirmStore';
+import { toast } from '../../../store/useToastStore';
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
@@ -29,12 +31,12 @@ const EditModal = ({ isOpen, item, type, departments, categories, onClose, onSav
     }
   }, [isOpen, item]);
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleKeyDown = async (e: React.KeyboardEvent) => {
     if (e.key === 'Escape') onClose();
     if (e.key === 'Enter' && e.ctrlKey) handleSave(); // Ctrl+Enter to save to avoid accidental save
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!name.trim()) return;
     const payload: any = { name: name.trim() };
     
@@ -164,12 +166,12 @@ const MergeModal = ({ isOpen, sourceItem, type, categories, subCategories, onClo
     }
   }, [isOpen]);
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleKeyDown = async (e: React.KeyboardEvent) => {
     if (e.key === 'Escape') onClose();
     if (e.key === 'Enter' && e.ctrlKey) handleSave();
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!targetId) return;
     onMerge(sourceItem.id, targetId);
   };
@@ -248,7 +250,7 @@ export default function TaxonomyMaster() {
   const inputCatRef = useRef<HTMLInputElement>(null);
   const inputSubCatRef = useRef<HTMLInputElement>(null);
 
-  const fetchDepartments = () => {
+  const fetchDepartments = async () => {
     fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/generic/departments`, {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     })
@@ -257,7 +259,7 @@ export default function TaxonomyMaster() {
     .catch(console.error);
   };
 
-  const fetchCategories = () => {
+  const fetchCategories = async () => {
     fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/category`, {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     })
@@ -279,7 +281,7 @@ export default function TaxonomyMaster() {
 
   // Global Keydown for Navigation
   useEffect(() => {
-    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+    const handleGlobalKeyDown = async (e: KeyboardEvent) => {
       if (isModalOpen || isMergeModalOpen) return;
       if (document.activeElement?.tagName === 'INPUT') return; // let user type
 
@@ -396,15 +398,15 @@ export default function TaxonomyMaster() {
         if (type === 0) fetchDepartments();
         else fetchCategories();
       } else {
-        alert(data.error || 'Failed to update item');
+        toast.error(data.error || 'Failed to update item');
       }
     } catch (err) {
-      alert('Network error');
+      toast.error('Network error');
     }
   };
 
   const handleDelete = async (item: any, type: number) => {
-    if (!window.confirm(`Are you sure you want to delete ${item.name}?`)) return;
+    if (!await confirmDialog(`Are you sure you want to delete ${item.name}?`)) return;
     const url = type === 0 
       ? `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/generic/departments/${item.id}`
       : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/category/${item.id}`;
@@ -419,10 +421,10 @@ export default function TaxonomyMaster() {
         else fetchCategories();
       } else {
         const data = await res.json();
-        alert(data.error || 'Failed to delete');
+        toast.error(data.error || 'Failed to delete');
       }
     } catch (err) {
-      alert('Network error');
+      toast.error('Network error');
     }
   };
 
@@ -442,10 +444,10 @@ export default function TaxonomyMaster() {
         setIsMergeModalOpen(false);
         fetchCategories();
       } else {
-        alert(data.error || 'Failed to merge');
+        toast.error(data.error || 'Failed to merge');
       }
     } catch (err) {
-      alert('Network error');
+      toast.error('Network error');
     }
   };
 
@@ -503,7 +505,7 @@ export default function TaxonomyMaster() {
                     return (
                       <div 
                         key={dept.id} 
-                        onClick={() => { setSelectedDeptId(dept.id); setSelectedCatId(null); setFocusedCol(0); setFocusedIdx(idx); }}
+                        onClick={async () => { setSelectedDeptId(dept.id); setSelectedCatId(null); setFocusedCol(0); setFocusedIdx(idx); }}
                         className={`px-2 py-1 cursor-pointer font-bold text-[12px] border ${
                           isFocused ? 'bg-blue-100 border-blue-400' : 
                           isSelected ? 'bg-[#ffe000] border-yellow-500' : 'bg-[#fcfaf2] border-slate-300 hover:bg-[#ffffe0]'
@@ -554,7 +556,7 @@ export default function TaxonomyMaster() {
                       return (
                         <div 
                           key={cat.id} 
-                          onClick={() => { setSelectedCatId(cat.id); setFocusedCol(1); setFocusedIdx(idx); }}
+                          onClick={async () => { setSelectedCatId(cat.id); setFocusedCol(1); setFocusedIdx(idx); }}
                           className={`px-2 py-1 cursor-pointer font-bold text-[12px] border flex justify-between items-center ${
                             isSelected ? 'bg-[#1b5e58] text-white border-[#1b5e58]' : 
                             isFocused ? 'bg-blue-100 border-blue-400' : 'bg-[#fcfaf2] border-slate-300 hover:bg-[#ffffe0]'
@@ -606,7 +608,7 @@ export default function TaxonomyMaster() {
                       return (
                         <div 
                           key={subcat.id} 
-                          onClick={() => { setFocusedCol(2); setFocusedIdx(idx); }}
+                          onClick={async () => { setFocusedCol(2); setFocusedIdx(idx); }}
                           className={`px-2 py-1 cursor-pointer font-bold text-[12px] border flex justify-between items-center ${
                             isFocused ? 'bg-blue-100 border-blue-400' : 'bg-[#fcfaf2] border-slate-300 hover:bg-[#ffffe0]'
                           }`}
@@ -672,7 +674,7 @@ export default function TaxonomyMaster() {
              </div>
 
              <button 
-               onClick={() => navigate('/dashboard')}
+               onClick={async () => navigate('/dashboard')}
                className='flex flex-row items-center px-2 py-1 bg-[#e0efeb] border border-[#a3c3be] hover:bg-[#c9e1dd] hover:border-[#81a09d] text-left transition-all shadow-[inset_1px_1px_0_rgba(255,255,255,0.8)]'
              >
                  <span className='font-bold text-black text-[11px] w-[25px] underline'>Q</span>

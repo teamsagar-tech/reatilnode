@@ -42,7 +42,8 @@ export default function PartyMaster() {
     contactNumber2: '', mobileNumber2: '', contactNumber3: '', mobileNumber3: '',
     accountName: '', bankName: '', accountNumber: '', ifsc: '', branch: '', bankAccountType: 'Savings',
     gstRawData: null as any,
-    contacts: []
+    contacts: [],
+    invoiceConfig: { designNo: false, colourNo: false, showSize: false, showPurchaseDiscount: false, showMarkdown: false }
   });
 
   const [categories, setCategories] = useState<{cat: string, sub: string}[]>([]);
@@ -210,11 +211,11 @@ export default function PartyMaster() {
         setCaptchaData(data);
         setCaptchaInput('');
       } else {
-        alert("Failed to fetch GST captcha");
+        toast.error("Failed to fetch GST captcha");
       }
     } catch (e) {
       console.error(e);
-      alert("Network error while fetching GST captcha");
+      toast.error("Network error while fetching GST captcha");
     } finally {
       setFetchingGST(false);
     }
@@ -222,7 +223,7 @@ export default function PartyMaster() {
 
   const applyGstData = (data: any, gstin: string) => {
     if (data.sts && data.sts !== "Active") {
-      alert(`Cannot add this Party. GST Status is: ${data.sts}`);
+      toast.error(`Cannot add this Party. GST Status is: ${data.sts}`);
       setGstStatusError(data.sts);
       return false;
     }
@@ -358,10 +359,10 @@ export default function PartyMaster() {
       const data = await res.json();
       
       if (data.error || data.errorCode) {
-        alert(data.error || data.message || "Invalid Captcha or GSTIN");
+        toast.error(data.error || data.message || "Invalid Captcha or GSTIN");
         setCaptchaData(null);
       } else if (data.sts !== "Active") {
-        alert(`Cannot add this Party. GST Status is: ${data.sts}`);
+        toast.error(`Cannot add this Party. GST Status is: ${data.sts}`);
         setGstStatusError(data.sts);
         setCaptchaData(null);
       } else {
@@ -372,7 +373,7 @@ export default function PartyMaster() {
       }
     } catch (e) {
       console.error(e);
-      alert("Error submitting GST Captcha");
+      toast.error("Error submitting GST Captcha");
       setCaptchaData(null);
     } finally {
       setFetchingGST(false);
@@ -427,7 +428,8 @@ export default function PartyMaster() {
           contactNumber2: '', mobileNumber2: '', contactNumber3: '', mobileNumber3: '',
           accountName: '', bankName: '', accountNumber: '', ifsc: '', branch: '', bankAccountType: 'Savings',
           gstRawData: null,
-          contacts: []
+          contacts: [],
+    invoiceConfig: { designNo: false, colourNo: false, showSize: false, showPurchaseDiscount: false, showMarkdown: false }
         });
         setCategories([]);
         setBrands([]);
@@ -467,7 +469,8 @@ export default function PartyMaster() {
             contactNumber2: '', mobileNumber2: '', contactNumber3: '', mobileNumber3: '',
             accountName: '', bankName: '', accountNumber: '', ifsc: '', branch: '', bankAccountType: 'Savings',
             gstRawData: null,
-            contacts: []
+            contacts: [],
+    invoiceConfig: { designNo: false, colourNo: false, showSize: false, showPurchaseDiscount: false, showMarkdown: false }
           });
           setCategories([]);
           setBrands([]);
@@ -503,7 +506,9 @@ export default function PartyMaster() {
               contactNumber2: row.contact_number2 || '', mobileNumber2: row.mobile_number2 || '', contactNumber3: row.contact_number3 || '', mobileNumber3: row.mobile_number3 || '',
               accountName: row.account_name || '', bankName: row.bank_name || '', accountNumber: row.account_number || '', ifsc: row.ifsc || '', branch: row.branch || '', bankAccountType: row.bank_account_type || 'Savings',
               gstRawData: row.gst_raw_data ? (typeof row.gst_raw_data === 'object' ? row.gst_raw_data : (typeof row.gst_raw_data === 'string' && row.gst_raw_data.trim().startsWith('{') ? JSON.parse(row.gst_raw_data) : null)) : null,
-              contacts: []
+                              invoiceConfig: row.invoice_config ? (typeof row.invoice_config === 'string' ? JSON.parse(row.invoice_config) : row.invoice_config) : { designNo: false, colourNo: false, showSize: false, showPurchaseDiscount: false, showMarkdown: false },
+              contacts: [],
+    invoiceConfig: { designNo: false, colourNo: false, showSize: false, showPurchaseDiscount: false, showMarkdown: false }
             });
             setCategories(row.categories ? (typeof row.categories === 'string' ? JSON.parse(row.categories) : row.categories) : []);
             setBrands(row.brands ? (typeof row.brands === 'string' ? JSON.parse(row.brands) : row.brands) : []);
@@ -570,7 +575,8 @@ export default function PartyMaster() {
                               contactPerson: row.contact_person || '', mobileNumber: row.mobile_number1 || '', email: row.email || '',
                               contactNumber2: row.contact_number2 || '', mobileNumber2: row.mobile_number2 || '', contactNumber3: row.contact_number3 || '', mobileNumber3: row.mobile_number3 || '',
                               accountName: row.account_name || '', bankName: row.bank_name || '', accountNumber: row.account_number || '', ifsc: row.ifsc || '', branch: row.branch || '', bankAccountType: row.bank_account_type || 'Savings',
-                              gstRawData: row.gst_raw_data ? (typeof row.gst_raw_data === 'object' ? row.gst_raw_data : (typeof row.gst_raw_data === 'string' && row.gst_raw_data.trim().startsWith('{') ? JSON.parse(row.gst_raw_data) : null)) : null
+                              gstRawData: row.gst_raw_data ? (typeof row.gst_raw_data === 'object' ? row.gst_raw_data : (typeof row.gst_raw_data === 'string' && row.gst_raw_data.trim().startsWith('{') ? JSON.parse(row.gst_raw_data) : null)) : null,
+                              invoiceConfig: row.invoice_config ? (typeof row.invoice_config === 'string' ? JSON.parse(row.invoice_config) : row.invoice_config) : { designNo: false, colourNo: false, showSize: false, showPurchaseDiscount: false, showMarkdown: false }
                             });
                             setCategories(row.categories ? (typeof row.categories === 'string' ? JSON.parse(row.categories) : row.categories) : []);
                             setBrands(row.brands ? (typeof row.brands === 'string' ? JSON.parse(row.brands) : row.brands) : []);
@@ -1027,7 +1033,7 @@ export default function PartyMaster() {
                     onClick={() => {
                       const b = availableBrands.find(b => b.name.toLowerCase() === tempBrand.toLowerCase());
                       if (b) addBrand(b.name);
-                      else alert('Please select a valid brand or press Alt+C to create one.');
+                      else toast.warning('Please select a valid brand or press Alt+C to create one.');
                     }}
                     className="bg-[#eef5ed] border border-[#a3c3be] px-2 py-[2px] font-bold text-black hover:bg-[#ffe000] text-[11px] shadow-[inset_1px_1px_0_rgba(255,255,255,0.8)]"
                   >
@@ -1060,6 +1066,28 @@ export default function PartyMaster() {
                   </div>
                 )}
               </div>
+              
+              <div className="mt-4 border border-slate-300 p-2 bg-[#fcfaf2]">
+                <h4 className="text-[12px] font-bold text-[#1b5e58] border-b border-slate-300 mb-2 pb-1">Invoice UI Defaults</h4>
+                <div className="flex flex-wrap items-center gap-4 text-[11px] font-bold">
+                  <label className="flex items-center gap-1 cursor-pointer">
+                     <input type="checkbox" checked={formData.invoiceConfig?.designNo || false} onChange={e => setFormData({...formData, invoiceConfig: {...formData.invoiceConfig, designNo: e.target.checked}})} className="accent-[#1b5e58]" /> Design No
+                  </label>
+                  <label className="flex items-center gap-1 cursor-pointer">
+                     <input type="checkbox" checked={formData.invoiceConfig?.colourNo || false} onChange={e => setFormData({...formData, invoiceConfig: {...formData.invoiceConfig, colourNo: e.target.checked}})} className="accent-[#1b5e58]" /> Colour No
+                  </label>
+                  <label className="flex items-center gap-1 cursor-pointer">
+                     <input type="checkbox" checked={formData.invoiceConfig?.showSize || false} onChange={e => setFormData({...formData, invoiceConfig: {...formData.invoiceConfig, showSize: e.target.checked}})} className="accent-[#1b5e58]" /> Size
+                  </label>
+                  <label className="flex items-center gap-1 cursor-pointer">
+                     <input type="checkbox" checked={formData.invoiceConfig?.showPurchaseDiscount || false} onChange={e => setFormData({...formData, invoiceConfig: {...formData.invoiceConfig, showPurchaseDiscount: e.target.checked}})} className="accent-[#1b5e58]" /> Discount %
+                  </label>
+                  <label className="flex items-center gap-1 cursor-pointer">
+                     <input type="checkbox" checked={formData.invoiceConfig?.showMarkdown || false} onChange={e => setFormData({...formData, invoiceConfig: {...formData.invoiceConfig, showMarkdown: e.target.checked}})} className="accent-[#1b5e58]" /> MRP Markdown
+                  </label>
+                </div>
+              </div>
+
             </div>
           </div>
                   </div>
@@ -1149,7 +1177,8 @@ export default function PartyMaster() {
                           contactNumber2: '', mobileNumber2: '', contactNumber3: '', mobileNumber3: '',
                           accountName: '', bankName: '', accountNumber: '', ifsc: '', branch: '', bankAccountType: 'Savings',
                           gstRawData: null,
-                          contacts: []
+                          contacts: [],
+    invoiceConfig: { designNo: false, colourNo: false, showSize: false, showPurchaseDiscount: false, showMarkdown: false }
                         });
                         setCategories([]);
                         setBrands([]);

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import ConfirmModal from '../../../components/ui/ConfirmModal';
+import { toast } from "../../../store/useToastStore";
 
 const SectionTitle = ({ children }: { children: React.ReactNode }) => (
   <div className="font-bold text-[#1b5e58] text-[12px] border-b border-[#a3c3be] mb-2 mt-2 pb-1 uppercase tracking-wider bg-[#eef5ed] px-1">
@@ -63,7 +64,7 @@ export default function FirmMaster() {
 
   const handleSaveFirm = async () => {
     if (!formData.name) {
-      alert('Firm Name is required');
+      toast.error('Firm Name is required');
       return;
     }
     try {
@@ -80,7 +81,7 @@ export default function FirmMaster() {
         body: JSON.stringify(formData)
       });
       if (res.ok) {
-        alert(editId ? 'Firm profile updated successfully!' : 'Firm created successfully!');
+        toast.success(editId ? 'Firm profile updated successfully!' : 'Firm created successfully!');
         setFormData({
           name: '', email: '', mobile: '', settings: { address: '', gstin: '', state: '' }
         });
@@ -93,11 +94,11 @@ export default function FirmMaster() {
           const errData = await res.json();
           if (errData.error) errText = errData.error;
         } catch(e) {}
-        alert(errText);
+        toast.warning(errText);
       }
     } catch (err) {
       console.error(err);
-      alert('Error saving firm');
+      toast.error('Error saving firm');
     }
   };
 

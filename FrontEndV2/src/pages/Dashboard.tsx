@@ -1,3 +1,5 @@
+import { confirmDialog } from '../store/useConfirmStore';
+import { toast } from '../store/useToastStore';
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Helmet } from 'react-helmet-async';
@@ -336,7 +338,7 @@ export default function Dashboard() {
     setSelectedIndex(0);
   }, [currentMenu]);
 
-  const handleAction = (item: any) => {
+  const handleAction = async (item: any) => {
     if (item.action === 'open-chatbot') {
       window.dispatchEvent(new CustomEvent('open-chatbot'));
       return;
@@ -361,7 +363,7 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
+    const handleKeyDown = async (e: KeyboardEvent) => {
       if (showFirmSwitcher) {
         if (e.key === 'Escape') {
           e.preventDefault();
@@ -428,11 +430,11 @@ export default function Dashboard() {
         localStorage.setItem('user', JSON.stringify(data.user));
         window.location.reload();
       } else {
-        alert('Failed to switch firm');
+        toast.error('Failed to switch firm');
       }
     } catch (err) {
       console.error(err);
-      alert('Error switching firm');
+      toast.error('Error switching firm');
     }
   };
 
@@ -484,7 +486,7 @@ export default function Dashboard() {
                   <div className="w-1/2 text-right">Date of Last Entry</div>
                 </div>
                 <div className="flex justify-between font-bold text-black px-1 py-1">
-                  <div className="w-1/2 cursor-pointer hover:bg-yellow-200" onClick={() => setShowFirmSwitcher(true)}>
+                  <div className="w-1/2 cursor-pointer hover:bg-yellow-200" onClick={async () => setShowFirmSwitcher(true)}>
                     {user.available_firms?.find((f: any) => f.firm_id === user.firm_id)?.firm_name || 'RetailNode V2 System'}
                   </div>
                   <div className="w-1/2 text-right font-normal italic">No Vouchers Entered</div>
@@ -500,7 +502,7 @@ export default function Dashboard() {
               
               {menuStack.length > 1 && (
                 <div className="px-2 py-1 bg-[#d5e8d4] border-b border-[#81a09d] text-xs text-black font-medium flex items-center">
-                  <button onClick={() => setMenuStack(prev => prev.slice(0, -1))} className="hover:text-red-700 transition-colors flex items-center gap-1">
+                  <button onClick={async () => setMenuStack(prev => prev.slice(0, -1))} className="hover:text-red-700 transition-colors flex items-center gap-1">
                     &larr; Back (Esc)
                   </button>
                 </div>
@@ -522,7 +524,7 @@ export default function Dashboard() {
                     <div
                       key={item.title}
                       onMouseEnter={() => setSelectedIndex(focusableItems.findIndex((i: any) => i.title === item.title))}
-                      onClick={() => handleAction(item)}
+                      onClick={async () => handleAction(item)}
                       className={`cursor-pointer px-4 py-1 mx-2 flex items-center justify-between transition-colors ${
                         isFocused ? "bg-[#ffe000] text-black font-bold" : "text-black"
                       }`}
@@ -557,7 +559,7 @@ export default function Dashboard() {
                return (
                  <button 
                    key={f.key} 
-                   onClick={() => {
+                   onClick={async () => {
                      if (targetItem) {
                        setMenuStack([allMenuData]);
                        setTimeout(() => handleAction(targetItem), 0);
@@ -584,11 +586,11 @@ export default function Dashboard() {
              </div>
 
              <button 
-               onClick={() => {
+               onClick={async () => {
                   if (menuStack.length > 1) {
                     setMenuStack(prev => prev.slice(0, -1));
                   } else {
-                    if (window.confirm("Are you sure you want to log out?")) {
+                    if (await confirmDialog("Are you sure you want to log out?")) {
                       sessionStorage.clear();
                       localStorage.clear();
                       window.location.href = '/login';
@@ -619,7 +621,7 @@ export default function Dashboard() {
             <span className="text-[11px] opacity-90">Impersonating Mode</span>
           </div>
           <button 
-            onClick={() => {
+            onClick={async () => {
               sessionStorage.clear();
               window.location.href = '/dashboard';
             }}
@@ -638,7 +640,7 @@ export default function Dashboard() {
               {(user.available_firms || []).map((f: any, idx: number) => (
                 <div 
                   key={f.firm_id}
-                  onClick={() => handleSwitchFirm(f.firm_id)}
+                  onClick={async () => handleSwitchFirm(f.firm_id)}
                   onMouseEnter={() => setFirmSwitcherIndex(idx)}
                   className={`px-4 py-2 cursor-pointer font-bold flex justify-between ${
                     idx === firmSwitcherIndex ? "bg-[#ffe000] text-black" : "text-[#1b5e58] hover:bg-[#f3f9f4]"

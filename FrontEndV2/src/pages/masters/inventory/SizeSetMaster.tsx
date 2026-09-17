@@ -1,3 +1,5 @@
+import { confirmDialog } from '../../../store/useConfirmStore';
+import { toast } from '../../../store/useToastStore';
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
@@ -50,7 +52,7 @@ export default function SizeSetMaster() {
   const location = useLocation();
   const [mode, setMode] = useState(location.state?.mode || 'list'); // 'list' or 'create'
   
-  const getInitialFormData = () => {
+  const getInitialFormData = async () => {
     if (location.state?.editData) {
       const data = location.state.editData;
       return {
@@ -114,7 +116,7 @@ export default function SizeSetMaster() {
   }, []);
 
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
+    const handleKeyDown = async (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.preventDefault();
         if (mode === 'create') {
@@ -139,7 +141,7 @@ export default function SizeSetMaster() {
 
   const handleSave = async () => {
     if (!formData.name) {
-      alert('Set Name is required');
+      toast.error('Set Name is required');
       return;
     }
     try {
@@ -160,22 +162,22 @@ export default function SizeSetMaster() {
         })
       });
       if (res.ok) {
-        alert('Saved Successfully!');
+        toast.success('Saved Successfully!');
         setFormData({ size_scale: formData.size_scale, sizes_list: [] });
         fetchSizeSets();
       } else {
         const err = await res.json();
-        alert(err.error || 'Failed to save size set');
+        toast.error(err.error || 'Failed to save size set');
       }
     } catch (err) {
       console.error(err);
-      alert('Network error');
+      toast.error('Network error');
     }
   };
 
   const handleDelete = async () => {
     if (!formData.id) return;
-    if (!window.confirm('Are you sure you want to delete this size set?')) return;
+    if (!await confirmDialog('Are you sure you want to delete this size set?')) return;
     
     try {
       const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/generic/sizesets/${formData.id}`, {
@@ -185,7 +187,7 @@ export default function SizeSetMaster() {
         }
       });
       if (res.ok) {
-        alert('Deleted Successfully!');
+        toast.success('Deleted Successfully!');
         setFormData({ sizes_list: [] });
         if (location.state?.mode === 'create') {
           navigate(-1);
@@ -195,15 +197,15 @@ export default function SizeSetMaster() {
         }
       } else {
         const err = await res.json();
-        alert(err.error || 'Failed to delete size set');
+        toast.error(err.error || 'Failed to delete size set');
       }
     } catch (err) {
       console.error(err);
-      alert('Network error');
+      toast.error('Network error');
     }
   };
 
-  const toggleSizeSelection = (sizeName: string, sizeGroup: string) => {
+  const toggleSizeSelection = async (sizeName: string, sizeGroup: string) => {
     const currentList = formData.sizes_list || [];
     let newList = [];
     if (currentList.includes(sizeName)) {
@@ -265,7 +267,7 @@ export default function SizeSetMaster() {
     setFormData({ ...formData, sizes_list: sortedList, name: autoName, size_scale: autoScale });
   };
 
-  const handleNameChange = (v: string) => {
+  const handleNameChange = async (v: string) => {
     let newSizesList = formData.sizes_list || [];
     let newScale = formData.size_scale;
 
@@ -386,7 +388,7 @@ export default function SizeSetMaster() {
                   <div className='flex justify-between items-center mb-2'>
                     <div className='font-bold text-slate-800 text-[14px]'>List of Size Sets</div>
                     <button 
-                      onClick={() => { setMode("create"); setFormData({}); }} 
+                      onClick={async () => { setMode("create"); setFormData({}); }} 
                       className='bg-[#eef5ed] border border-[#a3c3be] px-2 py-1 font-bold text-black shadow-[inset_1px_1px_0_rgba(255,255,255,0.8)] hover:bg-[#ffe000] focus:bg-[#ffe000] outline-none text-[12px]'
                     >Create New (Alt/Opt+C)</button>
                   </div>
@@ -484,7 +486,7 @@ export default function SizeSetMaster() {
                                   return (
                                     <div 
                                       key={size.id} 
-                                      onClick={() => toggleSizeSelection(size.name, groupName)}
+                                      onClick={async () => toggleSizeSelection(size.name, groupName)}
                                       className={`px-3 py-1 font-bold text-[12px] rounded border cursor-pointer transition-colors shadow-sm select-none
                                         ${isSelected 
                                           ? 'bg-[#1b5e58] text-white border-[#12423d]' 
@@ -517,7 +519,7 @@ export default function SizeSetMaster() {
                       </button>
                     )}
                       <button 
-                        onClick={() => setShowResetConfirm(true)}
+                        onClick={async () => setShowResetConfirm(true)}
                         tabIndex={-1}
                         className='bg-[#fcfaf2] border border-[#a3c3be] px-6 py-1 text-black font-bold hover:bg-[#ffe000] focus:bg-[#ffe000] outline-none text-[12px]'
                       >
@@ -566,7 +568,7 @@ export default function SizeSetMaster() {
              </div>
 
              <button 
-               onClick={() => mode === 'create' ? setMode('list') : navigate('/dashboard')}
+               onClick={async () => mode === 'create' ? setMode('list') : navigate('/dashboard')}
                className='flex flex-row items-center px-2 py-1 bg-[#e0efeb] border border-[#a3c3be] hover:bg-[#c9e1dd] hover:border-[#81a09d] text-left transition-all shadow-[inset_1px_1px_0_rgba(255,255,255,0.8)]'
              >
                  <span className='font-bold text-black text-[11px] w-[25px] underline'>Q</span>
@@ -586,8 +588,8 @@ export default function SizeSetMaster() {
         message="Are you sure you want to clear all data? This cannot be undone."
         type="warning"
         onConfirm={() => {
-          const resetFn = () => {
-                          if (window.confirm('Are you sure you want to reset?')) {
+          const resetFn = async () => {
+                          if (await confirmDialog('Are you sure you want to reset?')) {
                             setFormData({ sizes_list: [] });
                           }
                         };

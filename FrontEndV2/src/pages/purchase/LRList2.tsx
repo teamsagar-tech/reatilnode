@@ -1,3 +1,5 @@
+import { confirmDialog } from '../../store/useConfirmStore';
+import { toast } from '../../store/useToastStore';
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
@@ -86,13 +88,7 @@ export default function LRList2() {
       const matchParty = filterParty ? item.partyName === filterParty : true;
       
       return matchTransporter && matchLR && matchBale && matchGRN && matchParty;
-    }).sort((a, b) => {
-      const aPending = a.status === 'LR PENDING';
-      const bPending = b.status === 'LR PENDING';
-      if (aPending && !bPending) return -1;
-      if (!aPending && bPending) return 1;
-      return 0; // retain original order for others
-    });
+    }).sort((a, b) => b.id - a.id);
   }, [initialData, filterTransporter, filterLR, filterBale, filterGRN, filterParty]);
 
   // Unique lists for dropdowns
@@ -148,7 +144,7 @@ export default function LRList2() {
   }, [mode]);
 
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
+    const handleKeyDown = async (e: KeyboardEvent) => {
       if (mode === 'list') {
         if (e.key === 'ArrowDown') {
           e.preventDefault();
@@ -156,6 +152,15 @@ export default function LRList2() {
         } else if (e.key === 'ArrowUp') {
           e.preventDefault();
           setSelectedIndex(prev => (prev > 0 ? prev - 1 : prev));
+        } else if (e.key === 'Enter') {
+          e.preventDefault();
+          if (filteredData[selectedIndex]?.id) {
+            if ((filteredData[selectedIndex].status || '').toLowerCase().includes('delivered')) {
+              navigate('/inventory/barcodes/label-print-page', { state: { lr_nos: [filteredData[selectedIndex].lrNo] } });
+            } else {
+              navigate('/purchase-invoice', { state: { invoiceId: filteredData[selectedIndex].id, mode: 'view' } });
+            }
+          }
         } else if (e.key === 'Escape') {
           e.preventDefault();
           navigate('/dashboard');
@@ -181,9 +186,9 @@ export default function LRList2() {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [navigate, mode, filteredData.length]);
+  }, [navigate, mode, filteredData, selectedIndex]);
 
-  const handleFieldKeyDown = (e: React.KeyboardEvent, nextFieldId: string) => {
+  const handleFieldKeyDown = async (e: React.KeyboardEvent, nextFieldId: string) => {
     if (e.key === 'Enter') {
       e.preventDefault();
       const nextField = document.getElementById(nextFieldId);
@@ -228,26 +233,32 @@ export default function LRList2() {
   };
 
   const handleSaveBatch = async () => {
-    if (!formData.transporter_id || !formData.hundekari_id || !formData.inward_at_location_id) {
-      alert("Please fill all header fields (Transporter, Hundekari, Location)");
+    let locId = formData.inward_at_location_id;
+    if (locId && isNaN(Number(locId))) {
+      const loc = locations.find(l => l.name === locId || l.location_name === locId);
+      if (loc) locId = loc.id;
+    }
+
+    if (!formData.transporter_id || !formData.hundekari_id || !locId) {
+      toast.warning("Please fill all header fields (Transporter, Hundekari, Location)");
       return;
     }
 
     const validRows = lrRows.filter(r => r.lr_no && r.received_bales && r.status !== 'ERROR');
     if (validRows.length === 0) {
-      alert("Please enter at least one valid LR row");
+      toast.warning("Please enter at least one valid LR row");
       return;
     }
 
     const missingVendorRows = validRows.filter(r => r.status === 'NO_INVOICE' && !r.vendor_id);
     if (missingVendorRows.length > 0) {
-      alert("Please select a Party (Vendor) for LRs without invoices");
+      toast.warning("Please select a Party (Vendor) for LRs without invoices");
       return;
     }
 
     const hasMismatches = validRows.some(r => r.invoiced_bales !== null && parseInt(r.received_bales) !== r.invoiced_bales);
     if (hasMismatches) {
-      const proceed = window.confirm("Warning: One or more LRs have a mismatch between Received Bales and Invoiced Bales. Are you sure you want to save?");
+      const proceed = await confirmDialog("Warning: One or more LRs have a mismatch between Received Bales and Invoiced Bales. Are you sure you want to save?");
       if (!proceed) return;
     }
 
@@ -262,23 +273,30 @@ export default function LRList2() {
         body: JSON.stringify({
           transporter_id: formData.transporter_id,
           hundekari_id: formData.hundekari_id,
-          inward_at_location_id: formData.inward_at_location_id,
+          inward_at_location_id: locId,
           lr_inward_date: formData.lr_inward_date || new Date().toISOString().split('T')[0],
           lrRows: validRows
         })
       });
       const data = await res.json();
       if (data.success) {
-        alert("Batch LRs inwarded successfully!");
+        toast.success("Batch LRs inwarded successfully!");
         setLrRows([{ id: 1, lr_no: '', received_bales: '', invoiced_bales: null, error: '', status: '', vendor_id: '' }]);
         setFormData({ inward_at_location_id: localStorage.getItem('default_inward_location_id') || '' });
-        setMode('list');
+        
+        // Navigate to label print with the inwarded LR numbers
+        const inwardedLRs = validRows.map(r => r.lr_no).filter(Boolean);
+        if (inwardedLRs.length > 0) {
+          navigate('/inventory/barcodes/label-print-page', { state: { lr_nos: inwardedLRs } });
+        } else {
+          setMode('list');
+        }
       } else {
-        alert(data.message || "Failed to save");
+        toast.error(data.message || "Failed to save");
       }
     } catch (err) {
       console.error("Error saving bulk LRs", err);
-      alert("Server Error while saving");
+      toast.error("Server Error while saving");
     }
   };
 
@@ -383,13 +401,13 @@ export default function LRList2() {
                      </div>
                      <div className='flex items-center gap-2'>
                        <button 
-                         onClick={() => { setMode('inward'); setTimeout(() => document.getElementById('field-0')?.focus(), 50); }}
+                         onClick={async () => { setMode('inward'); setTimeout(() => document.getElementById('field-0')?.focus(), 50); }}
                          className='bg-amber-600 border border-black text-white px-2 py-1 font-bold text-[12px] hover:bg-amber-700 shadow-[2px_2px_0_rgba(0,0,0,1)]'
                        >
                          LR Inwarded (Alt+I)
                        </button>
                        <button 
-                         onClick={() => { setMode('create'); setTimeout(() => document.getElementById('field-0')?.focus(), 50); }}
+                         onClick={async () => { setMode('create'); setTimeout(() => document.getElementById('field-0')?.focus(), 50); }}
                          className='bg-[#1b5e58] border border-black text-white px-2 py-1 font-bold text-[12px] hover:bg-[#12423d] shadow-[2px_2px_0_rgba(0,0,0,1)]'
                        >
                          Create New (Alt+C)
@@ -420,7 +438,7 @@ export default function LRList2() {
                          {filteredData.length > 0 ? filteredData.map((row, idx) => (
                            <tr 
                              key={row.id} 
-                             onClick={() => setSelectedIndex(idx)}
+                             onClick={async () => setSelectedIndex(idx)}
                              className={`cursor-pointer ${getRowBgClass(idx, row.status)}`}
                            >
                              <td className={`px-2 py-1 border-r border-slate-300 text-center ${selectedIndex === idx ? 'border-r-black' : ''}`}>{row.id}</td>
@@ -453,10 +471,13 @@ export default function LRList2() {
                           <div className="w-[140px] text-slate-800 font-bold text-[12px] text-right pr-2">Inward Location</div>
                           <SearchableDropdown 
                             className="w-[250px] bg-white border border-slate-400 px-1 py-[2px] text-[12px] font-bold text-black focus:bg-[#ffffe0] focus:outline-none focus:border-slate-800"
-                            value={formData.inward_at_location_id || ''}
+                            value={locations.find(l => String(l.id) === String(formData.inward_at_location_id))?.name || formData.inward_at_location_id || ''}
                             onChange={(v) => {
                               setFormData({...formData, inward_at_location_id: v});
-                              localStorage.setItem('default_inward_location_id', v);
+                            }}
+                            onSelect={(opt) => {
+                              setFormData({...formData, inward_at_location_id: opt.id});
+                              localStorage.setItem('default_inward_location_id', String(opt.id));
                             }}
                             options={locations}
                             displayKey="name"
@@ -619,7 +640,7 @@ export default function LRList2() {
                               </td>
                               <td className="px-2 py-1 text-center">
                                 <button 
-                                  onClick={() => {
+                                  onClick={async () => {
                                     if (lrRows.length > 1) {
                                       setLrRows(lrRows.filter((_, i) => i !== index));
                                     }
@@ -635,7 +656,7 @@ export default function LRList2() {
                       </table>
                       <div className="p-2 border-t border-black bg-[#f1f5f9]">
                         <button 
-                          onClick={() => setLrRows([...lrRows, { id: Date.now(), lr_no: '', received_bales: '', invoiced_bales: null, error: '', status: '', vendor_id: '' }])}
+                          onClick={async () => setLrRows([...lrRows, { id: Date.now(), lr_no: '', received_bales: '', invoiced_bales: null, error: '', status: '', vendor_id: '' }])}
                           className="text-[#1b5e58] font-bold text-[12px] hover:underline"
                         >
                           + Add Another LR
@@ -676,7 +697,7 @@ export default function LRList2() {
                      <div className="mt-6 text-right w-[420px]">
                         <button 
                           id="btn-save"
-                          onClick={() => setMode('list')}
+                          onClick={async () => setMode('list')}
                           className='bg-[#1b5e58] border border-black text-white px-4 py-1 font-bold text-[12px] hover:bg-[#12423d] shadow-[2px_2px_0_rgba(0,0,0,1)]'
                         >
                           Save (Cmd/Ctrl+A)
@@ -720,7 +741,7 @@ export default function LRList2() {
              </div>
 
              <button 
-               onClick={() => mode === 'create' ? setMode('list') : navigate('/dashboard')}
+               onClick={async () => mode === 'create' ? setMode('list') : navigate('/dashboard')}
                className='flex flex-row items-center px-2 py-1 bg-[#e0efeb] border border-[#a3c3be] hover:bg-[#c9e1dd] hover:border-[#81a09d] text-left transition-all shadow-[inset_1px_1px_0_rgba(255,255,255,0.8)]'
              >
                  <span className='font-bold text-black text-[11px] w-[25px] underline'>Q</span>

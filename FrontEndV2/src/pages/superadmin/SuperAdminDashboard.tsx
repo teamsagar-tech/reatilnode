@@ -1,3 +1,5 @@
+import { confirmDialog } from '../../store/useConfirmStore';
+import { toast } from '../../store/useToastStore';
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
@@ -106,14 +108,14 @@ export default function SuperAdminDashboard() {
       fetchFirms(); // Reload to get updated list
       closeModal();
     } catch (err: any) {
-      alert(err.message);
+      toast.warning(err.message);
     } finally {
       setAddingFirm(false);
     }
   };
 
   const handleToggleStatus = async (id: number) => {
-    if (!window.confirm("Are you sure you want to change the status of this tenant?")) return;
+    if (!await confirmDialog("Are you sure you want to change the status of this tenant?")) return;
     try {
       const token = (sessionStorage.getItem('token') || localStorage.getItem('token'));
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/firms/${id}/status`, {
@@ -127,11 +129,11 @@ export default function SuperAdminDashboard() {
       const data = await response.json();
       setFirms(firms.map(f => f.id === id ? { ...f, is_active: data.is_active } : f));
     } catch (err: any) {
-      alert(err.message);
+      toast.warning(err.message);
     }
   };
 
-  const openEditModal = (firm: Firm) => {
+  const openEditModal = async (firm: Firm) => {
     setEditingFirmId(firm.id);
     setNewFirmName(firm.name);
     setNewFirmEmail(firm.email || "");
@@ -149,7 +151,7 @@ export default function SuperAdminDashboard() {
     setShowAddModal(true);
   };
 
-  const openAddModal = () => {
+  const openAddModal = async () => {
     setEditingFirmId(null);
     setNewFirmName("");
     setNewFirmEmail("");
@@ -167,7 +169,7 @@ export default function SuperAdminDashboard() {
     setShowAddModal(true);
   };
 
-  const closeModal = () => {
+  const closeModal = async () => {
     setShowAddModal(false);
   };
 
@@ -182,8 +184,8 @@ export default function SuperAdminDashboard() {
         <div className="bg-[#1b5e58] text-white font-bold px-4 py-2 border-b-2 border-[#12423d] flex justify-between items-center shadow-sm">
           <span>SuperAdmin Portal - Global Tenant Management</span>
           <button 
-            onClick={() => {
-              if (window.confirm("Are you sure you want to log out?")) {
+            onClick={async () => {
+              if (await confirmDialog("Are you sure you want to log out?")) {
                 sessionStorage.clear();
                 localStorage.clear();
                 window.location.href = '/login';
@@ -259,13 +261,13 @@ export default function SuperAdminDashboard() {
                         <td className="px-4 py-2 text-slate-700 font-medium border-r border-[#a3c3be] w-40">{new Date(firm.created_at).toLocaleString()}</td>
                         <td className="px-4 py-2 font-bold w-32">
                           <button 
-                            onClick={() => openEditModal(firm)}
+                            onClick={async () => openEditModal(firm)}
                             className="text-[#1b5e58] hover:underline mr-3"
                           >
                             Edit
                           </button>
                           <button 
-                            onClick={() => handleToggleStatus(firm.id)}
+                            onClick={async () => handleToggleStatus(firm.id)}
                             className={`${firm.is_active ? 'text-red-700' : 'text-emerald-700'} hover:underline`}
                           >
                             {firm.is_active ? 'Suspend' : 'Activate'}
@@ -364,7 +366,7 @@ export default function SuperAdminDashboard() {
                   <div className="pt-3 flex justify-end gap-3 mt-2 border-t border-[#a3c3be]">
                     <button
                       type="button"
-                      onClick={() => setShowAddModal(false)}
+                      onClick={async () => setShowAddModal(false)}
                       className="px-4 py-1.5 bg-[#e0efeb] border border-[#a3c3be] text-black hover:bg-[#c9e1dd] font-bold text-sm"
                     >
                       Cancel

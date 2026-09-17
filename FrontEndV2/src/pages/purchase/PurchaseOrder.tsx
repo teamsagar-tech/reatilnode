@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { PlusCircle, Search, Save, Trash2, Printer, CheckCircle } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card';
+import { toast } from "../../store/useToastStore";
 
 // Custom Tally-style input
 const InputRow = ({ label, value, onChange, type = "text", placeholder = "", className = "", required = false }: any) => (
@@ -55,7 +56,7 @@ export default function PurchaseOrder() {
   const totalQty = items.reduce((sum, item) => sum + (Number(item.order_quantity) || 0), 0);
 
   const handleSave = async () => {
-      alert("Purchase Order Logic Wired! Ready for integration.");
+      toast.warning("Purchase Order Logic Wired! Ready for integration.");
   };
 
   return (

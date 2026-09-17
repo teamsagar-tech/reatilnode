@@ -120,6 +120,7 @@ import LRList2 from "./pages/purchase/LRList2"
 import ManageReceivable from "./pages/inventory/ManageReceivable"
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import ToastContainer from "./components/ui/ToastContainer";
+import ConfirmDialog from "./components/ui/ConfirmDialog";
 import NetworkStatusIndicator from "./components/NetworkStatusIndicator";
 function App() {
   useGlobalKeyboard();
@@ -129,6 +130,7 @@ function App() {
       <Router>
         <NetworkStatusIndicator />
         <ToastContainer />
+        <ConfirmDialog />
         <Routes>
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/login" element={<Login />} />

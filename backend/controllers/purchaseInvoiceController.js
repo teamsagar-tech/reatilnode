@@ -188,15 +188,21 @@ exports.create = async (req, res) => {
     let lr_status = 'Pending';
 
     // Auto-Link Unlinked LR if it exists
-    if (lr_no) {
-      const [unlinkedRows] = await conn.execute(
-        'SELECT id FROM Unlinked_LRs WHERE firm_id = ? AND vendor_id = ? AND lr_no = ? LIMIT 1',
-        [req.firm_id, vendor_id, lr_no]
+    if (lr_no && transporter) {
+      const [transporterRows] = await conn.execute(
+        'SELECT id FROM Transporters WHERE firm_id = ? AND transporter_name = ? LIMIT 1',
+        [req.firm_id, transporter]
       );
-      if (unlinkedRows.length > 0) {
-        lr_status = 'Delivered'; // Auto-delivered since LR was already received
-        // Remove it from unlinked pool
-        await conn.execute('DELETE FROM Unlinked_LRs WHERE id = ?', [unlinkedRows[0].id]);
+      if (transporterRows.length > 0) {
+        const [unlinkedRows] = await conn.execute(
+          'SELECT id FROM Unlinked_LRs WHERE firm_id = ? AND transporter_id = ? AND lr_no = ? LIMIT 1',
+          [req.firm_id, transporterRows[0].id, lr_no]
+        );
+        if (unlinkedRows.length > 0) {
+          lr_status = 'Delivered'; // Auto-delivered since LR was already received
+          // Remove it from unlinked pool
+          await conn.execute('DELETE FROM Unlinked_LRs WHERE id = ?', [unlinkedRows[0].id]);
+        }
       }
     }
 
@@ -351,14 +357,35 @@ exports.update = async (req, res) => {
 
     // Fetch existing invoice
     const [existingInvoiceRows] = await conn.execute(
-      'SELECT id, grn_no, net_amount, vendor_id FROM PurchaseInvoices WHERE id = ? AND firm_id = ?',
+      'SELECT id, grn_no, net_amount, vendor_id, lr_status FROM PurchaseInvoices WHERE id = ? AND firm_id = ?',
       [id, req.firm_id]
     );
     if (existingInvoiceRows.length === 0) {
       await conn.rollback();
       return res.status(404).json({ error: 'Invoice not found' });
     }
-    const oldInvoice = existingInvoiceRows[0];
+    
+    let lr_status = existingInvoiceRows[0].lr_status || 'Pending';
+
+    // Auto-Link Unlinked LR if it exists and wasn't already delivered
+    if (lr_no && transporter && lr_status !== 'Delivered') {
+      const [transporterRows] = await conn.execute(
+        'SELECT id FROM Transporters WHERE firm_id = ? AND transporter_name = ? LIMIT 1',
+        [req.firm_id, transporter]
+      );
+      if (transporterRows.length > 0) {
+        const [unlinkedRows] = await conn.execute(
+          'SELECT id FROM Unlinked_LRs WHERE firm_id = ? AND transporter_id = ? AND lr_no = ? LIMIT 1',
+          [req.firm_id, transporterRows[0].id, lr_no]
+        );
+        if (unlinkedRows.length > 0) {
+          lr_status = 'Delivered';
+          await conn.execute('DELETE FROM Unlinked_LRs WHERE id = ?', [unlinkedRows[0].id]);
+        }
+      }
+    }
+
+    const { grn_no, net_amount: old_net_amount, vendor_id: old_vendor_id } = existingInvoiceRows[0];
     const { freight, insurance, packing_charges } = req.body;
 
     if (bill_no) {
@@ -373,32 +400,32 @@ exports.update = async (req, res) => {
     }
 
     // Adjust Vendor Balance
-    if (oldInvoice.vendor_id === vendor_id) {
+    if (old_vendor_id === vendor_id) {
       // Same vendor
-      const diff = Number(net_amount || 0) - Number(oldInvoice.net_amount || 0);
+      const diff = Number(net_amount || 0) - Number(old_net_amount || 0);
       if (diff !== 0) {
         await conn.execute('UPDATE Vendors SET current_balance = current_balance + ? WHERE id = ?', [diff, vendor_id]);
         await conn.execute(
           'UPDATE PartyLedgers SET credit_amount = ?, transaction_date = ? WHERE voucher_type = "Purchase Invoice" AND voucher_no = ? AND firm_id = ?',
-          [net_amount || 0, receive_date || new Date(), oldInvoice.grn_no, req.firm_id]
+          [net_amount || 0, receive_date || new Date(), grn_no, req.firm_id]
         );
       }
     } else {
       // Vendor changed, remove from old, add to new
-      await conn.execute('UPDATE Vendors SET current_balance = current_balance - ? WHERE id = ?', [oldInvoice.net_amount || 0, oldInvoice.vendor_id]);
+      await conn.execute('UPDATE Vendors SET current_balance = current_balance - ? WHERE id = ?', [old_net_amount || 0, old_vendor_id]);
       await conn.execute('UPDATE Vendors SET current_balance = current_balance + ? WHERE id = ?', [net_amount || 0, vendor_id]);
       await conn.execute(
         'UPDATE PartyLedgers SET party_id = ?, credit_amount = ?, transaction_date = ? WHERE voucher_type = "Purchase Invoice" AND voucher_no = ? AND firm_id = ?',
-        [vendor_id, net_amount || 0, receive_date || new Date(), oldInvoice.grn_no, req.firm_id]
+        [vendor_id, net_amount || 0, receive_date || new Date(), grn_no, req.firm_id]
       );
     }
 
     // Update Header
     await conn.execute(
       `UPDATE PurchaseInvoices 
-       SET vendor_id=?, bill_no=?, bill_date=?, receive_date=?, discount_percent=?, discount_amount=?, commission_percent=?, commission_amount=?, total_amount=?, gst_amount=?, net_amount=?, narration=?, purchase_order_id=?, lr_no=?, transporter=?, bales=?, freight=?, insurance=?, packing_charges=?, ip_address=?
+       SET vendor_id=?, bill_no=?, bill_date=?, receive_date=?, discount_percent=?, discount_amount=?, commission_percent=?, commission_amount=?, total_amount=?, gst_amount=?, net_amount=?, narration=?, purchase_order_id=?, lr_no=?, transporter=?, bales=?, freight=?, insurance=?, packing_charges=?, lr_status=?, ip_address=?
        WHERE id=? AND firm_id=?`,
-      [vendor_id, bill_no || null, bill_date || null, receive_date || new Date(), discount_percent || 0, discount_amount || 0, commission_percent || 0, commission_amount || 0, total_amount || 0, gst_amount || 0, net_amount || 0, narration || null, req.body.purchase_order_id || null, lr_no || null, transporter || null, bales || null, freight || 0, insurance || 0, packing_charges || 0, req.headers['x-forwarded-for'] || req.socket.remoteAddress || null, id, req.firm_id]
+      [vendor_id, bill_no || null, bill_date || null, receive_date || new Date(), discount_percent || 0, discount_amount || 0, commission_percent || 0, commission_amount || 0, total_amount || 0, gst_amount || 0, net_amount || 0, narration || null, req.body.purchase_order_id || null, lr_no || null, transporter || null, bales || null, freight || 0, insurance || 0, packing_charges || 0, lr_status, req.headers['x-forwarded-for'] || req.socket.remoteAddress || null, id, req.firm_id]
     );
 
     // Delete old items (attributes will cascade if set, otherwise we should manually delete attributes first)

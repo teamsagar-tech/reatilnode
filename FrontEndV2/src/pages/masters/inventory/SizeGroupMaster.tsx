@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import ConfirmModal from '../../../components/ui/ConfirmModal';
+import { toast } from "../../../store/useToastStore";
 
 export default function SizeGroupMaster() {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
@@ -59,14 +60,14 @@ export default function SizeGroupMaster() {
 
   const handleSave = async () => {
     if (!formData.groupName) {
-      alert('Group Name is required');
+      toast.error('Group Name is required');
       return;
     }
     
     // Parse comma separated sizes
     const sizesArray = formData.sizes.split(',').map((s: string) => s.trim()).filter((s: string) => s !== '');
     if (sizesArray.length === 0) {
-      alert('At least one size is required');
+      toast.error('At least one size is required');
       return;
     }
 
@@ -85,16 +86,16 @@ export default function SizeGroupMaster() {
       });
 
       if (response.ok) {
-        alert('Size Group Saved Successfully!');
+        toast.success('Size Group Saved Successfully!');
         setMode('list');
         fetchSizeGroups();
       } else {
         const error = await response.json();
-        alert(error.error || 'Failed to save');
+        toast.error(error.error || 'Failed to save');
       }
     } catch (error) {
       console.error('Save error:', error);
-      alert('Failed to save size group');
+      toast.error('Failed to save size group');
     }
   };
 

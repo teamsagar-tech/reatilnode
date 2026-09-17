@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import SearchableDropdown from '../../components/SearchableDropdown';
+import { toast } from "../../store/useToastStore";
 
 // Mock Data
 const ITEM_SUGGESTIONS = [
@@ -61,7 +62,7 @@ export default function PurchaseOrder() {
   }, [navigate]);
 
   const handleSaveOrder = () => {
-    alert('Order Saved! (Mock)');
+    toast.success('Order Saved! (Mock)');
   };
 
   const handleInvoiceChange = (field: string, value: any) => {

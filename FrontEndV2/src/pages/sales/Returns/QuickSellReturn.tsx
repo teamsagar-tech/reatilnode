@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import SearchableDropdown from '../../../components/SearchableDropdown';
+import { toast } from "../../../store/useToastStore";
 
 export default function QuickSellReturn() {
   const navigate = useNavigate();
@@ -29,7 +30,7 @@ export default function QuickSellReturn() {
         navigate(-1);
       } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a') {
         e.preventDefault();
-        alert('Credit Note Generated Successfully!');
+        toast.success('Credit Note Generated Successfully!');
         navigate(-1);
       } else if (e.key === 'F3') {
         e.preventDefault();
@@ -43,7 +44,7 @@ export default function QuickSellReturn() {
   const handleBarcodeSubmit = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && barcode.trim() !== '') {
       e.preventDefault();
-      alert(`Scanned Barcode: ${barcode} for Return`);
+      toast.warning(`Scanned Barcode: ${barcode} for Return`);
       setBarcode('');
     }
   };

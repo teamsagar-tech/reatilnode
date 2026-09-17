@@ -151,3 +151,19 @@
 .readonly-mode .voucher-action-btn {
   pointer-events: none !important;
 }
+
+@layer base {
+  body {
+    font-weight: 700;
+  }
+  input, select, textarea, button {
+    font-weight: 700;
+  }
+  * {
+    /* Override tailwind default text colors if needed, but here we just want bold */
+  }
+}
+
+* {
+  font-weight: 700 !important;
+}

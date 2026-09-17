@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
+import { toast } from "../../store/useToastStore";
 
 const InputRow = ({ label, value, onChange, placeholder = '', type = 'text', onKeyDown, refProp }: any) => (
   <div className="flex items-center text-[12px] mb-1">
@@ -63,17 +64,17 @@ export default function POSPage() {
         // Keep focus on scanner
         setTimeout(() => scannerRef.current?.focus(), 10);
       } else {
-        alert(data.message || 'Product not found');
+        toast.error(data.message || 'Product not found');
         setBarcode('');
       }
     } catch (err) {
       console.error('Scan error', err);
-      alert('Failed to scan product');
+      toast.error('Failed to scan product');
     }
   };
 
   const handleSaveBill = async () => {
-    if (items.length === 0) return alert("Cart is empty");
+    if (items.length === 0) return toast.error("Cart is empty");
     try {
       const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/sales/bill`, {
         method: 'POST',
@@ -97,16 +98,16 @@ export default function POSPage() {
       });
       const data = await res.json();
       if (data.success) {
-        alert(`Bill Saved Successfully! Bill No: ${data.data.bill_no}`);
+        toast.success(`Bill Saved Successfully! Bill No: ${data.data.bill_no}`);
         setItems([]);
         setBarcode('');
         scannerRef.current?.focus();
       } else {
-        alert(data.message || 'Failed to save bill');
+        toast.error(data.message || 'Failed to save bill');
       }
     } catch (err) {
       console.error('Save bill error', err);
-      alert('Failed to save bill');
+      toast.error('Failed to save bill');
     }
   };
 

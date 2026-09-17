@@ -1,10 +1,17 @@
-# Separate Hundekari Table Tasks
-
-- [x] Create `Hundekaris` table on the remote database.
-- [x] Add `rate_per_bale` column to `Hundekaris` table as requested.
-- [x] Add `GET /api/logistics/hundekaris` route and controller logic.
-- [x] Add `POST /api/logistics/hundekaris` route and controller logic.
-- [x] Update `LRList.tsx` and `LRList2.tsx` to fetch from the new endpoint.
-- [x] Update `HundekariModal.tsx` to POST to the new endpoint and include `rate_per_bale`.
-- [x] Restart the remote backend PM2 process.
-- [x] Build and deploy the frontend.
+- [x] Add `invoice_config` (JSON) to the `Parties` MySQL table via `ALTER TABLE`.
+- [x] Update `partyController.js` (Backend):
+  - [x] Pull `invoice_config` in `getParties`.
+  - [x] Store `invoice_config` in `createParty`.
+  - [x] Store `invoice_config` in `updateParty`.
+  - [x] Create `updatePartyInvoiceConfig(req, res)` for background saving.
+- [x] Update `partyRoutes.js` (Backend):
+  - [x] Add `PUT /api/masters/party/:id/invoice-config` route.
+- [x] Update `PartyMaster.tsx` (Frontend):
+  - [x] Add "Invoice UI Defaults" section and 5 checkboxes.
+  - [x] Bind state to `formData.invoice_config`.
+- [x] Update `PartyModal.tsx` (Frontend):
+  - [x] Mirror the "Invoice UI Defaults" section from PartyMaster.
+- [x] Update `PurchaseInvoice.tsx` (Frontend):
+  - [x] Override `invoiceData` checkboxes when a supplier is selected if `vendor.invoice_config` exists.
+  - [x] Trigger background API call to `updatePartyInvoiceConfig` when saving an invoice if the selected Party didn't previously have a config.
+- [x] Build & Deploy.

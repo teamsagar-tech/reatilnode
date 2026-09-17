@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import ConfirmModal from '../../../components/ui/ConfirmModal';
-
+import { toast } from "../../../store/useToastStore";
 
 const SectionTitle = ({ children }: { children: React.ReactNode }) => (
     <div className="font-bold text-[#1b5e58] text-[12px] border-b border-[#a3c3be] mb-2 mt-2 pb-1 uppercase tracking-wider bg-[#eef5ed] px-1">
@@ -61,7 +61,7 @@ export default function StyleMaster() {
 
   const handleSaveStyle = async () => {
     if (!formData.name) {
-      alert('Style Name is required');
+      toast.error('Style Name is required');
       return;
     }
     try {
@@ -82,11 +82,11 @@ export default function StyleMaster() {
         setMode('list');
         fetchStyles();
       } else {
-        alert('Failed to save style');
+        toast.error('Failed to save style');
       }
     } catch (err) {
       console.error(err);
-      alert('Error saving style');
+      toast.error('Error saving style');
     }
   };
 
@@ -102,11 +102,11 @@ export default function StyleMaster() {
         setDeleteId(null);
         fetchStyles();
       } else {
-        alert('Failed to delete style');
+        toast.error('Failed to delete style');
       }
     } catch (err) {
       console.error(err);
-      alert('Error deleting style');
+      toast.error('Error deleting style');
     }
   };
 
