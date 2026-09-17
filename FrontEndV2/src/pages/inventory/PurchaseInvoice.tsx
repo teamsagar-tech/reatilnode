@@ -935,11 +935,13 @@ export default function PurchaseInvoice() {
         else if (state.activeSizeMatrixRow !== null) setActiveSizeMatrixRow(null);
         else {
           const hasData = state.invoiceData.supplier || state.products.some(p => p.item || Number(p.qty) > 0);
-          if (hasData) {
+          if (state.isReadOnly) {
+            navigate(-1);
+          } else if (hasData) {
             const wantToQuit = await confirmDialog("Quit: Yes or No?");
-            if (wantToQuit) navigate('/dashboard');
+            if (wantToQuit) navigate(-1);
           } else {
-            navigate('/dashboard');
+            navigate(-1);
           }
         }
       }
@@ -966,7 +968,7 @@ export default function PurchaseInvoice() {
           setIsReadOnly(false);
         } else if (e.code === 'KeyQ') {
           e.preventDefault();
-          navigate('/dashboard');
+          navigate(-1);
         }
       }
     };
@@ -2934,11 +2936,13 @@ export default function PurchaseInvoice() {
              <button 
                onClick={async () => {
                  const hasData = invoiceData.supplier || products.some(p => p.item || Number(p.qty) > 0);
-                 if (hasData) {
+                 if (isReadOnly) {
+                   navigate(-1);
+                 } else if (hasData) {
                    const wantToQuit = await confirmDialog("Quit: Yes or No?");
-                   if (wantToQuit) navigate('/dashboard');
+                   if (wantToQuit) navigate(-1);
                  } else {
-                   navigate('/dashboard');
+                   navigate(-1);
                  }
                }}
                className="flex flex-row items-center px-2 py-1 bg-[#e0efeb] border border-[#a3c3be] hover:bg-[#c9e1dd] hover:border-[#81a09d] text-left transition-all shadow-[inset_1px_1px_0_rgba(255,255,255,0.8)] w-full"
