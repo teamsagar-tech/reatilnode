@@ -890,7 +890,9 @@ export default function PurchaseInvoice() {
     activeSizeMatrixRow,
     isReadOnly,
     invoiceLrStatus,
-    handleSaveInvoice
+    handleSaveInvoice,
+    products,
+    invoiceData
   });
 
   useEffect(() => {
@@ -907,7 +909,9 @@ export default function PurchaseInvoice() {
       activeSizeMatrixRow,
       isReadOnly,
       invoiceLrStatus,
-      handleSaveInvoice
+      handleSaveInvoice,
+      products,
+      invoiceData
     };
   });
 
@@ -929,7 +933,15 @@ export default function PurchaseInvoice() {
         else if (state.activeSuggestionRow !== null) setActiveSuggestionRow(null);
         else if (state.activeHsnRow !== null) setActiveHsnRow(null);
         else if (state.activeSizeMatrixRow !== null) setActiveSizeMatrixRow(null);
-        else navigate(-1);
+        else {
+          const hasData = state.invoiceData.supplier || state.products.some(p => p.item || Number(p.qty) > 0);
+          if (hasData) {
+            const wantToQuit = await confirmDialog("Quit: Yes or No?");
+            if (wantToQuit) navigate('/dashboard');
+          } else {
+            navigate('/dashboard');
+          }
+        }
       }
       
       if (e.altKey) {
@@ -2920,7 +2932,15 @@ export default function PurchaseInvoice() {
                </button>
              )}
              <button 
-               onClick={async () => navigate('/dashboard')}
+               onClick={async () => {
+                 const hasData = invoiceData.supplier || products.some(p => p.item || Number(p.qty) > 0);
+                 if (hasData) {
+                   const wantToQuit = await confirmDialog("Quit: Yes or No?");
+                   if (wantToQuit) navigate('/dashboard');
+                 } else {
+                   navigate('/dashboard');
+                 }
+               }}
                className="flex flex-row items-center px-2 py-1 bg-[#e0efeb] border border-[#a3c3be] hover:bg-[#c9e1dd] hover:border-[#81a09d] text-left transition-all shadow-[inset_1px_1px_0_rgba(255,255,255,0.8)] w-full"
              >
                  <span className="font-bold text-black text-[11px] w-[25px] underline">Q</span>
