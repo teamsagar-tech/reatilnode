@@ -1,17 +1,17 @@
-- [x] Add `invoice_config` (JSON) to the `Parties` MySQL table via `ALTER TABLE`.
-- [x] Update `partyController.js` (Backend):
-  - [x] Pull `invoice_config` in `getParties`.
-  - [x] Store `invoice_config` in `createParty`.
-  - [x] Store `invoice_config` in `updateParty`.
-  - [x] Create `updatePartyInvoiceConfig(req, res)` for background saving.
-- [x] Update `partyRoutes.js` (Backend):
-  - [x] Add `PUT /api/masters/party/:id/invoice-config` route.
-- [x] Update `PartyMaster.tsx` (Frontend):
-  - [x] Add "Invoice UI Defaults" section and 5 checkboxes.
-  - [x] Bind state to `formData.invoice_config`.
-- [x] Update `PartyModal.tsx` (Frontend):
-  - [x] Mirror the "Invoice UI Defaults" section from PartyMaster.
-- [x] Update `PurchaseInvoice.tsx` (Frontend):
-  - [x] Override `invoiceData` checkboxes when a supplier is selected if `vendor.invoice_config` exists.
-  - [x] Trigger background API call to `updatePartyInvoiceConfig` when saving an invoice if the selected Party didn't previously have a config.
-- [x] Build & Deploy.
+# Invoice Extraction & Import Tasks
+
+- `[x]` **Phase 1: Extract data from Invoice Images**
+  - `[x]` Extract all 9 invoices (LA BASE, PANKHUDI, MOMENTO FASHION, FOCUS JEANS, SHREE TRADING x 3)
+  - `[x]` Structure data into `sample/invoices/raw_invoices.json`
+
+- `[x]` **Phase 2: Import Script & Backend Bugfixes**
+  - `[x]` Create `Backend/scripts/import_invoices.js`
+  - `[x]` Implement Auto-create Vendors via API
+  - `[x]` Implement Auto-create Items via API
+  - `[x]` Fix Backend SQL schema mismatches (`Vendors` FK, removed `created_by`/`ip_address`, removed `tax_percent`)
+
+- `[x]` **Phase 3: Execution & Verification**
+  - `[x]` Run `node Backend/scripts/import_invoices.js` on all 7 distinct invoices
+  - `[x]` Verify DB constraints and successful API responses (IDs 1 through 7)
+  - `[x]` Verify Stock Update Logic (adheres to "Inward after LR received" rule)
+  - `[x]` Commit and push all changes to GitHub
