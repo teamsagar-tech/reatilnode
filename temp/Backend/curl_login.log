@@ -1,0 +1,1 @@
+{"message":"Login successful","token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiZmlybV9pZCI6MSwicm9sZSI6ImFkbWluIiwiaWF0IjoxNzg3NjQ1ODIyLCJleHAiOjE3ODc3MzIyMjJ9.dYY7H29RRC5Vg40TGdtSKGsLmfnvphJJnohXVUFPqyU","user":{"id":1,"name":"Admin User","email":"admin@acme.com","role":"admin","firm_id":1}}

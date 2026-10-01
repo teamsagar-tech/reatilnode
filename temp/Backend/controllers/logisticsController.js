@@ -1,0 +1,363 @@
+const db = require('../config/db');
+
+exports.getTransporters = async (req, res) => {
+  try {
+    const firmId = req.firm_id;
+    const [rows] = await db.query('SELECT * FROM Transporters WHERE firm_id = ? ORDER BY id DESC', [firmId]);
+    res.json({ success: true, data: rows });
+  } catch (error) {
+    console.error('Error fetching transporters:', error);
+    res.status(500).json({ success: false, message: 'Server Error' });
+  }
+};
+
+exports.createTransporter = async (req, res) => {
+  try {
+    const firmId = req.firm_id;
+    const name = req.body.name || req.body.transporter_name;
+    const description = req.body.description || req.body.mobile || req.body.email ? `Mobile: ${req.body.mobile || ''}, Email: ${req.body.email || ''}` : '';
+    
+    if (!name) {
+      return res.status(400).json({ success: false, message: 'Transporter name is required' });
+    }
+
+    const [result] = await db.query(
+      'INSERT INTO Transporters (firm_id, name, description) VALUES (?, ?, ?)',
+      [firmId, name, description]
+    );
+
+    res.json({ success: true, message: 'Transporter created successfully', data: { id: result.insertId, name } });
+  } catch (error) {
+    if (error.code === 'ER_DUP_ENTRY') {
+      return res.status(400).json({ success: false, message: 'Transporter already exists' });
+    }
+    console.error('Error creating transporter:', error);
+    res.status(500).json({ success: false, message: 'Server Error' });
+  }
+};
+
+exports.updateTransporter = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const name = req.body.transporter_name || req.body.name;
+    const description = req.body.description || null;
+    const firmId = req.firm_id;
+
+    if (!name) {
+      return res.status(400).json({ success: false, message: 'Transporter name is required' });
+    }
+
+    const [result] = await db.query(
+      'UPDATE Transporters SET name = ?, description = ? WHERE id = ? AND firm_id = ?',
+      [name, description, id, firmId]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ success: false, message: 'Transporter not found' });
+    }
+
+    res.json({ success: true, message: 'Transporter updated successfully' });
+  } catch (error) {
+    if (error.code === 'ER_DUP_ENTRY') {
+      return res.status(400).json({ success: false, message: 'Transporter name already exists' });
+    }
+    console.error('Error updating transporter:', error);
+    res.status(500).json({ success: false, message: 'Server Error' });
+  }
+};
+
+exports.getHundekaris = async (req, res) => {
+  try {
+    const firmId = req.firm_id;
+    const [rows] = await db.query('SELECT * FROM Hundekaris WHERE firm_id = ? ORDER BY id DESC', [firmId]);
+    res.json({ success: true, data: rows });
+  } catch (error) {
+    console.error('Error fetching hundekaris:', error);
+    res.status(500).json({ success: false, message: 'Server Error' });
+  }
+};
+
+exports.createHundekari = async (req, res) => {
+  try {
+    const firmId = req.firm_id;
+    const { hundekari_name, mobile, email, rate_per_bale, location_id } = req.body;
+
+    if (!hundekari_name) {
+      return res.status(400).json({ success: false, message: 'Hundekari name is required' });
+    }
+
+    const [result] = await db.query(
+      'INSERT INTO Hundekaris (firm_id, hundekari_name, mobile, email, rate_per_bale, location_id) VALUES (?, ?, ?, ?, ?, ?)',
+      [firmId, hundekari_name, mobile || null, email || null, rate_per_bale || 0, location_id || null]
+    );
+
+    res.json({ success: true, message: 'Hundekari created successfully', data: { id: result.insertId } });
+  } catch (error) {
+    if (error.code === 'ER_DUP_ENTRY') {
+      return res.status(400).json({ success: false, message: 'Hundekari with this Mobile/Email already exists' });
+    }
+    console.error('Error creating hundekari:', error);
+    res.status(500).json({ success: false, message: 'Server Error' });
+  }
+};
+
+exports.getUnlinkedLRs = async (req, res) => {
+  try {
+    const firmId = req.firm_id;
+    const [rows] = await db.query(`
+      SELECT ulr.*, t.name as transporter_name, h.hundekari_name 
+      FROM Unlinked_LRs ulr
+      LEFT JOIN Transporters t ON ulr.transporter_id = t.id
+      LEFT JOIN Hundekari h ON ulr.hundekari_id = h.id
+      WHERE ulr.firm_id = ? 
+      ORDER BY ulr.id DESC
+    `, [firmId]);
+    res.json({ success: true, data: rows });
+  } catch (error) {
+    console.error('Error fetching unlinked LRs:', error);
+    res.status(500).json({ success: false, message: 'Server Error' });
+  }
+};
+
+exports.createUnlinkedLR = async (req, res) => {
+  try {
+    const firmId = req.firm_id;
+    const { transporter_id, hundekari_id, lr_no, bale, inward_at_location_id, lr_inward_date } = req.body;
+
+    if (!transporter_id || !hundekari_id || !lr_no || !bale || !inward_at_location_id || !lr_inward_date) {
+      return res.status(400).json({ success: false, message: 'All required fields must be provided' });
+    }
+
+    const [result] = await db.query(
+      'INSERT IGNORE INTO Unlinked_LRs (firm_id, transporter_id, hundekari_id, lr_no, bale, inward_at_location_id, lr_inward_date, inwarded_by_user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      [firmId, transporter_id, hundekari_id, lr_no, bale, inward_at_location_id, lr_inward_date, req.user?.id || null]
+    );
+
+    res.json({ success: true, message: 'LR inwarded successfully', data: { id: result.insertId } });
+  } catch (error) {
+    if (error.code === 'ER_DUP_ENTRY') {
+      return res.status(400).json({ success: false, message: 'This LR Number is already inwarded for this firm' });
+    }
+    console.error('Error creating unlinked LR:', error);
+    res.status(500).json({ success: false, message: 'Server Error' });
+  }
+};
+
+exports.createBulkUnlinkedLR = async (req, res) => {
+  try {
+    const firmId = req.firm_id;
+    const { transporter_id, hundekari_id, inward_at_location_id, lr_inward_date, lrRows } = req.body;
+
+    if (!transporter_id || !hundekari_id || !inward_at_location_id || !lr_inward_date || !Array.isArray(lrRows) || lrRows.length === 0) {
+      return res.status(400).json({ success: false, message: 'All header fields and at least one LR row must be provided' });
+    }
+
+    const connection = await db.getConnection();
+    await connection.beginTransaction();
+
+    try {
+      for (const row of lrRows) {
+        if (!row.lr_no || !row.received_bales) continue;
+
+        await connection.query(
+          'INSERT IGNORE INTO Unlinked_LRs (firm_id, vendor_id, transporter_id, hundekari_id, lr_no, bale, inward_at_location_id, lr_inward_date, inwarded_by_user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+          [firmId, row.vendor_id || null, transporter_id, hundekari_id, row.lr_no, row.received_bales, inward_at_location_id, lr_inward_date, req.user?.id || null]
+        );
+      }
+      await connection.commit();
+      connection.release();
+      res.json({ success: true, message: 'Bulk LRs inwarded successfully' });
+    } catch (err) {
+      await connection.rollback();
+      connection.release();
+      if (err.code === 'ER_DUP_ENTRY') {
+        return res.status(400).json({ success: false, message: 'One or more LR Numbers are already inwarded for this firm' });
+      }
+      throw err;
+    }
+  } catch (error) {
+    console.error('Error creating bulk unlinked LRs:', error);
+    res.status(500).json({ success: false, message: 'Server Error' });
+  }
+};
+
+exports.verifyLRBales = async (req, res) => {
+  try {
+    const { lr_no } = req.body;
+    if (!lr_no) {
+      return res.status(400).json({ error: 'LR No is required' });
+    }
+
+    const [rows] = await db.query(
+      `SELECT p.id, p.bales 
+       FROM PurchaseInvoices p 
+       WHERE p.firm_id = ? AND p.lr_no = ? AND (p.lr_status IN ('LR PENDING', 'Pending', 'Delivered') OR p.lr_status = 'Pending') 
+       ORDER BY p.created_at DESC LIMIT 1`,
+      [req.firm_id, lr_no]
+    );
+
+    if (rows.length === 0) {
+      // Check if it's already in Unlinked_LRs to prevent double entry
+      const [unlinkedRows] = await db.query(
+        `SELECT id FROM Unlinked_LRs WHERE firm_id = ? AND lr_no = ?`,
+        [req.firm_id, lr_no]
+      );
+      if (unlinkedRows.length > 0) {
+        return res.json({ success: false, message: 'LR already inwarded previously', expectedBales: null });
+      }
+      return res.json({ success: true, message: 'No Invoice Found', expectedBales: null, status: 'NO_INVOICE' });
+    }
+
+    res.json({ success: true, expectedBales: rows[0].bales, status: 'MATCHED' });
+  } catch (error) {
+    console.error('Error verifying LR bales:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+exports.getPendingLRs = async (req, res) => {
+  try {
+    const [rows] = await db.query(`
+      SELECT 
+        p.id, 
+        IFNULL(p.lr_no, '') as lrNo, 
+        IFNULL(p.grn_no, '') as grn, 
+        IFNULL(p.lr_status, '') as status, 
+        IFNULL(v.name, '') as partyName, 
+        IFNULL(p.bill_no, '') as billNo, 
+        IFNULL(p.transporter, '') as transporter, 
+        p.bales, 
+        DATE_FORMAT(p.bill_date, '%Y-%m-%d') as billDate
+      FROM PurchaseInvoices p
+      LEFT JOIN Vendors v ON p.vendor_id = v.id
+      WHERE p.firm_id = ? AND p.lr_status IN ('LR PENDING', 'Pending', 'Delivered')
+      ORDER BY p.created_at DESC
+    `, [req.firm_id]);
+    res.json(rows);
+  } catch (error) {
+    console.error('Error fetching pending LRs:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+exports.verifyUnlinkedLR = async (req, res) => {
+  try {
+    const { vendor_id, lr_no } = req.body;
+    if (!vendor_id || !lr_no) {
+      return res.status(400).json({ success: false, error: 'Vendor ID and LR No are required' });
+    }
+
+    const [rows] = await db.query(
+      `SELECT id FROM Unlinked_LRs WHERE firm_id = ? AND vendor_id = ? AND lr_no = ? LIMIT 1`,
+      [req.firm_id, vendor_id, lr_no]
+    );
+
+    if (rows.length > 0) {
+      res.json({ success: true, exists: true, message: 'LR already received. Will be auto-delivered!' });
+    } else {
+      res.json({ success: true, exists: false });
+    }
+  } catch (error) {
+    console.error('Error verifying unlinked LR:', error);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+};
+
+exports.getHundekariPendingLRs = async (req, res) => {
+  try {
+    const firmId = req.firm_id;
+    const { hundekari_id } = req.params;
+
+    const [rows] = await db.query(`
+      SELECT 
+        u.id, 
+        u.lr_no, 
+        DATE_FORMAT(u.lr_inward_date, '%Y-%m-%d') as inward_date,
+        u.bale as bales,
+        t.name as transporter_name as transporter
+      FROM Unlinked_LRs u
+      LEFT JOIN Transporters t ON u.transporter_id = t.id
+      WHERE u.firm_id = ? AND u.hundekari_id = ? AND u.hundekari_payment_status = 'PENDING'
+      ORDER BY u.lr_inward_date ASC
+    `, [firmId, hundekari_id]);
+
+    const total_pending_bales = rows.reduce((sum, row) => sum + parseInt(row.bales || 0), 0);
+
+    res.json({
+      success: true,
+      pending_lrs: rows,
+      total_pending_bales
+    });
+  } catch (error) {
+    console.error('Error fetching Hundekari pending LRs:', error);
+    res.status(500).json({ success: false, message: 'Server Error' });
+  }
+};
+
+exports.createHundekariPayment = async (req, res) => {
+  try {
+    const firmId = req.firm_id;
+    const { payment_no, payment_date, hundekari_id, payment_mode, ledger_id, amount, ref_no, remarks, lr_ids } = req.body;
+
+    if (!payment_no || !payment_date || !hundekari_id || !payment_mode || !amount || !Array.isArray(lr_ids)) {
+      return res.status(400).json({ success: false, message: 'Missing required fields' });
+    }
+
+    const connection = await db.getConnection();
+    await connection.beginTransaction();
+
+    try {
+      const [insertResult] = await connection.query(`
+        INSERT INTO Hundekari_Payments (firm_id, payment_no, payment_date, hundekari_id, payment_mode, ledger_id, amount, ref_no, remarks, created_by)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `, [firmId, payment_no, payment_date, hundekari_id, payment_mode, ledger_id || null, amount, ref_no || null, remarks || null, req.user?.id || 1]);
+      
+      const paymentId = insertResult.insertId;
+
+      if (lr_ids.length > 0) {
+        await connection.query(`
+          UPDATE Unlinked_LRs 
+          SET hundekari_payment_status = 'PAID', hundekari_payment_id = ? 
+          WHERE firm_id = ? AND id IN (?)
+        `, [paymentId, firmId, lr_ids]);
+      }
+
+      await connection.commit();
+      connection.release();
+      res.json({ success: true, message: 'Hundekari Payment Saved', payment_id: paymentId });
+    } catch (err) {
+      await connection.rollback();
+      connection.release();
+      throw err;
+    }
+  } catch (error) {
+    console.error('Error creating Hundekari Payment:', error);
+    res.status(500).json({ success: false, message: 'Server Error' });
+  }
+};
+
+exports.getHundekariPayments = async (req, res) => {
+  try {
+    const firmId = req.firm_id;
+    const [rows] = await db.query(`
+      SELECT 
+        hp.id,
+        hp.payment_no,
+        DATE_FORMAT(hp.payment_date, '%d/%m/%Y') as payment_date,
+        h.hundekari_name,
+        hp.amount,
+        hp.payment_mode,
+        hp.ref_no,
+        hp.remarks
+      FROM Hundekari_Payments hp
+      JOIN Hundekari h ON hp.hundekari_id = h.id
+      WHERE hp.firm_id = ?
+      ORDER BY hp.payment_date DESC, hp.id DESC
+      LIMIT 100
+    `, [firmId]);
+    res.json(rows);
+  } catch (error) {
+    console.error('Error fetching Hundekari payments:', error);
+    res.status(500).json({ success: false, message: 'Server Error' });
+  }
+};

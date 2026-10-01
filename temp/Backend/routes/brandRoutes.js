@@ -1,0 +1,17 @@
+const express = require('express');
+const router = express.Router();
+const brandController = require('../controllers/brandController');
+const { authenticateToken } = require('../middleware/authMiddleware');
+const { tenantMiddleware } = require('../middleware/tenantMiddleware');
+const { requirePermission } = require('../middleware/rbacMiddleware');
+
+router.use(authenticateToken);
+router.use(tenantMiddleware);
+
+router.get('/', requirePermission('inventory', 'read'), brandController.getAll);
+router.get('/:id', requirePermission('inventory', 'read'), brandController.getById);
+router.post('/', requirePermission('inventory', 'write'), brandController.create);
+router.put('/:id', requirePermission('inventory', 'write'), brandController.update);
+router.delete('/:id', requirePermission('inventory', 'delete'), brandController.delete);
+
+module.exports = router;
