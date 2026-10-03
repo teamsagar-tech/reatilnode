@@ -242,6 +242,32 @@ export default function BrandMaster() {
                     <InputRow id="input-name" label="Name" value={formData.name} onChange={(v: string) => setFormData({...formData, name: v})} />
                     <InputRow label="Short Name" value={formData.shortName} onChange={(v: string) => setFormData({...formData, shortName: v})} />
                     </div>
+                    
+                    {/* Column 2: Connected Parties */}
+                    <div className="w-[60%] flex flex-col gap-1 pl-4 overflow-y-auto pb-4 custom-scrollbar">
+                      <SectionTitle>Connected Parties</SectionTitle>
+                      <div className="flex flex-col gap-1">
+                        {(() => {
+                           const connected = parties.filter(p => {
+                             try {
+                               const bList = typeof p.brands === 'string' ? JSON.parse(p.brands) : (p.brands || []);
+                               return bList.some((b: any) => (b.name || '').toLowerCase() === (formData.name || '').toLowerCase());
+                             } catch (e) { return false; }
+                           });
+                           
+                           if (connected.length === 0) {
+                             return <div className="text-[11px] font-medium text-slate-500 italic">No parties connected to this brand yet.</div>;
+                           }
+                           
+                           return connected.map(p => (
+                             <div key={p.id} className="bg-[#eef5ed] border border-[#a3c3be] px-2 py-1 text-[11px] font-bold text-slate-800 shadow-[inset_1px_1px_0_rgba(255,255,255,0.8)] flex items-center justify-between">
+                               <span>{p.party_name || p.name}</span>
+                               <span className="text-[9px] text-slate-500 uppercase">{p.type || 'Party'}</span>
+                             </div>
+                           ));
+                        })()}
+                      </div>
+                    </div>
 
                   </div>
                   

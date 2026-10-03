@@ -32,6 +32,28 @@ const SectionTitle = ({ children }: { children: React.ReactNode }) => (
     </div>
   );
 
+  const SelectRow = ({ label, value, onChange, options, width = 'flex-1', id, onBlur, onKeyDown, onFocus }: any) => (
+    <div className="flex items-center mb-[2px] relative">
+      <div className="w-[110px] text-slate-800 font-bold text-[11px] text-right pr-2 leading-tight">
+        {label}
+      </div>
+      <select 
+        id={id}
+        className={`bg-white border border-slate-400 px-1 py-[2px] text-[12px] font-bold text-black focus:bg-[#ffffe0] focus:outline-none focus:border-slate-800 ${width}`}
+        value={value || ''}
+        onChange={e => onChange(e.target.value)}
+        onBlur={onBlur}
+        onFocus={onFocus}
+        onKeyDown={onKeyDown}
+      >
+        <option value=""></option>
+        {options.map((opt: string) => (
+          <option key={opt} value={opt}>{opt}</option>
+        ))}
+      </select>
+    </div>
+  );
+
 export default function ItemMaster() {
   const navigate = useNavigate();
   const [showResetConfirm, setShowResetConfirm] = useState(false);
@@ -50,7 +72,7 @@ export default function ItemMaster() {
   const [selectedIndex, setSelectedIndex] = useState(0);
 
   const fetchItems = () => {
-    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/items`, {
+    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/item`, {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     })
     .then(res => res.json())
@@ -143,7 +165,7 @@ export default function ItemMaster() {
     }
 
     try {
-      const url = editId ? `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/items/${editId}` : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/items`;
+      const url = editId ? `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/item/${editId}` : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/item`;
       const method = editId ? 'PUT' : 'POST';
 
       const response = await fetch(url, {
@@ -372,7 +394,13 @@ export default function ItemMaster() {
                     </InputRow>
                     <InputRow id="input-hsnsacCode" label="Hsnsac Code" value={formData.hsnsacCode} onChange={(v: string) => setFormData({...formData, hsnsacCode: v})} onKeyDown={(e: any) => handleFieldKeyDown(e, 'input-gstPercent')} />
                     <InputRow id="input-gstPercent" label="Gst Percent" value={formData.gstPercent} onChange={(v: string) => setFormData({...formData, gstPercent: v})} onKeyDown={(e: any) => handleFieldKeyDown(e, 'input-defaultUnitType')} />
-                    <InputRow id="input-defaultUnitType" label="Default Unit Type" value={formData.defaultUnitType} onChange={(v: string) => setFormData({...formData, defaultUnitType: v})} />
+                    <SelectRow 
+                      id="input-defaultUnitType" 
+                      label="Default Unit Type" 
+                      value={formData.defaultUnitType} 
+                      onChange={(v: string) => setFormData({...formData, defaultUnitType: v})} 
+                      options={['nos', 'pcs', 'box', 'dozon', 'mtr']}
+                    />
                     </div>
 
                   </div>

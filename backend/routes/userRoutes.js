@@ -12,6 +12,9 @@ router.post('/', userController.createUser);
 router.put('/:id', userController.updateUser);
 router.put('/:id/permissions', userController.updateUserPermissions);
 router.put('/:id/role', userController.updateUserRole);
+router.put('/:id/status', userController.updateUserStatus);
+router.post('/verify-otp', userController.verifyEmailOtp);
 router.put('/:id/password', userController.updateUserPassword);
+router.delete('/:id', userController.deleteUser);
 
 module.exports = router;

@@ -54,3 +54,35 @@ For the SaaS authorization system to work, every new page must be tracked in the
 - The single source of truth for the Auth/RBAC tree is the `AVAILABLE_MODULES` array inside `FrontEnd/src/pages/superadmin/TenantUsers.tsx`.
 - Whenever you create a new page, you MUST append its ID and Label into the correct `submodules -> pages` array in `TenantUsers.tsx`.
 - Example: If you build a `Tax Config` page, you must add `{ id: 'taxConfig', label: 'Tax Config' }` under the `masters -> config` submodule in `AVAILABLE_MODULES`.
+
+## 6. Escape Navigation & Global Confirmation Dialog
+To maintain the rapid, keyboard-first Tally UX across all master and data entry pages:
+- You MUST listen for the `Escape` key (`e.key === 'Escape'`).
+- If there is unsaved data in the form, you MUST intercept the navigation and use the global `useConfirmStore` to prompt the user before exiting.
+- **Implementation Snippet:**
+  ```javascript
+  import { useConfirmStore } from '../../../store/useConfirmStore';
+  
+  const { showConfirm, isOpen } = useConfirmStore();
+  
+  useEffect(() => {
+    if (isOpen) return; // Prevent background shortcuts when dialog is open
+    
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        const hasUnsavedData = mode === 'create' && Object.keys(formData).length > 0;
+        
+        if (hasUnsavedData) {
+          showConfirm('Quit without saving?', 'You have unsaved changes. Are you sure you want to quit?', () => {
+             // Logic to reset form or navigate away
+          });
+        } else {
+           // Direct navigate or reset
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, showConfirm, mode, formData]);
+  ```

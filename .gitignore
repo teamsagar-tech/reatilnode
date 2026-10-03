@@ -4,3 +4,7 @@ dist/
 .DS_Store
 .agents/plans/*/.system_generated/
 .agents/conversations/
+
+# Google Cloud Credentials
+Backend/config/google-credentials.json
+

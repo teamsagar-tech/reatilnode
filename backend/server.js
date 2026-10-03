@@ -16,6 +16,7 @@ const partyRoutes = require('./routes/partyRoutes');
 const firmRoutes = require('./routes/firmRoutes');
 const locationRoutes = require('./routes/locationRoutes');
 const userRoutes = require('./routes/userRoutes');
+const logRoutes = require('./routes/logRoutes');
 const ticketRoutes = require('./routes/ticketRoutes');
 const purchaseInvoiceRoutes = require('./routes/purchaseInvoiceRoutes');
 const purchaseOrderRoutes = require('./routes/purchaseOrderRoutes');
@@ -28,6 +29,9 @@ const returnsRoutes = require('./routes/returnsRoutes');
 const cutRoutes = require('./routes/cutRoutes');
 
 const app = express();
+
+// Initialize Daily Cron Jobs
+require('./cron/dailyReport').initCronJobs();
 
 const db = require('./config/db');
 (async () => {
@@ -82,11 +86,30 @@ const db = require('./config/db');
 })();
 
 // Global Middleware
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:5174',
+  'https://app.retailnode.in',
+  'https://app2.retailnode.in',
+  'https://retailnode.in',
+  'https://www.retailnode.in',
+  'https://onevastra.technfest.com',
+  'https://ovapi.technfest.com'
+];
+
 app.use(cors({
-  origin: true,
+  origin: function (origin, callback) {
+    // allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) === -1) {
+      const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+      return callback(new Error(msg), false);
+    }
+    return callback(null, true);
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept']
 }));
 app.use(express.json());
 
@@ -103,13 +126,14 @@ app.use('/api/masters/size-groups', sizeGroupRoutes);
 app.use('/api/masters/category', categoryRoutes);
 app.use('/api/masters/location', locationRoutes);
 app.use('/api/masters/generic', genericMasterRoutes);
-app.use('/api/items', itemRoutes);
+app.use('/api/masters/item', itemRoutes);
 app.use('/api/inventory', inventoryRoutes);
 app.use('/api/masters/party', partyRoutes);
 app.use('/api/vendors', vendorRoutes);
 app.use('/api/customers', customerRoutes);
 app.use('/api/roles', roleRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/logs', logRoutes);
 app.use('/api/user-series', require('./routes/userSeriesRoutes'));
 app.use('/api/tickets', ticketRoutes);
 app.use('/api/purchase-invoices', purchaseInvoiceRoutes);
@@ -120,6 +144,7 @@ app.use('/api/label-print', labelPrintRoutes);
 app.use('/api/sales', salesRoutes);
 app.use('/api/manage-receivable', manageReceivableRoutes);
 app.use('/api/returns', returnsRoutes);
+app.use('/api/notifications', require('./routes/notificationRoutes'));
 
 // Healthcheck endpoint
 app.get('/api/health', (req, res) => {

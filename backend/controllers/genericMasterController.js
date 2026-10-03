@@ -1,4 +1,5 @@
 const db = require('../config/db');
+const { logAction } = require('../utils/logger');
 const { normalizeMasterName } = require('../utils/normalization');
 
 // Allowed list mapping URL paths to DB Tables
@@ -116,6 +117,7 @@ exports.create = async (req, res) => {
       }
 
     const [result] = await db.execute(query, params);
+    await logAction(req.firm_id, req.user.id, 'CREATE', tableName, `Created ${tableName} ID #${result.insertId}`, req.ip, req.body);
     res.status(201).json({ message: 'Created successfully', id: result.insertId });
   } catch (error) {
     console.error(`Error creating ${tableName}:`, error);

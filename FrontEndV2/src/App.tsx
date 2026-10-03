@@ -9,10 +9,10 @@ import Contact from "./pages/Contact"
 import ImpersonateAuth from "./pages/auth/ImpersonateAuth"
 import DashboardLayout from "./components/layout/DashboardLayout"
 import Dashboard from "./pages/Dashboard"
-import PurchaseInvoice from "./pages/inventory/PurchaseInvoice"
 import PointOfSales from "./pages/sales/PointOfSales/PointOfSales"
 
 // Purchase Orders
+import PurchaseInvoice from "./pages/inventory/PurchaseInvoice";
 
 // Stock Transfer
 import StockTransferList from "./pages/inventory/StockTransfer/StockTransferList"
@@ -122,6 +122,8 @@ import ProtectedRoute from "./components/auth/ProtectedRoute";
 import ToastContainer from "./components/ui/ToastContainer";
 import ConfirmDialog from "./components/ui/ConfirmDialog";
 import NetworkStatusIndicator from "./components/NetworkStatusIndicator";
+import NotificationsPage from "./pages/NotificationsPage";
+
 function App() {
   useGlobalKeyboard();
 
@@ -140,9 +142,11 @@ function App() {
           <Route path="/impersonate-auth" element={<ImpersonateAuth />} />
           
           <Route element={<ProtectedRoute />}>
-            <Route path="/dashboard" element={<Dashboard />} />
+            <Route element={<DashboardLayout />}>
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/notifications" element={<NotificationsPage />} />
 
-          <Route path="/purchase-order" element={<PurchaseOrder />} />
+              <Route path="/purchase-order" element={<PurchaseOrder />} />
 
           <Route path="/purchase-invoice" element={<PurchaseInvoice />} />
           <Route path="/inventory/price-list-import" element={<PriceListImport />} />
@@ -260,6 +264,7 @@ function App() {
           <Route path="/masters/firm" element={<FirmMaster />} />
           <Route path="/masters/chargestype" element={<ChargesTypeMaster />} />
           <Route path="/masters/itempercentage" element={<ItemPercentageMaster />} />
+            </Route>
           </Route>
           
           <Route path="*" element={<Navigate to="/dashboard" replace />} />

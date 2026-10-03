@@ -1,4 +1,5 @@
 const db = require('../config/db');
+const { sendEmailNotification } = require('../services/notificationService');
 
 exports.updateUserPermissions = async (req, res) => {
   const { id } = req.params;
@@ -133,7 +134,34 @@ exports.createUser = async (req, res) => {
       }
     }
 
-    res.status(201).json({ id: userId, message: 'User created successfully' });
+    // Generate and send OTP for email verification (if it's a real email)
+    if (email && !email.includes('@internal.local')) {
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+      
+      await db.execute(
+        'INSERT INTO OtpVerification (mobile_no, otp, expires_at) VALUES (?, ?, ?)',
+        [email.trim(), otp, expiresAt]
+      );
+
+      const htmlContent = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 10px;">
+          <h2 style="color: #0f172a;">Welcome to RetailNode!</h2>
+          <p style="color: #334155; line-height: 1.6;">Hello ${name},</p>
+          <p style="color: #334155; line-height: 1.6;">Your account has been created successfully. To verify your email address, please use the following OTP:</p>
+          <div style="background-color: #f8fafc; padding: 15px; border-radius: 8px; text-align: center; margin: 20px 0;">
+            <span style="font-size: 24px; font-weight: bold; color: #4338ca; letter-spacing: 4px;">${otp}</span>
+          </div>
+          <p style="color: #64748b; font-size: 14px;">This OTP is valid for 1 hour.</p>
+        </div>
+      `;
+      
+      sendEmailNotification(email.trim(), 'Verify Your RetailNode Account', htmlContent).catch(err => {
+        console.error('Failed to send welcome OTP email:', err);
+      });
+    }
+
+    res.status(201).json({ id: userId, message: 'User created successfully. Verification OTP sent if applicable.' });
   } catch (error) {
     if (error.code === 'ER_DUP_ENTRY') {
       return res.status(400).json({ error: 'Email already exists' });
@@ -207,5 +235,82 @@ exports.getUsers = async (req, res) => {
   } catch (error) {
     console.error('Error fetching users:', error);
     res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+exports.deleteUser = async (req, res) => {
+  const { id } = req.params;
+  try {
+    if (req.user.role !== 'superadmin') {
+      const [userRows] = await db.execute('SELECT firm_id FROM Users WHERE id = ?', [id]);
+      if (userRows.length === 0) return res.status(404).json({ error: 'User not found' });
+      if (userRows[0].firm_id !== req.user.firm_id) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+    }
+    
+    // Soft Delete Implementation
+    await db.execute('UPDATE Users SET is_active = 0, deleted_at = NOW() WHERE id = ?', [id]);
+    await db.execute('UPDATE TenantUsers SET is_active = 0, deleted_at = NOW() WHERE user_id = ?', [id]).catch(() => {});
+    
+    res.json({ message: 'User deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting user:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+exports.verifyEmailOtp = async (req, res) => {
+  const { email, otp } = req.body;
+  if (!email || !otp) return res.status(400).json({ error: 'Email and OTP required' });
+
+  try {
+    const [rows] = await db.execute(
+      'SELECT * FROM OtpVerification WHERE mobile_no = ? AND otp = ? AND expires_at > NOW() ORDER BY created_at DESC LIMIT 1',
+      [email.trim(), otp]
+    );
+
+    if (rows.length === 0) {
+      return res.status(400).json({ error: 'Invalid or expired OTP' });
+    }
+
+    // Mark email as verified
+    await db.execute('UPDATE Users SET email_verified = TRUE WHERE email = ?', [email.trim()]);
+    
+    // Cleanup OTP
+    await db.execute('DELETE FROM OtpVerification WHERE id = ?', [rows[0].id]);
+
+    res.json({ message: 'Email verified successfully' });
+  } catch (error) {
+    console.error('Error verifying OTP:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+exports.updateUserStatus = async (req, res) => {
+  try {
+    if (req.user.role !== 'superadmin' && req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Only admins can change user status' });
+    }
+
+    const { id } = req.params;
+    const { is_active } = req.body;
+
+    if (is_active === undefined) {
+      return res.status(400).json({ error: 'is_active is required' });
+    }
+
+    // Verify firm access if not superadmin
+    if (req.user.role !== 'superadmin') {
+      const [userRows] = await db.execute('SELECT firm_id FROM Users WHERE id = ?', [id]);
+      if (userRows.length === 0 || userRows[0].firm_id !== req.user.firm_id) {
+        return res.status(403).json({ error: 'Unauthorized to modify this user' });
+      }
+    }
+
+    await db.execute('UPDATE Users SET is_active = ? WHERE id = ?', [is_active ? 1 : 0, id]);
+    res.json({ message: 'User status updated successfully' });
+  } catch (err) {
+    console.error('Error updating user status:', err);
+    res.status(500).json({ error: 'Server error while updating user status' });
   }
 };

@@ -63,6 +63,7 @@ import Payroll from "./pages/hr/Payroll/Payroll";
 import ExpenseEntries from "./pages/hr/Payroll/ExpenseEntries";
 import ExpenseDashboard from "./pages/hr/Payroll/ExpenseDashboard";
 import TenantUsers from "./pages/superadmin/TenantUsers";
+import AuditLogs from "./pages/superadmin/AuditLogs";
 import HSNSalesReport from "./pages/reports/Sales/HSNSalesReport";
 import DepartmentSalesReport from "./pages/reports/Sales/DepartmentSalesReport";
 import SalesmanPerformanceReport from "./pages/reports/Sales/SalesmanPerformanceReport";
@@ -89,10 +90,13 @@ import AdminVendorPOTracker from "./pages/settings/Portals/AdminVendorPOTracker"
 import SectionMaster from "./pages/masters/inventory/SectionMaster"
 import StyleMaster from "./pages/masters/inventory/StyleMaster"
 import SubStyleMaster from "./pages/masters/inventory/SubStyleMaster"
+import TaxonomyMaster from "./pages/masters/inventory/TaxonomyMaster"
 import DesignMaster from "./pages/masters/inventory/DesignMaster"
 import SizeMaster from "./pages/masters/inventory/SizeMaster"
 import SizeGroupMaster from "./pages/masters/inventory/SizeGroupMaster"
+import SizeSetMaster from "./pages/masters/inventory/SizeSetMaster"
 import ColorMaster from "./pages/masters/inventory/ColorMaster"
+import CutMaster from "./pages/masters/inventory/CutMaster"
 import MaterialMaster from "./pages/masters/inventory/MaterialMaster"
 import HSNSACMaster from "./pages/masters/inventory/HSNSACMaster"
 import PartyMaster from "./pages/masters/accounting/PartyMaster"
@@ -107,10 +111,13 @@ import MastersHub from "./pages/masters/MastersHub"
 
 import LRList from "./pages/purchase/LRList"
 import ManageReceivable from "./pages/inventory/ManageReceivable/ManageReceivable"
+import NotificationsPage from "./pages/NotificationsPage"
+import ConfirmDialog from "./components/ui/ConfirmDialog"
 
 function App() {
   return (
     <HelmetProvider>
+      <ConfirmDialog />
       <Router>
         <Routes>
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
@@ -123,6 +130,9 @@ function App() {
           <Route element={<DashboardLayout />}>
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/superadmin/firms/:id/users" element={<TenantUsers />} />
+            <Route path="/superadmin/audit-logs" element={<AuditLogs />} />
+            
+            <Route path="/notifications" element={<NotificationsPage />} />
 
             <Route path="/purchase-order" element={<PurchaseOrder />} />
 
@@ -206,10 +216,13 @@ function App() {
             <Route path="/masters/section" element={<SectionMaster />} />
             <Route path="/masters/style" element={<StyleMaster />} />
             <Route path="/masters/substyle" element={<SubStyleMaster />} />
+            <Route path="/masters/taxonomy" element={<TaxonomyMaster />} />
             <Route path="/masters/design" element={<DesignMaster />} />
             <Route path="/masters/size" element={<SizeMaster />} />
             <Route path="/masters/size-group" element={<SizeGroupMaster />} />
+            <Route path="/masters/size-sets" element={<SizeSetMaster />} />
             <Route path="/masters/color" element={<ColorMaster />} />
+            <Route path="/masters/cut" element={<CutMaster />} />
             <Route path="/masters/material" element={<MaterialMaster />} />
             <Route path="/masters/hsnsac" element={<HSNSACMaster />} />
             

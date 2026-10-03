@@ -17,13 +17,16 @@
     "csv-parser": "^3.2.1",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
+    "googleapis": "^182.0.0",
     "jsonwebtoken": "^9.0.3",
     "mongodb": "^7.6.0",
     "multer": "^2.3.0",
     "mysql2": "^3.24.2",
+    "node-cron": "^4.6.0",
     "qrcode": "^1.5.4",
-    "resend": "^6.24.0",
+    "resend": "^6.32.0",
     "speakeasy": "^2.0.0",
+    "web-push": "^3.6.7",
     "xlsx": "^0.18.5"
   }
 }

@@ -30,47 +30,69 @@ export default function TermsOfService() {
               </div>
               <div>
                 <h1 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">Terms of Service</h1>
-                <p className="text-slate-500 font-medium mt-1">Last Updated: August 26, 2026</p>
+                <p className="text-slate-500 font-medium mt-1">Last Updated: October 2, 2026</p>
               </div>
             </div>
 
             <div className="prose prose-slate prose-emerald max-w-none prose-headings:font-bold prose-headings:tracking-tight prose-a:font-semibold">
               <p className="text-lg text-slate-600 leading-relaxed font-medium">
-                Please read these Terms of Service completely before using RetailNode. This document acts as a legally binding contract establishing the terms under which you may use our ERP platform.
+                Please read these Terms of Service ("Terms", "Terms of Service") carefully before using the RetailNode ERP platform operated by our company. This document forms a legally binding contract establishing the conditions under which you may access and utilize our services.
               </p>
 
               <h2 className="text-2xl mt-8 mb-4 flex items-center">
                 <CheckCircle className="w-6 h-6 mr-3 text-emerald-500" />
-                1. Acceptance of Terms
+                1. Acceptance & Scope of Terms
               </h2>
-              <p>By registering for and using RetailNode, you agree to be bound by these Terms of Service. If you do not agree with any part of these terms, you must not use our services.</p>
+              <p>By registering for an account, accessing, or utilizing RetailNode, you explicitly agree to be bound by these Terms of Service and all applicable laws. If you are entering into these Terms on behalf of a company or other legal entity, you represent that you have the authority to bind such entity to these Terms. If you do not agree with any part of these terms, you must cease use of the platform immediately.</p>
 
               <h2 className="text-2xl mt-8 mb-4 flex items-center">
                 <AlertTriangle className="w-6 h-6 mr-3 text-emerald-500" />
-                2. SaaS Multi-Tenancy & Data Ownership
+                2. SaaS Multi-Tenancy, Data Ownership, & Licensing
               </h2>
-              <p>RetailNode is a cloud-based Software as a Service (SaaS). </p>
+              <p>RetailNode is provided as a Software as a Service (SaaS). We grant you a limited, non-exclusive, non-transferable, and revocable license to access and use the platform strictly in accordance with these Terms.</p>
               <ul>
-                <li><strong>Data Ownership:</strong> You retain all rights and ownership to the business data you input into RetailNode. We claim no intellectual property rights over the material you provide to the service.</li>
-                <li><strong>Tenant Isolation:</strong> Our systems are designed to strictly isolate your data from other clients (Firms). However, you are responsible for maintaining the confidentiality of your login credentials.</li>
+                <li><strong>Data Ownership:</strong> You retain complete ownership and intellectual property rights to all business data, customer records, and inventory metrics you input into RetailNode. We claim no ownership over the material you provide.</li>
+                <li><strong>Tenant Isolation & Security:</strong> Our architecture guarantees strict multi-tenant isolation. However, you are solely responsible for safeguarding your login credentials and ensuring that Role-Based Access Control (RBAC) within your firm is configured appropriately.</li>
+                <li><strong>Data Backup:</strong> While we perform regular automated backups for disaster recovery purposes, you are advised to maintain your own records. We are not liable for accidental data loss caused by user error.</li>
               </ul>
 
-              <h2 className="text-2xl mt-8 mb-4">3. Acceptable Use</h2>
-              <p>You agree not to use the platform in a way that:</p>
+              <h2 className="text-2xl mt-8 mb-4">3. Acceptable Use Policy</h2>
+              <p>You agree to use the platform solely for lawful business purposes. You explicitly agree <strong>not</strong> to:</p>
               <ul>
-                <li>Violates any local, state, national, or international laws.</li>
-                <li>Attempts to bypass or break any security mechanism, tenant isolation, or rate limiting applied to the service.</li>
-                <li>Involves reverse engineering or attempting to extract the source code of the software.</li>
+                <li>Use the service in any way that violates any applicable local, national, or international laws or regulations.</li>
+                <li>Attempt to probe, scan, or test the vulnerability of the system, or bypass any security mechanism, rate limiting, or tenant isolation protocol.</li>
+                <li>Reverse engineer, decompile, or attempt to extract the source code of the RetailNode software.</li>
+                <li>Use the platform to distribute malware, spam, or engage in any activity that disrupts the performance of the servers for other tenants.</li>
+                <li>Resell, sublicense, or share your account access with unauthorized third parties.</li>
               </ul>
 
-              <h2 className="text-2xl mt-8 mb-4">4. Service Availability & Support</h2>
-              <p>While we strive for 99.9% uptime, we do not guarantee that the service will be completely uninterrupted. Scheduled maintenance will be communicated in advance. Support is provided as per your Service Level Agreement (SLA).</p>
+              <h2 className="text-2xl mt-8 mb-4">4. Subscription, Billing, & Payments</h2>
+              <p>RetailNode is a subscription-based service. By subscribing, you agree to pay all applicable fees associated with your chosen plan.</p>
+              <ul>
+                <li><strong>Payment Terms:</strong> Subscription fees are billed in advance on a recurring cycle (monthly or annually). All fees are non-refundable unless otherwise required by law.</li>
+                <li><strong>Upgrades & Downgrades:</strong> You may upgrade your plan at any time; prorated charges will apply. Downgrades will take effect at the start of the next billing cycle.</li>
+                <li><strong>Taxes:</strong> You are responsible for all applicable taxes, levies, or duties imposed by taxing authorities associated with your purchases.</li>
+              </ul>
 
-              <h2 className="text-2xl mt-8 mb-4">5. Termination</h2>
-              <p>We reserve the right to suspend or terminate your access to the service immediately, without prior notice, if you breach these Terms. Upon termination, your right to use the Service will immediately cease.</p>
+              <h2 className="text-2xl mt-8 mb-4">5. Service Availability (SLA) & Maintenance</h2>
+              <p>We strive to maintain a 99.9% uptime for the RetailNode platform. However, the service is provided on an "AS IS" and "AS AVAILABLE" basis. We reserve the right to perform scheduled maintenance, during which the service may be temporarily unavailable. We will endeavor to provide advance notice for significant maintenance windows.</p>
 
-              <h2 className="text-2xl mt-8 mb-4">6. Contact Information</h2>
-              <p>If you have any questions or concerns regarding these terms, please contact our legal and support team at:</p>
+              <h2 className="text-2xl mt-8 mb-4">6. Limitation of Liability</h2>
+              <p>To the maximum extent permitted by applicable law, RetailNode, its directors, employees, partners, and suppliers shall not be liable for any indirect, incidental, special, consequential, or punitive damages, including without limitation, loss of profits, data, use, goodwill, or other intangible losses, resulting from:</p>
+              <ul>
+                <li>Your access to or use of or inability to access or use the Service.</li>
+                <li>Any conduct or content of any third party on the Service.</li>
+                <li>Unauthorized access, use, or alteration of your transmissions or content.</li>
+              </ul>
+
+              <h2 className="text-2xl mt-8 mb-4">7. Termination</h2>
+              <p>We reserve the right to suspend or terminate your account and access to the Service immediately, without prior notice or liability, under our sole discretion, for any reason whatsoever, including but not limited to a breach of these Terms. Upon termination, your right to use the Service will immediately cease. You may terminate your account at any time by contacting support or using the billing dashboard.</p>
+
+              <h2 className="text-2xl mt-8 mb-4">8. Modifications to Terms</h2>
+              <p>We reserve the right, at our sole discretion, to modify or replace these Terms at any time. If a revision is material, we will provide at least 30 days' notice prior to any new terms taking effect. By continuing to access or use our Service after those revisions become effective, you agree to be bound by the revised terms.</p>
+
+              <h2 className="text-2xl mt-8 mb-4">9. Contact Information</h2>
+              <p>If you have any questions or require legal clarification regarding these terms, please contact our legal and support team at:</p>
               <div className="bg-slate-50 p-6 rounded-xl border border-slate-200 mt-4">
                 <p className="font-bold text-slate-800 m-0">RetailNode Legal Department</p>
                 <p className="text-emerald-600 font-semibold m-0 mt-1">

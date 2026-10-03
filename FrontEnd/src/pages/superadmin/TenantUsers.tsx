@@ -12,6 +12,7 @@ interface User {
   role: string;
   role_id?: number | null;
   is_totp_enabled: number;
+  is_active: number | boolean;
   created_at: string;
 }
 
@@ -29,13 +30,16 @@ const AVAILABLE_MODULES = [
           { id: 'brandMaster', label: 'Brand Master' },
           { id: 'categoryMaster', label: 'Category Master' },
           { id: 'subCategory', label: 'SubCategory' },
+          { id: 'taxonomyMaster', label: 'Taxonomy Master' },
           { id: 'department', label: 'Department' },
           { id: 'section', label: 'Section' },
           { id: 'style', label: 'Style' },
           { id: 'subStyle', label: 'Sub-Style' },
           { id: 'designMaster', label: 'Design Master' },
           { id: 'sizeMaster', label: 'Size Master' },
+          { id: 'sizeSetMaster', label: 'Size Set' },
           { id: 'colorMaster', label: 'Color Master' },
+          { id: 'cutMaster', label: 'Cut Master' },
           { id: 'material', label: 'Material' },
           { id: 'hsnSac', label: 'HSN/SAC' }
         ]
@@ -303,6 +307,43 @@ export default function TenantUsers() {
     }
   };
 
+  const handleDeleteUser = async (userId: number) => {
+    if (!window.confirm("Are you sure you want to delete this user? This will remove their access but keep their historical data intact.")) return;
+    try {
+      const token = (sessionStorage.getItem('token') || localStorage.getItem('token'));
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/users/${userId}`, {
+        method: "DELETE",
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      if (!res.ok) throw new Error("Failed to delete user");
+      alert("User deleted successfully.");
+      setUsers(users.filter(u => u.id !== userId));
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
+  const handleToggleUserStatus = async (userId: number, currentStatus: number | boolean) => {
+    const action = currentStatus ? "disable" : "enable";
+    if (!window.confirm(`Are you sure you want to ${action} this user?`)) return;
+    try {
+      const token = (sessionStorage.getItem('token') || localStorage.getItem('token'));
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/users/${userId}/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ is_active: currentStatus ? 0 : 1 })
+      });
+      if (!res.ok) throw new Error(`Failed to ${action} user`);
+      alert(`User ${action}d successfully.`);
+      setUsers(users.map(u => u.id === userId ? { ...u, is_active: currentStatus ? 0 : 1 } : u));
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
   const currentUserStr = (sessionStorage.getItem('user') || localStorage.getItem('user'));
   const currentUser = currentUserStr ? JSON.parse(currentUserStr) : null;
   const isSuperAdmin = currentUser?.role === 'superadmin';
@@ -529,6 +570,12 @@ export default function TenantUsers() {
                             </button>
                             <button onClick={() => handleImpersonate(user.id)} className="flex items-center gap-1 text-xs font-bold text-emerald-600 hover:text-emerald-800">
                               <LogIn className="w-3 h-3" /> Login As
+                            </button>
+                            <button onClick={() => handleToggleUserStatus(user.id, user.is_active)} className={`flex items-center gap-1 text-xs font-bold ${user.is_active ? 'text-orange-500 hover:text-orange-700' : 'text-green-600 hover:text-green-800'}`}>
+                              {user.is_active ? 'Disable' : 'Enable'}
+                            </button>
+                            <button onClick={() => handleDeleteUser(user.id)} className="flex items-center gap-1 text-xs font-bold text-rose-600 hover:text-rose-800">
+                              Delete
                             </button>
                           </div>
                         </td>

@@ -326,10 +326,10 @@ export default function MasterCreationModal({ isOpen, onClose, onSave, masterTyp
       const finalBrandId = extra1 === initialBrand ? initialBrandId : null;
       data = { name, brand: extra1, brand_id: finalBrandId, hsn_code: extra2, tax_percent: extra3 ? parseFloat(extra3) : 0 };
       if (editId) {
-        endpoint = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/items/${editId}`;
+        endpoint = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/item/${editId}`;
         method = 'PUT';
       } else {
-        endpoint = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/items`;
+        endpoint = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/item`;
       }
     } else if (masterType === 'hsn') {
       data = { name, description: extra1, tax_percent: extra3 ? parseFloat(extra3) : 0 };

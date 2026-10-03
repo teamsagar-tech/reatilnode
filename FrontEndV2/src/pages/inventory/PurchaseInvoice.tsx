@@ -759,7 +759,7 @@ export default function PurchaseInvoice() {
 
   useEffect(() => {
     // Fetch Items
-    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/items`, {
+    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/item`, {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     })
     .then(res => res.json())
@@ -1744,7 +1744,7 @@ export default function PurchaseInvoice() {
            if (match) bId = match.id;
         }
 
-        const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/items`, {
+        const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/item`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
           body: JSON.stringify({

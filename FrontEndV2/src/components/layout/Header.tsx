@@ -133,7 +133,7 @@ export default function Header() {
       <div className="flex items-center gap-8">
         {/* Logo - Increased Size */}
         <Link to="/dashboard" className="flex items-center hover:opacity-90 transition-opacity">
-          <img src="/logo.svg" alt="RetailNode" className="h-9 w-auto" />
+          <img src="/logo.png" alt="RetailNode" className="h-[40px] w-auto object-contain" />
         </Link>
         
         {/* Desktop Navigation with Multi-level dropdowns */}

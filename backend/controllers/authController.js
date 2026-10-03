@@ -73,7 +73,7 @@ exports.login = async (req, res) => {
   try {
     const [rows] = await db.execute(
       `SELECT u.id, u.firm_id, u.name, u.email, u.mobile_no, u.password, u.role, u.role_id, 
-              u.is_totp_enabled, u.failed_login_attempts, u.locked_until, u.permissions_override, u.override_expires_at,
+              u.is_totp_enabled, u.failed_login_attempts, u.locked_until, u.permissions_override, u.override_expires_at, u.is_active,
               f.is_active AS firm_active, f.modules AS firm_modules,
               r.permissions AS role_permissions
        FROM Users u
@@ -88,6 +88,10 @@ exports.login = async (req, res) => {
     }
 
     const user = rows[0];
+
+    if (user.is_active === 0) {
+      return res.status(403).json({ error: 'Your account has been deactivated or deleted.' });
+    }
 
     if (user.role !== 'superadmin' && user.firm_active === 0) {
       return res.status(403).json({ error: 'Your firm has been suspended. Please contact support.' });

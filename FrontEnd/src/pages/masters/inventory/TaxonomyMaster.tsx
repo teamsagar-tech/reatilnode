@@ -504,7 +504,7 @@ export default function TaxonomyMaster() {
         onMerge={handleMerge}
       />
 
-      <div className='flex flex-col h-[calc(100vh-6rem)] font-sans selection:bg-indigo-100 w-full px-2 pt-2 pb-4'>
+      <div className='flex flex-col h-[calc(100vh-64px)] font-sans selection:bg-indigo-100 w-full px-2 pt-2 pb-2'>
         <div className='flex flex-1 gap-4 overflow-hidden'>
           
           {/* Main Container */}

@@ -1,0 +1,15 @@
+#!/usr/bin/expect -f
+set timeout 20
+set password "H-ABvSGw93024Lrs"
+
+# SCP the patch file
+spawn scp -o StrictHostKeyChecking=no /Users/ratan/.gemini/antigravity-ide/brain/688c4173-37f6-413d-b146-ebea0b40cdd8/scratch/patch_cors.js root@95.135.166.109:/tmp/patch_cors.js
+expect "*?assword:*"
+send "$password\r"
+expect eof
+
+# Run the patch and restart pm2
+spawn ssh -o StrictHostKeyChecking=no root@95.135.166.109 "node /tmp/patch_cors.js && cd /var/www/RetailNodeV2/Backend && pm2 restart all"
+expect "*?assword:*"
+send "$password\r"
+expect eof

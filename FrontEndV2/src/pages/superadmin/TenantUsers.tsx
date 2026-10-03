@@ -14,6 +14,7 @@ interface User {
   role: string;
   role_id?: number | null;
   is_totp_enabled: number;
+  is_active: number | boolean;
   created_at: string;
 }
 
@@ -305,6 +306,28 @@ export default function TenantUsers() {
     }
   };
 
+  const handleToggleUserStatus = async (userId: number, currentStatus: number | boolean) => {
+    const action = currentStatus ? "disable" : "enable";
+    const confirmed = await useConfirmStore.getState().confirmDialog(`Are you sure you want to ${action} this user?`);
+    if (!confirmed) return;
+    try {
+      const token = (sessionStorage.getItem('token') || localStorage.getItem('token'));
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/users/${userId}/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ is_active: currentStatus ? 0 : 1 })
+      });
+      if (!res.ok) throw new Error(`Failed to ${action} user`);
+      toast.success(`User ${action}d successfully`);
+      setUsers(users.map(u => u.id === userId ? { ...u, is_active: currentStatus ? 0 : 1 } : u));
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+  };
+
   const currentUserStr = (sessionStorage.getItem('user') || localStorage.getItem('user'));
   const currentUser = currentUserStr ? JSON.parse(currentUserStr) : null;
   const isSuperAdmin = currentUser?.role === 'superadmin';
@@ -539,6 +562,9 @@ export default function TenantUsers() {
                             </span>
                             <span onClick={async () => handleImpersonate(user.id)} className="underline cursor-pointer hover:text-[#12423d] flex items-center gap-1">
                               <LogIn className="w-3 h-3" /> Login As
+                            </span>
+                            <span onClick={() => handleToggleUserStatus(user.id, user.is_active)} className={`underline cursor-pointer flex items-center gap-1 ${user.is_active ? 'text-amber-600 hover:text-amber-800' : 'text-emerald-600 hover:text-emerald-800'}`}>
+                              {user.is_active ? 'Disable' : 'Enable'}
                             </span>
                           </td>
                         </tr>
