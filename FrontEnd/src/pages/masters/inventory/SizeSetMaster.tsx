@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import SearchableDropdown from '../../../components/SearchableDropdown';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { Search } from 'lucide-react';
@@ -127,17 +128,17 @@ export default function SizeSetMaster() {
   );
 
   const SelectGroup = ({ label, id, value, onChange, options, width = 'w-full' }: any) => (
-    <div className="flex flex-col gap-[2px] mb-2.5 group">
+    <div className="flex flex-col gap-[2px] mb-2.5 group w-full">
       <label htmlFor={id} className="text-[10px] font-bold text-slate-500 uppercase tracking-widest group-focus-within:text-indigo-600 transition-colors">{label}</label>
-      <select 
+      <SearchableDropdown
         id={id}
-        className={`bg-slate-50 border border-slate-200 px-2.5 py-1.5 text-xs font-bold text-slate-800 rounded-md shadow-sm focus:bg-white focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all hover:border-slate-300 ${width}`}
+        className={`bg-slate-50 border border-slate-200 px-2.5 py-1.5 text-xs font-bold text-slate-800 rounded-md shadow-sm focus:bg-white focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all hover:border-slate-300 w-full`}
         value={value || ''}
-        onChange={e => onChange(e.target.value)}
-      >
-        <option value="">Select...</option>
-        {options.map((opt: string) => <option key={opt} value={opt}>{opt}</option>)}
-      </select>
+        onChange={v => onChange(v)}
+        options={options}
+        placeholder={label}
+        width="100%"
+      />
     </div>
   );
 

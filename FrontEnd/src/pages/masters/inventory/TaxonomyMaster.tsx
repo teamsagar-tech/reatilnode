@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import SearchableDropdown from '../../../components/SearchableDropdown';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { Edit2, Merge, Trash2, X } from 'lucide-react';
@@ -127,30 +128,34 @@ const EditModal = ({ isOpen, item, type, departments, categories, onClose, onSav
               {itemType === 'category' ? (
                 <div className="flex flex-col gap-1.5 mt-2">
                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Belongs To Department</label>
-                  <select 
+                  <SearchableDropdown 
                     value={deptId}
-                    onChange={e => setDeptId(e.target.value)}
+                    onChange={v => {
+                      const d = departments.find((d: any) => d.name === v);
+                      if(d) setDeptId(d.id.toString());
+                    }}
+                    options={departments}
+                    displayKey="name"
+                    placeholder="-- SELECT DEPARTMENT --"
                     className="w-full bg-slate-50 border border-slate-200 px-3 py-2 text-xs font-bold text-slate-800 rounded-lg shadow-sm focus:bg-white focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all uppercase"
-                  >
-                    <option value="">-- SELECT DEPARTMENT --</option>
-                    {departments.map((d: any) => (
-                      <option key={d.id} value={d.id}>{d.name}</option>
-                    ))}
-                  </select>
+                    width="100%"
+                  />
                 </div>
               ) : (
                 <div className="flex flex-col gap-1.5 mt-2">
                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Belongs To Category</label>
-                  <select 
+                  <SearchableDropdown 
                     value={parentId}
-                    onChange={e => setParentId(e.target.value)}
+                    onChange={v => {
+                      const c = categories.filter((c:any) => !c.parent_id).find((c: any) => c.name === v);
+                      if(c) setParentId(c.id.toString());
+                    }}
+                    options={categories.filter((c:any) => !c.parent_id)}
+                    displayKey="name"
+                    placeholder="-- SELECT PARENT CATEGORY --"
                     className="w-full bg-slate-50 border border-slate-200 px-3 py-2 text-xs font-bold text-slate-800 rounded-lg shadow-sm focus:bg-white focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all uppercase"
-                  >
-                    <option value="">-- SELECT PARENT CATEGORY --</option>
-                    {categories.filter((c:any) => !c.parent_id).map((c: any) => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
-                  </select>
+                    width="100%"
+                  />
                 </div>
               )}
             </>
@@ -221,17 +226,18 @@ const MergeModal = ({ isOpen, sourceItem, type, categories, subCategories, onClo
           </div>
           <div className="flex flex-col gap-1.5">
             <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Select Target {typeName}:</label>
-            <select 
-              ref={selectRef}
+            <SearchableDropdown 
               value={targetId}
-              onChange={e => setTargetId(e.target.value)}
+              onChange={v => {
+                const c = availableTargets.find((c: any) => c.name === v);
+                if(c) setTargetId(c.id.toString());
+              }}
+              options={availableTargets}
+              displayKey="name"
+              placeholder="-- SELECT TARGET --"
               className="w-full bg-slate-50 border border-slate-200 px-3 py-2.5 text-xs font-bold text-slate-800 rounded-lg shadow-sm focus:bg-white focus:outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-100 transition-all uppercase"
-            >
-              <option value="">-- SELECT TARGET --</option>
-              {availableTargets.map((c: any) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </select>
+              width="100%"
+            />
           </div>
         </div>
         
