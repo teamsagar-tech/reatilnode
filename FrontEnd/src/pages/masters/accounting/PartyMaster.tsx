@@ -687,14 +687,14 @@ export default function PartyMaster() {
                   
                   <div className="flex items-center mb-[2px]">
                     <div className="w-[110px] text-slate-800 font-bold text-[11px] text-right pr-2 leading-tight">Type</div>
-                    <select 
+                    <SearchableDropdown
                       className="flex-1 bg-white border border-slate-400 px-1 py-[2px] text-[12px] font-bold text-black focus:bg-[#ffffe0] focus:outline-none focus:border-slate-800"
-                      value={formData.type} onChange={e => setFormData({...formData, type: e.target.value})}
-                    >
-                      <option>Sundry Debtor (Customer)</option>
-                      <option>Sundry Creditor (Vendor)</option>
-                      <option>Other</option>
-                    </select>
+                      value={formData.type}
+                      onChange={v => setFormData({...formData, type: v})}
+                      options={['Sundry Debtor (Customer)', 'Sundry Creditor (Vendor)', 'Other']}
+                      placeholder="Select Type"
+                      width="100%"
+                    />
                   </div>
                 </div>
               </div>
@@ -711,13 +711,14 @@ export default function PartyMaster() {
               
               <div className="flex items-center mb-[2px]">
                 <div className="w-[110px] text-slate-800 font-bold text-[11px] text-right pr-2 leading-tight">Account Type</div>
-                <select 
+                <SearchableDropdown
                   className="flex-1 bg-white border border-slate-400 px-1 py-[2px] text-[12px] font-bold text-black focus:bg-[#ffffe0] focus:outline-none focus:border-slate-800"
-                  value={formData.bankAccountType} onChange={e => setFormData({...formData, bankAccountType: e.target.value})}
-                >
-                  <option>Savings</option>
-                  <option>Current</option>
-                </select>
+                  value={formData.bankAccountType}
+                  onChange={v => setFormData({...formData, bankAccountType: v})}
+                  options={['Savings', 'Current']}
+                  placeholder="Account Type"
+                  width="100%"
+                />
               </div>
             </div>
           </div>
@@ -744,21 +745,18 @@ export default function PartyMaster() {
                   <div key={index} className="flex flex-col gap-[2px] mb-2 border-b border-slate-200 pb-2 bg-[#fcfaf2]">
                     <div className="flex items-center">
                        <div className="w-[110px] text-slate-800 font-bold text-[11px] text-right pr-2 leading-tight">Type</div>
-                       <select 
+                       <SearchableDropdown
                          className="flex-1 bg-white border border-slate-400 px-1 py-[2px] text-[12px] font-bold text-black focus:bg-[#ffffe0] focus:outline-none focus:border-slate-800"
                          value={contact.type}
-                         onChange={e => {
+                         onChange={v => {
                            const newContacts = [...formData.contacts];
-                           (newContacts[index] as any).type = e.target.value;
+                           (newContacts[index] as any).type = v;
                            setFormData({...formData, contacts: newContacts});
                          }}
-                       >
-                         <option>Office</option>
-                         <option>Factory</option>
-                         <option>Warehouse</option>
-                         <option>Personal</option>
-                         <option>Other</option>
-                       </select>
+                         options={['Office', 'Factory', 'Warehouse', 'Personal', 'Other']}
+                         placeholder="Type"
+                         width="100%"
+                       />
                        {index > 0 && (
                          <button 
                            type="button"
@@ -977,20 +975,20 @@ export default function PartyMaster() {
               <div className="mt-4">
                 <div className="flex items-center gap-2 mb-2">
                           <label className="text-[12px] font-bold text-slate-700">Brand Type:</label>
-                          <select 
-                            className="bg-white border border-slate-400 px-1 py-[2px] text-[12px] font-bold text-black focus:bg-[#ffffe0] focus:outline-none"
+                          <SearchableDropdown
+                            className="w-[200px] bg-white border border-slate-400 px-1 py-[2px] text-[12px] font-bold text-black focus:bg-[#ffffe0] focus:outline-none"
                             value={brandType}
-                            onChange={(e) => {
-                              const val = e.target.value as 'Single' | 'Multi';
-                              setBrandType(val);
-                              if (val === 'Single' && brands.length > 1) {
+                            onChange={(val) => {
+                              const v = val as 'Single' | 'Multi';
+                              setBrandType(v);
+                              if (v === 'Single' && brands.length > 1) {
                                 setBrands([brands[0]]);
                               }
                             }}
-                          >
-                            <option value="Multi">Multi Brand Party</option>
-                            <option value="Single">Single Brand Party</option>
-                          </select>
+                            options={['Multi', 'Single']}
+                            placeholder="Brand Type"
+                            width="200px"
+                          />
                         </div>
                         <SectionTitle>Assigned Brands</SectionTitle>
                 <div className="relative flex items-center gap-1 mb-1">
