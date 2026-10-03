@@ -186,14 +186,14 @@ export default function PartyMaster() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [navigate, mode, sampleData, selectedIndex, formData, categories, selectedBrands, selectedCategories]);
 
-  const InputGroup = ({ label, id, value, onChange, onBlur, nextId, width = 'w-full', type = 'text', placeholder = '', autoFocus = false }: any) => (
-    <div className="flex flex-col gap-[2px] mb-2.5 group">
-      <label htmlFor={id} className="text-[10px] font-bold text-slate-500 uppercase tracking-widest group-focus-within:text-indigo-600 transition-colors">{label}</label>
+  const InputGroup = ({ label, id, value, onChange, onBlur, nextId, width = 'flex-1', type = 'text', placeholder = '', autoFocus = false }: any) => (
+    <div className="flex items-center mb-1 hover:bg-slate-50 p-0.5 rounded transition-colors group">
+      <label htmlFor={id} className="w-[110px] shrink-0 text-[10px] font-bold text-slate-500 uppercase tracking-widest text-right pr-3 group-hover:text-indigo-600 transition-colors">{label}</label>
       <input 
         id={id}
         autoFocus={autoFocus}
         type={type} 
-        className={`bg-slate-50 border border-slate-200 px-2.5 py-1.5 text-xs font-bold text-slate-800 rounded-md shadow-sm focus:bg-white focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all hover:border-slate-300 ${width}`}
+        className={`bg-slate-50 border border-slate-200 px-2 py-1 text-xs font-bold text-slate-800 rounded-md shadow-sm focus:bg-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-200 transition-all hover:border-slate-300 ${width}`}
         value={value || ''}
         onChange={e => onChange(e.target.value)}
         onBlur={onBlur}
@@ -299,14 +299,14 @@ export default function PartyMaster() {
                       <InputGroup label="Party Name" value={formData.partyName} onChange={(v: string) => setFormData({...formData, partyName: v})} />
                       <InputGroup label="Short Name" value={formData.shortName || formData.name} onChange={(v: string) => setFormData({...formData, shortName: v})} />
                       
-                      <div className="flex items-center mb-1.5 hover:bg-slate-50/50 p-1 rounded-lg transition-colors group">
-                        <div className="w-[130px] text-slate-700 font-bold text-[11px] text-right pr-3 leading-tight tracking-wide group-hover:text-indigo-700 transition-colors">Type</div>
+                      <div className="flex items-center mb-1 hover:bg-slate-50 p-0.5 rounded transition-colors group">
+                        <label className="w-[110px] shrink-0 text-[10px] font-bold text-slate-500 uppercase tracking-widest text-right pr-3 group-hover:text-indigo-600 transition-colors">Type</label>
                         <SearchableDropdown 
-                          className="flex-1 bg-white border border-slate-200 px-2.5 py-1.5 text-xs font-bold text-slate-800 rounded-md shadow-sm focus:outline-none focus:border-indigo-400 w-full"
+                          className="flex-1 bg-slate-50 border border-slate-200 px-2 py-1 text-xs font-bold text-slate-800 rounded-md shadow-sm focus:outline-none focus:border-indigo-400 w-full"
                           value={formData.type} 
                           onChange={v => setFormData({...formData, type: v})}
                           options={['Single Brand', 'Multi Brand']}
-                          placeholder="Type"
+                          placeholder="Select Type"
                           width="100%"
                         />
                       </div>
@@ -331,10 +331,10 @@ export default function PartyMaster() {
                       <InputGroup label="Account Number" value={formData.accountNumber} onChange={(v: string) => setFormData({...formData, accountNumber: v})} />
                       <InputGroup label="Branch" value={formData.branch} onChange={(v: string) => setFormData({...formData, branch: v})} />
                       
-                      <div className="flex items-center mb-1.5 hover:bg-slate-50/50 p-1 rounded-lg transition-colors group">
-                        <div className="w-[130px] text-slate-700 font-bold text-[11px] text-right pr-3 leading-tight tracking-wide group-hover:text-indigo-700 transition-colors">Account Type</div>
+                      <div className="flex items-center mb-1 hover:bg-slate-50 p-0.5 rounded transition-colors group">
+                        <label className="w-[110px] shrink-0 text-[10px] font-bold text-slate-500 uppercase tracking-widest text-right pr-3 group-hover:text-indigo-600 transition-colors">Acc Type</label>
                         <SearchableDropdown 
-                          className="flex-1 bg-white border border-slate-200 px-2.5 py-1.5 text-xs font-bold text-slate-800 rounded-md shadow-sm focus:outline-none focus:border-indigo-400 w-full"
+                          className="flex-1 bg-slate-50 border border-slate-200 px-2 py-1 text-xs font-bold text-slate-800 rounded-md shadow-sm focus:outline-none focus:border-indigo-400 w-full"
                           value={formData.bankAccountType} 
                           onChange={v => setFormData({...formData, bankAccountType: v})}
                           options={['Savings', 'Current']}
@@ -357,7 +357,7 @@ export default function PartyMaster() {
                           ))}
                         </div>
                         <SearchableDropdown 
-                          className="w-full bg-white border border-slate-200 px-2.5 py-1.5 text-xs font-bold text-slate-800 rounded-md"
+                          className="w-full bg-white border border-slate-200 px-2 py-1 text-xs font-bold text-slate-800 rounded-md"
                           value=""
                           onChange={v => {
                             if(v && !selectedBrands.find(b => b.name === v)) {

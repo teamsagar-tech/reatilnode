@@ -115,15 +115,15 @@ export default function ItemMaster() {
     </div>
   );
 
-  const InputGroup = ({ label, id, value, onChange, nextId, width = 'w-full', type = 'text', placeholder = '', autoFocus = false, datalistId, options }: any) => (
-    <div className="flex flex-col gap-[2px] mb-2.5 group relative">
-      <label htmlFor={id} className="text-[10px] font-bold text-slate-500 uppercase tracking-widest group-focus-within:text-indigo-600 transition-colors">{label}</label>
+  const InputGroup = ({ label, id, value, onChange, nextId, width = 'flex-1', type = 'text', placeholder = '', autoFocus = false, datalistId, options }: any) => (
+    <div className="flex items-center mb-1 hover:bg-slate-50 p-0.5 rounded transition-colors group relative w-full">
+      <label htmlFor={id} className="w-[110px] shrink-0 text-[10px] font-bold text-slate-500 uppercase tracking-widest text-right pr-3 group-hover:text-indigo-600 transition-colors">{label}</label>
       <input 
         id={id}
         autoFocus={autoFocus}
         type={type} 
         list={datalistId}
-        className={`bg-slate-50 border border-slate-200 px-2.5 py-1.5 text-xs font-bold text-slate-800 rounded-md shadow-sm focus:bg-white focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all hover:border-slate-300 ${width}`}
+        className={`bg-slate-50 border border-slate-200 px-2 py-1 text-xs font-bold text-slate-800 rounded-md shadow-sm focus:bg-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-200 transition-all hover:border-slate-300 ${width}`}
         value={value || ''}
         onChange={e => onChange(e.target.value)}
         onKeyDown={e => { if(nextId && typeof handleFieldKeyDown !== 'undefined') handleFieldKeyDown(e, nextId) }}
@@ -139,13 +139,13 @@ export default function ItemMaster() {
     </div>
   );
 
-  const SelectGroup = ({ label, id, value, onChange, options, nextId, width = 'w-full', autoFocus = false }: any) => (
-    <div className="flex flex-col gap-[2px] mb-2.5 group w-full">
-      <label htmlFor={id} className="text-[10px] font-bold text-slate-500 uppercase tracking-widest group-focus-within:text-indigo-600 transition-colors">{label}</label>
+  const SelectGroup = ({ label, id, value, onChange, options, nextId, width = 'flex-1', autoFocus = false }: any) => (
+    <div className="flex items-center mb-1 hover:bg-slate-50 p-0.5 rounded transition-colors group w-full">
+      <label htmlFor={id} className="w-[110px] shrink-0 text-[10px] font-bold text-slate-500 uppercase tracking-widest text-right pr-3 group-hover:text-indigo-600 transition-colors">{label}</label>
       <SearchableDropdown
         id={id}
         autoFocus={autoFocus}
-        className={`bg-slate-50 border border-slate-200 px-2.5 py-1.5 text-xs font-bold text-slate-800 rounded-md shadow-sm focus:bg-white focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all hover:border-slate-300 w-full`}
+        className={`bg-slate-50 border border-slate-200 px-2 py-1 text-xs font-bold text-slate-800 rounded-md shadow-sm focus:bg-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-200 transition-all hover:border-slate-300 w-full`}
         value={value || ''}
         onChange={v => onChange(v)}
         onKeyDown={e => { if(nextId && typeof handleFieldKeyDown !== 'undefined') handleFieldKeyDown(e, nextId) }}
