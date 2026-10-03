@@ -28,7 +28,6 @@ const InputRow = ({ label, value, onChange, placeholder = "", width = "flex-1", 
       onChange={(e) => onChange(e.target.value)} 
       onBlur={onBlur}
       placeholder={placeholder}
-      autoComplete="off"
       onKeyDown={onKeyDown || ((e) => {
         if (e.key === 'Enter') {
           e.preventDefault();
@@ -517,7 +516,6 @@ export default function MasterCreationModal({ isOpen, onClose, onSave, masterTyp
               className={`flex-1 bg-white border border-slate-400 px-1 py-[2px] text-[12px] font-bold text-black focus:bg-[#ffffe0] focus:outline-none focus:border-slate-800`}
               value={name} 
               onChange={(e) => setName(e.target.value)} 
-              autoComplete="off"
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
                   e.preventDefault();
