@@ -511,19 +511,19 @@ export default function TaxonomyMaster() {
           <div className='flex-1 bg-white/70 backdrop-blur-xl border border-slate-200/60 rounded-2xl shadow-xl shadow-slate-200/40 flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-300'>
             
             {/* Header */}
-            <div className="flex items-center justify-between p-2 sm:p-3 border-b border-slate-100 shrink-0 bg-white">
-              <div className="flex items-end gap-3 shrink-0">
-                <h1 className="text-xl font-black text-slate-800 tracking-tight">Taxonomy Master</h1>
-                <span className="text-slate-300 font-light mb-1">|</span>
-                <p className="text-xs font-medium text-slate-500">Configure Hierarchy</p>
+            <div className="flex items-center justify-between px-2 py-1 border-b border-slate-100 shrink-0 bg-white">
+              <div className="flex items-end gap-2 shrink-0">
+                <h1 className="text-base font-black text-slate-800 tracking-tight">Taxonomy Master</h1>
+                <span className="text-slate-300 font-light text-sm mb-0.5">|</span>
+                <p className="text-[10px] font-medium text-slate-500 mb-0.5">Configure Hierarchy</p>
               </div>
               
-              <div className="hidden sm:flex items-center gap-4 text-xs font-bold text-slate-500 bg-slate-50 px-4 py-2 rounded-xl border border-slate-200 shadow-sm">
-                <span className="flex items-center gap-1.5"><span className="bg-white border border-slate-200 text-indigo-600 px-1.5 py-0.5 rounded shadow-sm">F4</span> Edit</span>
+              <div className="hidden sm:flex items-center gap-3 text-[10px] font-bold text-slate-500 bg-slate-50 px-2 py-1 rounded-lg border border-slate-200 shadow-sm">
+                <span className="flex items-center gap-1"><span className="bg-white border border-slate-200 text-indigo-600 px-1 py-0.5 rounded shadow-sm">F4</span> Edit</span>
                 <span className="text-slate-300">|</span>
-                <span className="flex items-center gap-1.5"><span className="bg-white border border-slate-200 text-amber-600 px-1.5 py-0.5 rounded shadow-sm">F6</span> Merge</span>
+                <span className="flex items-center gap-1"><span className="bg-white border border-slate-200 text-amber-600 px-1 py-0.5 rounded shadow-sm">F6</span> Merge</span>
                 <span className="text-slate-300">|</span>
-                <span className="flex items-center gap-1.5"><span className="bg-white border border-slate-200 text-rose-600 px-1.5 py-0.5 rounded shadow-sm">DEL</span> Delete</span>
+                <span className="flex items-center gap-1"><span className="bg-white border border-slate-200 text-rose-600 px-1 py-0.5 rounded shadow-sm">DEL</span> Delete</span>
               </div>
             </div>
 
