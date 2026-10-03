@@ -44,7 +44,6 @@ export default function PartyMaster() {
     gstRawData: null as any,
     contacts: [],
     invoiceConfig: { designNo: false, colourNo: false, showSize: false, showPurchaseDiscount: false, showMarkdown: false }
-  });
 
   const [categories, setCategories] = useState<{cat: string, sub: string}[]>([]);
   const [tempCat, setTempCat] = useState('');
@@ -133,7 +132,7 @@ export default function PartyMaster() {
   const [availableBrands, setAvailableBrands] = useState<any[]>([]);
   const [showBrandSuggestions, setShowBrandSuggestions] = useState(false);
   const [focusedBrandIndex, setFocusedBrandIndex] = useState(-1);
-  const [masterModal, setMasterModal] = useState<{type: string, initialValue: string, parentId?: number} | null>(null);
+  const [masterModal, setMasterModal] = useState<any>(null);
 
   useEffect(() => {
     fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/brand`, {
@@ -427,9 +426,9 @@ export default function PartyMaster() {
           contactPerson: '', mobileNumber: '', email: '',
           contactNumber2: '', mobileNumber2: '', contactNumber3: '', mobileNumber3: '',
           accountName: '', bankName: '', accountNumber: '', ifsc: '', branch: '', bankAccountType: 'Savings',
-          gstRawData: null,
-          contacts: [],
-    invoiceConfig: { designNo: false, colourNo: false, showSize: false, showPurchaseDiscount: false, showMarkdown: false }
+          gstRawData: null as any,
+          contacts: [] as any[],
+          invoiceConfig: { designNo: false, colourNo: false, showSize: false, showPurchaseDiscount: false, showMarkdown: false }
         });
         setCategories([]);
         setBrands([]);
@@ -468,9 +467,9 @@ export default function PartyMaster() {
             contactPerson: '', mobileNumber: '', email: '',
             contactNumber2: '', mobileNumber2: '', contactNumber3: '', mobileNumber3: '',
             accountName: '', bankName: '', accountNumber: '', ifsc: '', branch: '', bankAccountType: 'Savings',
-            gstRawData: null,
-            contacts: [],
-    invoiceConfig: { designNo: false, colourNo: false, showSize: false, showPurchaseDiscount: false, showMarkdown: false }
+            gstRawData: null as any,
+            contacts: [] as any[],
+            invoiceConfig: { designNo: false, colourNo: false, showSize: false, showPurchaseDiscount: false, showMarkdown: false }
           });
           setCategories([]);
           setBrands([]);
@@ -506,9 +505,8 @@ export default function PartyMaster() {
               contactNumber2: row.contact_number2 || '', mobileNumber2: row.mobile_number2 || '', contactNumber3: row.contact_number3 || '', mobileNumber3: row.mobile_number3 || '',
               accountName: row.account_name || '', bankName: row.bank_name || '', accountNumber: row.account_number || '', ifsc: row.ifsc || '', branch: row.branch || '', bankAccountType: row.bank_account_type || 'Savings',
               gstRawData: row.gst_raw_data ? (typeof row.gst_raw_data === 'object' ? row.gst_raw_data : (typeof row.gst_raw_data === 'string' && row.gst_raw_data.trim().startsWith('{') ? JSON.parse(row.gst_raw_data) : null)) : null,
-                              invoiceConfig: row.invoice_config ? (typeof row.invoice_config === 'string' ? JSON.parse(row.invoice_config) : row.invoice_config) : { designNo: false, colourNo: false, showSize: false, showPurchaseDiscount: false, showMarkdown: false },
-              contacts: [],
-    invoiceConfig: { designNo: false, colourNo: false, showSize: false, showPurchaseDiscount: false, showMarkdown: false }
+              invoiceConfig: row.invoice_config ? (typeof row.invoice_config === 'string' ? JSON.parse(row.invoice_config) : row.invoice_config) : { designNo: false, colourNo: false, showSize: false, showPurchaseDiscount: false, showMarkdown: false },
+              contacts: [] as any[]
             });
             setCategories(row.categories ? (typeof row.categories === 'string' ? JSON.parse(row.categories) : row.categories) : []);
             setBrands(row.brands ? (typeof row.brands === 'string' ? JSON.parse(row.brands) : row.brands) : []);
@@ -576,7 +574,8 @@ export default function PartyMaster() {
                               contactNumber2: row.contact_number2 || '', mobileNumber2: row.mobile_number2 || '', contactNumber3: row.contact_number3 || '', mobileNumber3: row.mobile_number3 || '',
                               accountName: row.account_name || '', bankName: row.bank_name || '', accountNumber: row.account_number || '', ifsc: row.ifsc || '', branch: row.branch || '', bankAccountType: row.bank_account_type || 'Savings',
                               gstRawData: row.gst_raw_data ? (typeof row.gst_raw_data === 'object' ? row.gst_raw_data : (typeof row.gst_raw_data === 'string' && row.gst_raw_data.trim().startsWith('{') ? JSON.parse(row.gst_raw_data) : null)) : null,
-                              invoiceConfig: row.invoice_config ? (typeof row.invoice_config === 'string' ? JSON.parse(row.invoice_config) : row.invoice_config) : { designNo: false, colourNo: false, showSize: false, showPurchaseDiscount: false, showMarkdown: false }
+                              invoiceConfig: row.invoice_config ? (typeof row.invoice_config === 'string' ? JSON.parse(row.invoice_config) : row.invoice_config) : { designNo: false, colourNo: false, showSize: false, showPurchaseDiscount: false, showMarkdown: false },
+                              contacts: [] as any[]
                             });
                             setCategories(row.categories ? (typeof row.categories === 'string' ? JSON.parse(row.categories) : row.categories) : []);
                             setBrands(row.brands ? (typeof row.brands === 'string' ? JSON.parse(row.brands) : row.brands) : []);
@@ -1176,9 +1175,9 @@ export default function PartyMaster() {
                           contactPerson: '', mobileNumber: '', email: '',
                           contactNumber2: '', mobileNumber2: '', contactNumber3: '', mobileNumber3: '',
                           accountName: '', bankName: '', accountNumber: '', ifsc: '', branch: '', bankAccountType: 'Savings',
-                          gstRawData: null,
-                          contacts: [],
-    invoiceConfig: { designNo: false, colourNo: false, showSize: false, showPurchaseDiscount: false, showMarkdown: false }
+                          gstRawData: null as any,
+                          contacts: [] as any[],
+                          invoiceConfig: { designNo: false, colourNo: false, showSize: false, showPurchaseDiscount: false, showMarkdown: false }
                         });
                         setCategories([]);
                         setBrands([]);

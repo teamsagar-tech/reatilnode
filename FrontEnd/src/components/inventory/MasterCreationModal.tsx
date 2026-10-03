@@ -5,7 +5,7 @@ interface MasterCreationModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (type: string, data: any) => void;
-  masterType: 'brand' | 'size' | 'sizegroup' | 'item' | 'hsn' | 'partycategory' | 'partysubcategory' | null;
+  masterType: 'brand' | 'size' | 'sizegroup' | 'item' | 'hsn' | 'partycategory' | 'partysubcategory' | 'sizeset' | 'design' | 'colour' | null;
   initialValue?: string;
   initialBrand?: string;
   initialBrandId?: number | null;
@@ -502,7 +502,7 @@ export default function MasterCreationModal({ isOpen, onClose, onSave, masterTyp
         {/* Header */}
         <div className="bg-[#1b5e58] text-white px-2 py-1 flex justify-between items-center shrink-0 border-b border-[#1b5e58]">
           <h2 className="text-[13px] font-bold tracking-tight">{getTitle()}</h2>
-          <button onClick={onClose} tabIndex={-1} className="p-0.5 hover:bg-[#12423d] transition-colors" tabIndex={-1}>
+          <button onClick={onClose} tabIndex={-1} className="p-0.5 hover:bg-[#12423d] transition-colors">
             <X className="w-4 h-4 text-white" />
           </button>
         </div>
