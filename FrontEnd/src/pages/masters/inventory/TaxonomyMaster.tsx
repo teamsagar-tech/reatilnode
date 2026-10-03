@@ -1,9 +1,7 @@
-import { confirmDialog } from '../../../store/useConfirmStore';
-import { toast } from '../../../store/useToastStore';
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { useGlobalKeyboard } from '../../../hooks/useGlobalKeyboard';
 
 // --- Edit Modal Component ---
 const EditModal = ({ isOpen, item, type, departments, categories, onClose, onSave }: any) => {
@@ -222,7 +220,7 @@ const MergeModal = ({ isOpen, sourceItem, type, categories, subCategories, onClo
 // --- Main Taxonomy Page ---
 export default function TaxonomyMaster() {
   const navigate = useNavigate();
-  useGlobalKeyboard();
+  // removed useGlobalKeyboard
 
   const [departments, setDepartments] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
@@ -398,15 +396,15 @@ export default function TaxonomyMaster() {
         if (type === 0) fetchDepartments();
         else fetchCategories();
       } else {
-        toast.error(data.error || 'Failed to update item');
+        alert(data.error || 'Failed to update item');
       }
     } catch (err) {
-      toast.error('Network error');
+      alert('Network error');
     }
   };
 
   const handleDelete = async (item: any, type: number) => {
-    if (!await confirmDialog(`Are you sure you want to delete ${item.name}?`)) return;
+    if (!window.confirm(`Are you sure you want to delete ${item.name}?`)) return;
     const url = type === 0 
       ? `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/generic/departments/${item.id}`
       : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/category/${item.id}`;
@@ -421,10 +419,10 @@ export default function TaxonomyMaster() {
         else fetchCategories();
       } else {
         const data = await res.json();
-        toast.error(data.error || 'Failed to delete');
+        alert(data.error || 'Failed to delete');
       }
     } catch (err) {
-      toast.error('Network error');
+      alert('Network error');
     }
   };
 
@@ -444,10 +442,10 @@ export default function TaxonomyMaster() {
         setIsMergeModalOpen(false);
         fetchCategories();
       } else {
-        toast.error(data.error || 'Failed to merge');
+        alert(data.error || 'Failed to merge');
       }
     } catch (err) {
-      toast.error('Network error');
+      alert('Network error');
     }
   };
 
