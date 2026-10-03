@@ -129,7 +129,7 @@ const EditModal = ({ isOpen, item, type, departments, categories, onClose, onSav
                 <div className="flex flex-col gap-1.5 mt-2">
                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Belongs To Department</label>
                   <SearchableDropdown 
-                    value={deptId}
+                    value={deptId ? deptId.toString() : ''}
                     onChange={v => {
                       const d = departments.find((d: any) => d.name === v);
                       if(d) setDeptId(d.id.toString());
@@ -145,7 +145,7 @@ const EditModal = ({ isOpen, item, type, departments, categories, onClose, onSav
                 <div className="flex flex-col gap-1.5 mt-2">
                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Belongs To Category</label>
                   <SearchableDropdown 
-                    value={parentId}
+                    value={parentId ? parentId.toString() : ''}
                     onChange={v => {
                       const c = categories.filter((c:any) => !c.parent_id).find((c: any) => c.name === v);
                       if(c) setParentId(c.id.toString());
@@ -227,7 +227,7 @@ const MergeModal = ({ isOpen, sourceItem, type, categories, subCategories, onClo
           <div className="flex flex-col gap-1.5">
             <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Select Target {typeName}:</label>
             <SearchableDropdown 
-              value={targetId}
+              value={targetId ? targetId.toString() : ''}
               onChange={v => {
                 const c = availableTargets.find((c: any) => c.name === v);
                 if(c) setTargetId(c.id.toString());
