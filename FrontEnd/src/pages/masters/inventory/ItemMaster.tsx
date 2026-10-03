@@ -1,3 +1,4 @@
+import SearchableDropdown from '../../../components/SearchableDropdown';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMasterApi } from '../../../hooks/useMasterApi';
@@ -139,21 +140,19 @@ export default function ItemMaster() {
   );
 
   const SelectGroup = ({ label, id, value, onChange, options, nextId, width = 'w-full', autoFocus = false }: any) => (
-    <div className="flex flex-col gap-[2px] mb-2.5 group">
+    <div className="flex flex-col gap-[2px] mb-2.5 group w-full">
       <label htmlFor={id} className="text-[10px] font-bold text-slate-500 uppercase tracking-widest group-focus-within:text-indigo-600 transition-colors">{label}</label>
-      <select 
+      <SearchableDropdown
         id={id}
         autoFocus={autoFocus}
-        className={`bg-slate-50 border border-slate-200 px-2.5 py-1.5 text-xs font-bold text-slate-800 rounded-md shadow-sm focus:bg-white focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all hover:border-slate-300 ${width}`}
+        className={`bg-slate-50 border border-slate-200 px-2.5 py-1.5 text-xs font-bold text-slate-800 rounded-md shadow-sm focus:bg-white focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all hover:border-slate-300 w-full`}
         value={value || ''}
-        onChange={e => onChange(e.target.value)}
+        onChange={v => onChange(v)}
         onKeyDown={e => { if(nextId && typeof handleFieldKeyDown !== 'undefined') handleFieldKeyDown(e, nextId) }}
-      >
-        <option value=""></option>
-        {options.map((opt: string) => (
-          <option key={opt} value={opt}>{opt}</option>
-        ))}
-      </select>
+        options={options}
+        placeholder={label}
+        width="100%"
+      />
     </div>
   );
 
