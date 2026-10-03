@@ -1,6 +1,7 @@
 import { Link, useLocation } from "react-router-dom";
 import { Bell, LayoutDashboard, Package, ShoppingCart, Users, Settings, ChevronDown, LogOut } from "lucide-react";
 import { toast } from "../../store/useToastStore";
+import NotificationBell from "./NotificationBell";
 
 export default function Header() {
   const location = useLocation();
@@ -89,6 +90,7 @@ export default function Header() {
           ]
         },
         { name: "Products", path: "/products" },
+        { name: "Taxonomy Master", path: "/masters/taxonomy" },
         { name: "Purchase Invoices", path: "/purchase_invoice/new" },
         { name: "Purchase Orders", path: "/purchase_order/new" },
         { name: "Stock Adjustment", path: "/inventory/adjust" },
@@ -201,10 +203,7 @@ export default function Header() {
       </div>
       
       <div className="flex items-center gap-4 sm:gap-6">
-        <button className="relative text-slate-500 hover:text-slate-700 transition-colors">
-          <Bell className="w-5 h-5" />
-          <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
-        </button>
+        <NotificationBell />
         
         <div className="flex items-center gap-3 border-l border-slate-200 pl-4 sm:pl-6 p-1.5 -my-1.5 rounded-lg transition-colors group/profile relative cursor-pointer">
           <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm shrink-0 uppercase">
