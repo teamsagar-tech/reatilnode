@@ -1,7 +1,7 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
+import { Edit2, Merge, Trash2, X } from 'lucide-react';
 
 // --- Edit Modal Component ---
 const EditModal = ({ isOpen, item, type, departments, categories, onClose, onSave }: any) => {
@@ -31,7 +31,7 @@ const EditModal = ({ isOpen, item, type, departments, categories, onClose, onSav
 
   const handleKeyDown = async (e: React.KeyboardEvent) => {
     if (e.key === 'Escape') onClose();
-    if (e.key === 'Enter' && e.ctrlKey) handleSave(); // Ctrl+Enter to save to avoid accidental save
+    if (e.key === 'Enter' && e.ctrlKey) handleSave(); // Ctrl+Enter to save
   };
 
   const handleSave = async () => {
@@ -54,34 +54,43 @@ const EditModal = ({ isOpen, item, type, departments, categories, onClose, onSav
   if (!isOpen || !item) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onKeyDown={handleKeyDown}>
-      <div className="bg-white border-2 border-[#1b5e58] shadow-2xl w-[400px] flex flex-col font-sans">
-        <div className="bg-[#1b5e58] text-white px-2 py-1 font-bold text-[13px] flex justify-between">
-          <span>Edit / Move {type === 0 ? 'Department' : type === 1 ? 'Category' : 'SubCategory'}</span>
-          <button onClick={onClose} className="hover:text-red-300">X</button>
+    <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 animate-in fade-in duration-200" onKeyDown={handleKeyDown}>
+      <div className="bg-white rounded-2xl shadow-2xl w-[450px] flex flex-col font-sans overflow-hidden border border-slate-100 animate-in zoom-in-95 duration-200">
+        <div className="bg-slate-50 border-b border-slate-100 px-6 py-4 flex justify-between items-center">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 bg-indigo-100 text-indigo-600 rounded-lg">
+              <Edit2 className="w-4 h-4" />
+            </div>
+            <h2 className="font-bold text-slate-800 text-sm uppercase tracking-wide">
+              Edit / Move {type === 0 ? 'Department' : type === 1 ? 'Category' : 'SubCategory'}
+            </h2>
+          </div>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 hover:bg-slate-100 p-1 rounded-md transition-colors">
+            <X className="w-5 h-5" />
+          </button>
         </div>
         
-        <div className="p-4 flex flex-col gap-3 text-[12px]">
-          <div>
-            <label className="font-bold text-slate-700 block mb-1">Name</label>
+        <div className="p-6 flex flex-col gap-4 text-xs font-semibold text-slate-600">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Name</label>
             <input 
               ref={nameInputRef}
               value={name} 
               onChange={(e) => setName(e.target.value.toUpperCase())} 
-              className="w-full border border-slate-400 px-2 py-1 focus:bg-[#ffffe0] focus:outline-none focus:border-slate-800 uppercase font-bold"
-              placeholder="Name"
+              className="w-full bg-slate-50 border border-slate-200 px-3 py-2 text-xs font-bold text-slate-800 rounded-lg shadow-sm focus:bg-white focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all uppercase"
+              placeholder="Enter name"
             />
           </div>
 
           {type !== 0 && (
-            <div>
-              <label className="font-bold text-slate-700 block mb-1">Default Cut (Quantity)</label>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Default Cut (Quantity)</label>
               <input 
                 type="number"
                 step="0.01"
                 value={defaultCut} 
                 onChange={(e) => setDefaultCut(e.target.value)} 
-                className="w-full border border-slate-400 px-2 py-1 focus:bg-[#ffffe0] focus:outline-none focus:border-slate-800 uppercase font-bold"
+                className="w-full bg-slate-50 border border-slate-200 px-3 py-2 text-xs font-bold text-slate-800 rounded-lg shadow-sm focus:bg-white focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all uppercase"
                 placeholder="e.g. 1.20 or 3.00 (optional)"
               />
             </div>
@@ -89,51 +98,55 @@ const EditModal = ({ isOpen, item, type, departments, categories, onClose, onSav
 
           {type !== 0 && (
             <>
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">Level / Type</label>
-                <div className="flex gap-4">
-                  <label className="flex items-center gap-1 cursor-pointer">
+              <div className="flex flex-col gap-2 mt-2">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Hierarchy Level</label>
+                <div className="flex gap-6 bg-slate-50 p-3 rounded-lg border border-slate-200">
+                  <label className="flex items-center gap-2 cursor-pointer group">
                     <input 
                       type="radio" 
                       name="itemType" 
                       checked={itemType === 'category'} 
-                      onChange={() => setItemType('category')} 
-                    /> Category
+                      onChange={() => setItemType('category')}
+                      className="accent-indigo-600 w-4 h-4" 
+                    /> 
+                    <span className="group-hover:text-indigo-600 transition-colors">Category</span>
                   </label>
-                  <label className="flex items-center gap-1 cursor-pointer">
+                  <label className="flex items-center gap-2 cursor-pointer group">
                     <input 
                       type="radio" 
                       name="itemType" 
                       checked={itemType === 'subcategory'} 
-                      onChange={() => setItemType('subcategory')} 
-                    /> Sub Category
+                      onChange={() => setItemType('subcategory')}
+                      className="accent-indigo-600 w-4 h-4"
+                    /> 
+                    <span className="group-hover:text-indigo-600 transition-colors">Sub Category</span>
                   </label>
                 </div>
               </div>
 
               {itemType === 'category' ? (
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Belongs To Department</label>
+                <div className="flex flex-col gap-1.5 mt-2">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Belongs To Department</label>
                   <select 
                     value={deptId}
                     onChange={e => setDeptId(e.target.value)}
-                    className="w-full border border-slate-400 px-2 py-1 focus:bg-[#ffffe0] focus:outline-none focus:border-slate-800 uppercase font-bold"
+                    className="w-full bg-slate-50 border border-slate-200 px-3 py-2 text-xs font-bold text-slate-800 rounded-lg shadow-sm focus:bg-white focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all uppercase"
                   >
-                    <option value="">Select Department</option>
+                    <option value="">-- SELECT DEPARTMENT --</option>
                     {departments.map((d: any) => (
                       <option key={d.id} value={d.id}>{d.name}</option>
                     ))}
                   </select>
                 </div>
               ) : (
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Belongs To Category</label>
+                <div className="flex flex-col gap-1.5 mt-2">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Belongs To Category</label>
                   <select 
                     value={parentId}
                     onChange={e => setParentId(e.target.value)}
-                    className="w-full border border-slate-400 px-2 py-1 focus:bg-[#ffffe0] focus:outline-none focus:border-slate-800 uppercase font-bold"
+                    className="w-full bg-slate-50 border border-slate-200 px-3 py-2 text-xs font-bold text-slate-800 rounded-lg shadow-sm focus:bg-white focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all uppercase"
                   >
-                    <option value="">Select Parent Category</option>
+                    <option value="">-- SELECT PARENT CATEGORY --</option>
                     {categories.filter((c:any) => !c.parent_id).map((c: any) => (
                       <option key={c.id} value={c.id}>{c.name}</option>
                     ))}
@@ -144,9 +157,13 @@ const EditModal = ({ isOpen, item, type, departments, categories, onClose, onSav
           )}
         </div>
         
-        <div className="bg-[#eef5ed] p-2 flex justify-end gap-2 border-t border-slate-300">
-          <button onClick={onClose} className="px-4 py-1 border border-slate-400 bg-white font-bold hover:bg-slate-100">Cancel</button>
-          <button onClick={handleSave} className="px-4 py-1 border border-[#1b5e58] bg-[#1b5e58] text-white font-bold hover:bg-[#144944]">Save (Ctrl+Enter)</button>
+        <div className="bg-slate-50/80 px-6 py-4 flex justify-end gap-3 border-t border-slate-100">
+          <button onClick={onClose} className="px-4 py-2 border border-slate-200 bg-white text-slate-600 font-bold rounded-lg shadow-sm hover:bg-slate-50 hover:border-slate-300 transition-all text-xs">
+            Cancel
+          </button>
+          <button onClick={handleSave} className="px-6 py-2 bg-indigo-600 text-white font-bold rounded-lg shadow-md shadow-indigo-200 hover:bg-indigo-700 hover:-translate-y-0.5 transition-all text-xs">
+            Save Changes <span className="opacity-70 font-normal ml-1">(Ctrl+Enter)</span>
+          </button>
         </div>
       </div>
     </div>
@@ -180,25 +197,35 @@ const MergeModal = ({ isOpen, sourceItem, type, categories, subCategories, onClo
   const availableTargets = (type === 1 ? categories : subCategories).filter((c: any) => c.id !== sourceItem.id);
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onKeyDown={handleKeyDown}>
-      <div className="bg-white border-2 border-red-700 shadow-2xl w-[450px] flex flex-col font-sans">
-        <div className="bg-red-700 text-white px-2 py-1 font-bold text-[13px] flex justify-between">
-          <span>Merge {typeName}</span>
-          <button onClick={onClose} className="hover:text-red-300">X</button>
+    <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 animate-in fade-in duration-200" onKeyDown={handleKeyDown}>
+      <div className="bg-white rounded-2xl shadow-2xl w-[450px] flex flex-col font-sans overflow-hidden border border-slate-100 animate-in zoom-in-95 duration-200">
+        <div className="bg-rose-50 border-b border-rose-100 px-6 py-4 flex justify-between items-center">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 bg-rose-100 text-rose-600 rounded-lg">
+              <Merge className="w-4 h-4" />
+            </div>
+            <h2 className="font-bold text-rose-800 text-sm uppercase tracking-wide">
+              Merge {typeName}
+            </h2>
+          </div>
+          <button onClick={onClose} className="text-rose-400 hover:text-rose-600 hover:bg-rose-100 p-1 rounded-md transition-colors">
+            <X className="w-5 h-5" />
+          </button>
         </div>
         
-        <div className="p-4 flex flex-col gap-4 text-[12px]">
-          <div className="bg-red-50 text-red-800 border border-red-200 p-2 font-bold">
-            WARNING: You are about to merge <span className="text-black bg-yellow-200 px-1">{sourceItem.name}</span>. 
-            This will permanently delete it and move all its associated items to the target {typeName}.
+        <div className="p-6 flex flex-col gap-5 text-xs font-semibold text-slate-600">
+          <div className="bg-rose-50 text-rose-700 border border-rose-200 p-4 rounded-xl leading-relaxed">
+            <strong className="text-rose-800 block mb-1">⚠️ MERGE WARNING</strong>
+            You are about to merge <span className="font-bold bg-white px-1.5 py-0.5 rounded text-rose-900 shadow-sm mx-1">{sourceItem.name}</span>. 
+            This will permanently delete it and migrate all its associated items to the target {typeName}.
           </div>
-          <div>
-            <label className="font-bold text-slate-700 block mb-1">Select Target {typeName} to merge into:</label>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Select Target {typeName}:</label>
             <select 
               ref={selectRef}
               value={targetId}
               onChange={e => setTargetId(e.target.value)}
-              className="w-full border border-slate-400 px-2 py-2 focus:bg-[#ffffe0] focus:outline-none focus:border-slate-800 uppercase font-bold"
+              className="w-full bg-slate-50 border border-slate-200 px-3 py-2.5 text-xs font-bold text-slate-800 rounded-lg shadow-sm focus:bg-white focus:outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-100 transition-all uppercase"
             >
               <option value="">-- SELECT TARGET --</option>
               {availableTargets.map((c: any) => (
@@ -208,9 +235,13 @@ const MergeModal = ({ isOpen, sourceItem, type, categories, subCategories, onClo
           </div>
         </div>
         
-        <div className="bg-[#eef5ed] p-2 flex justify-end gap-2 border-t border-slate-300">
-          <button onClick={onClose} className="px-4 py-1 border border-slate-400 bg-white font-bold hover:bg-slate-100">Cancel</button>
-          <button onClick={handleSave} disabled={!targetId} className="px-4 py-1 border border-red-700 bg-red-700 text-white font-bold hover:bg-red-800 disabled:opacity-50">Merge (Ctrl+Enter)</button>
+        <div className="bg-slate-50/80 px-6 py-4 flex justify-end gap-3 border-t border-slate-100">
+          <button onClick={onClose} className="px-4 py-2 border border-slate-200 bg-white text-slate-600 font-bold rounded-lg shadow-sm hover:bg-slate-50 hover:border-slate-300 transition-all text-xs">
+            Cancel
+          </button>
+          <button onClick={handleSave} disabled={!targetId} className="px-6 py-2 bg-rose-600 text-white font-bold rounded-lg shadow-md shadow-rose-200 hover:bg-rose-700 hover:-translate-y-0.5 transition-all text-xs disabled:opacity-50 disabled:hover:translate-y-0 cursor-pointer disabled:cursor-not-allowed">
+            Confirm Merge <span className="opacity-70 font-normal ml-1">(Ctrl+Enter)</span>
+          </button>
         </div>
       </div>
     </div>
@@ -220,7 +251,6 @@ const MergeModal = ({ isOpen, sourceItem, type, categories, subCategories, onClo
 // --- Main Taxonomy Page ---
 export default function TaxonomyMaster() {
   const navigate = useNavigate();
-  // removed useGlobalKeyboard
 
   const [departments, setDepartments] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
@@ -295,8 +325,8 @@ export default function TaxonomyMaster() {
       } else if (e.key === 'ArrowRight') {
         e.preventDefault();
         if (focusedCol < 2) {
-          if (focusedCol === 0 && !selectedDeptId) return; // Cant move right if no dept selected
-          if (focusedCol === 1 && !selectedCatId) return; // Cant move right if no cat selected
+          if (focusedCol === 0 && !selectedDeptId) return;
+          if (focusedCol === 1 && !selectedCatId) return;
           setFocusedCol(prev => prev + 1);
           setFocusedIdx(0);
         }
@@ -317,7 +347,6 @@ export default function TaxonomyMaster() {
             setSelectedCatId(item.id);
           }
         } else {
-          // Focus the input
           if (focusedCol === 0) inputDeptRef.current?.focus();
           if (focusedCol === 1) inputCatRef.current?.focus();
           if (focusedCol === 2) inputSubCatRef.current?.focus();
@@ -331,7 +360,7 @@ export default function TaxonomyMaster() {
         }
       } else if (e.key === 'F6') {
         e.preventDefault();
-        if (focusedIdx < maxIdx && focusedCol > 0) { // Can't merge departments yet
+        if (focusedIdx < maxIdx && focusedCol > 0) { 
           setModalItem(currentList[focusedIdx]);
           setModalType(focusedCol);
           setIsMergeModalOpen(true);
@@ -475,28 +504,45 @@ export default function TaxonomyMaster() {
         onMerge={handleMerge}
       />
 
-      <div className='flex flex-col h-[calc(100vh-64px)] font-sans text-[13px] selection:bg-transparent overflow-hidden bg-[#e0efeb] w-full'>
-        <div className='flex flex-1 p-1 gap-1 overflow-hidden h-full'>
-          <div className='flex-1 bg-[#fcfaf2] border-2 border-[#81a09d] flex flex-col overflow-hidden shadow-inner relative'>
-            <div className='bg-[#1b5e58] text-white font-bold px-2 py-1 flex justify-between shrink-0'>
-               <div>Master Creation (F4: Edit, F6: Merge, DEL: Delete)</div>
-               <div className='text-yellow-300'>Taxonomy Hierarchy</div>
+      <div className='flex flex-col h-[calc(100vh-6rem)] font-sans selection:bg-indigo-100 w-full px-2 pt-2 pb-4'>
+        <div className='flex flex-1 gap-4 overflow-hidden'>
+          
+          {/* Main Container */}
+          <div className='flex-1 bg-white/70 backdrop-blur-xl border border-slate-200/60 rounded-2xl shadow-xl shadow-slate-200/40 flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-300'>
+            
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 sm:p-5 border-b border-slate-100 shrink-0 bg-white">
+              <div className="flex items-end gap-3 shrink-0">
+                <h1 className="text-2xl font-black text-slate-800 tracking-tight">Taxonomy Master</h1>
+                <span className="text-slate-300 font-light mb-1">|</span>
+                <p className="text-sm font-medium text-slate-500">Configure Hierarchy</p>
+              </div>
+              
+              <div className="hidden sm:flex items-center gap-4 text-xs font-bold text-slate-500 bg-slate-50 px-4 py-2 rounded-xl border border-slate-200 shadow-sm">
+                <span className="flex items-center gap-1.5"><span className="bg-white border border-slate-200 text-indigo-600 px-1.5 py-0.5 rounded shadow-sm">F4</span> Edit</span>
+                <span className="text-slate-300">|</span>
+                <span className="flex items-center gap-1.5"><span className="bg-white border border-slate-200 text-amber-600 px-1.5 py-0.5 rounded shadow-sm">F6</span> Merge</span>
+                <span className="text-slate-300">|</span>
+                <span className="flex items-center gap-1.5"><span className="bg-white border border-slate-200 text-rose-600 px-1.5 py-0.5 rounded shadow-sm">DEL</span> Delete</span>
+              </div>
             </div>
 
             {errorMsg && (
-              <div className="bg-red-200 text-red-900 border border-red-500 px-2 py-1 text-[12px] font-bold mx-2 mt-2">
+              <div className="bg-rose-50 text-rose-700 border-l-4 border-rose-500 px-4 py-3 text-xs font-bold mx-5 mt-4 rounded-r-lg shadow-sm">
                 {errorMsg}
               </div>
             )}
             
-            <div className='p-2 flex-1 overflow-hidden flex gap-4'>
+            {/* 3 Column Grid */}
+            <div className='p-4 sm:p-5 flex-1 overflow-hidden flex gap-4 bg-slate-50/50'>
               
               {/* Column 1: Departments */}
-              <div className={`flex-1 border-2 bg-white flex flex-col shadow-sm ${focusedCol === 0 ? 'border-blue-500' : 'border-slate-400'}`}>
-                <div className="bg-[#eef5ed] border-b border-slate-400 px-2 py-1 font-bold text-slate-800 text-[12px] text-center uppercase tracking-wider">
+              <div className={`flex-1 bg-white border rounded-2xl flex flex-col shadow-sm overflow-hidden transition-all duration-300 ${focusedCol === 0 ? 'border-indigo-400 ring-4 ring-indigo-50' : 'border-slate-200'}`}>
+                <div className="bg-slate-50/80 border-b border-slate-100 px-4 py-3 font-bold text-slate-700 text-xs uppercase tracking-widest flex items-center justify-between">
                   Departments
+                  <span className="bg-white border border-slate-200 text-slate-600 rounded-full px-2 py-0.5 text-[10px] shadow-sm">{departments.length}</span>
                 </div>
-                <div className="flex-1 overflow-y-auto custom-scrollbar p-1 flex flex-col gap-1">
+                <div className="flex-1 overflow-y-auto custom-scrollbar p-2 flex flex-col gap-1.5">
                   {departments.map((dept, idx) => {
                     const isSelected = selectedDeptId === dept.id;
                     const isFocused = focusedCol === 0 && focusedIdx === idx;
@@ -504,17 +550,18 @@ export default function TaxonomyMaster() {
                       <div 
                         key={dept.id} 
                         onClick={async () => { setSelectedDeptId(dept.id); setSelectedCatId(null); setFocusedCol(0); setFocusedIdx(idx); }}
-                        className={`px-2 py-1 cursor-pointer font-bold text-[12px] border ${
-                          isFocused ? 'bg-blue-100 border-blue-400' : 
-                          isSelected ? 'bg-[#ffe000] border-yellow-500' : 'bg-[#fcfaf2] border-slate-300 hover:bg-[#ffffe0]'
+                        className={`px-3 py-2.5 rounded-xl cursor-pointer font-bold text-xs border transition-all flex items-center justify-between ${
+                          isSelected ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-200' : 
+                          isFocused ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-white border-slate-100 hover:border-slate-300 text-slate-700 hover:bg-slate-50'
                         }`}
                       >
                         {dept.name}
+                        {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />}
                       </div>
                     );
                   })}
                 </div>
-                <div className={`p-1 bg-[#f8f9fa] border-t border-slate-400 ${focusedCol === 0 && focusedIdx === departments.length ? 'ring-2 ring-blue-500' : ''}`}>
+                <div className={`p-3 bg-slate-50/50 border-t border-slate-100 ${focusedCol === 0 && focusedIdx === departments.length ? 'bg-indigo-50/50' : ''}`}>
                   <input 
                     ref={inputDeptRef}
                     type="text"
@@ -531,22 +578,27 @@ export default function TaxonomyMaster() {
                         });
                       }
                     }}
-                    placeholder="Add New Department..."
-                    className="w-full bg-white border border-slate-400 px-2 py-1 text-[12px] font-bold text-black focus:bg-[#ffffe0] focus:outline-none focus:border-slate-800"
+                    placeholder="+ Add Department..."
+                    className="w-full bg-white border border-slate-200 px-3 py-2.5 text-xs font-bold text-slate-700 rounded-lg shadow-sm focus:bg-white focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all placeholder-slate-400"
                   />
                 </div>
               </div>
 
               {/* Column 2: Categories */}
-              <div className={`flex-1 border-2 bg-white flex flex-col shadow-sm ${!selectedDeptId ? 'opacity-50 pointer-events-none' : ''} ${focusedCol === 1 ? 'border-blue-500' : 'border-slate-400'}`}>
-                <div className="bg-[#eef5ed] border-b border-slate-400 px-2 py-1 font-bold text-slate-800 text-[12px] text-center uppercase tracking-wider">
+              <div className={`flex-1 bg-white border rounded-2xl flex flex-col shadow-sm overflow-hidden transition-all duration-300 ${!selectedDeptId ? 'opacity-50 pointer-events-none' : ''} ${focusedCol === 1 ? 'border-indigo-400 ring-4 ring-indigo-50' : 'border-slate-200'}`}>
+                <div className="bg-slate-50/80 border-b border-slate-100 px-4 py-3 font-bold text-slate-700 text-xs uppercase tracking-widest flex items-center justify-between">
                   Categories
+                  <span className="bg-white border border-slate-200 text-slate-600 rounded-full px-2 py-0.5 text-[10px] shadow-sm">{displayedCategories.length}</span>
                 </div>
-                <div className="flex-1 overflow-y-auto custom-scrollbar p-1 flex flex-col gap-1">
+                <div className="flex-1 overflow-y-auto custom-scrollbar p-2 flex flex-col gap-1.5">
                   {!selectedDeptId ? (
-                    <div className="text-center text-slate-500 mt-10 text-[11px] italic">Select a Department first</div>
+                    <div className="flex items-center justify-center h-full">
+                      <div className="text-center text-slate-400 text-xs font-semibold bg-slate-50 px-4 py-2 rounded-lg border border-slate-100">Select a Department first</div>
+                    </div>
                   ) : displayedCategories.length === 0 ? (
-                    <div className="text-center text-slate-500 mt-10 text-[11px] italic">No categories found.</div>
+                    <div className="flex items-center justify-center h-full">
+                      <div className="text-center text-slate-400 text-xs font-semibold bg-slate-50 px-4 py-2 rounded-lg border border-slate-100">No categories found</div>
+                    </div>
                   ) : (
                     displayedCategories.map((cat, idx) => {
                       const isSelected = selectedCatId === cat.id;
@@ -555,19 +607,19 @@ export default function TaxonomyMaster() {
                         <div 
                           key={cat.id} 
                           onClick={async () => { setSelectedCatId(cat.id); setFocusedCol(1); setFocusedIdx(idx); }}
-                          className={`px-2 py-1 cursor-pointer font-bold text-[12px] border flex justify-between items-center ${
-                            isSelected ? 'bg-[#1b5e58] text-white border-[#1b5e58]' : 
-                            isFocused ? 'bg-blue-100 border-blue-400' : 'bg-[#fcfaf2] border-slate-300 hover:bg-[#ffffe0]'
+                          className={`px-3 py-2.5 rounded-xl cursor-pointer font-bold text-xs border transition-all flex justify-between items-center ${
+                            isSelected ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-200' : 
+                            isFocused ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-white border-slate-100 hover:border-slate-300 text-slate-700 hover:bg-slate-50'
                           }`}
                         >
                           <span>{cat.name}</span>
-                          {cat.default_cut && <span className={`text-[10px] px-1 rounded ${isSelected ? 'bg-white text-black' : 'bg-slate-200 text-slate-600'}`}>Cut: {cat.default_cut}</span>}
+                          {cat.default_cut && <span className={`text-[10px] px-1.5 py-0.5 rounded shadow-sm ${isSelected ? 'bg-indigo-700 text-indigo-100 border border-indigo-500' : 'bg-slate-100 text-slate-500 border border-slate-200'}`}>Cut: {cat.default_cut}</span>}
                         </div>
                       );
                     })
                   )}
                 </div>
-                <div className={`p-1 bg-[#f8f9fa] border-t border-slate-400 ${focusedCol === 1 && focusedIdx === displayedCategories.length ? 'ring-2 ring-blue-500' : ''}`}>
+                <div className={`p-3 bg-slate-50/50 border-t border-slate-100 ${focusedCol === 1 && focusedIdx === displayedCategories.length ? 'bg-indigo-50/50' : ''}`}>
                   <input 
                     ref={inputCatRef}
                     type="text"
@@ -584,22 +636,27 @@ export default function TaxonomyMaster() {
                       }
                     }}
                     disabled={!selectedDeptId}
-                    placeholder="Add New Category..."
-                    className="w-full bg-white border border-slate-400 px-2 py-1 text-[12px] font-bold text-black focus:bg-[#ffffe0] focus:outline-none focus:border-slate-800 disabled:bg-slate-100"
+                    placeholder="+ Add Category..."
+                    className="w-full bg-white border border-slate-200 px-3 py-2.5 text-xs font-bold text-slate-700 rounded-lg shadow-sm focus:bg-white focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all placeholder-slate-400 disabled:bg-slate-50 disabled:text-slate-400"
                   />
                 </div>
               </div>
 
               {/* Column 3: SubCategories */}
-              <div className={`flex-1 border-2 bg-white flex flex-col shadow-sm ${!selectedCatId ? 'opacity-50 pointer-events-none' : ''} ${focusedCol === 2 ? 'border-blue-500' : 'border-slate-400'}`}>
-                <div className="bg-[#eef5ed] border-b border-slate-400 px-2 py-1 font-bold text-slate-800 text-[12px] text-center uppercase tracking-wider">
+              <div className={`flex-1 bg-white border rounded-2xl flex flex-col shadow-sm overflow-hidden transition-all duration-300 ${!selectedCatId ? 'opacity-50 pointer-events-none' : ''} ${focusedCol === 2 ? 'border-indigo-400 ring-4 ring-indigo-50' : 'border-slate-200'}`}>
+                <div className="bg-slate-50/80 border-b border-slate-100 px-4 py-3 font-bold text-slate-700 text-xs uppercase tracking-widest flex items-center justify-between">
                   Sub Categories
+                  <span className="bg-white border border-slate-200 text-slate-600 rounded-full px-2 py-0.5 text-[10px] shadow-sm">{displayedSubCategories.length}</span>
                 </div>
-                <div className="flex-1 overflow-y-auto custom-scrollbar p-1 flex flex-col gap-1">
+                <div className="flex-1 overflow-y-auto custom-scrollbar p-2 flex flex-col gap-1.5">
                    {!selectedCatId ? (
-                    <div className="text-center text-slate-500 mt-10 text-[11px] italic">Select a Category first</div>
+                    <div className="flex items-center justify-center h-full">
+                      <div className="text-center text-slate-400 text-xs font-semibold bg-slate-50 px-4 py-2 rounded-lg border border-slate-100">Select a Category first</div>
+                    </div>
                   ) : displayedSubCategories.length === 0 ? (
-                    <div className="text-center text-slate-500 mt-10 text-[11px] italic">No subcategories found.</div>
+                    <div className="flex items-center justify-center h-full">
+                      <div className="text-center text-slate-400 text-xs font-semibold bg-slate-50 px-4 py-2 rounded-lg border border-slate-100">No subcategories found</div>
+                    </div>
                   ) : (
                     displayedSubCategories.map((subcat, idx) => {
                       const isFocused = focusedCol === 2 && focusedIdx === idx;
@@ -607,18 +664,18 @@ export default function TaxonomyMaster() {
                         <div 
                           key={subcat.id} 
                           onClick={async () => { setFocusedCol(2); setFocusedIdx(idx); }}
-                          className={`px-2 py-1 cursor-pointer font-bold text-[12px] border flex justify-between items-center ${
-                            isFocused ? 'bg-blue-100 border-blue-400' : 'bg-[#fcfaf2] border-slate-300 hover:bg-[#ffffe0]'
+                          className={`px-3 py-2.5 rounded-xl cursor-pointer font-bold text-xs border flex justify-between items-center transition-all ${
+                            isFocused ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-white border-slate-100 hover:border-slate-300 text-slate-700 hover:bg-slate-50'
                           }`}
                         >
                           <span>{subcat.name}</span>
-                          {subcat.default_cut && <span className={`text-[10px] px-1 rounded bg-slate-200 text-slate-600`}>Cut: {subcat.default_cut}</span>}
+                          {subcat.default_cut && <span className={`text-[10px] px-1.5 py-0.5 rounded shadow-sm bg-slate-100 text-slate-500 border border-slate-200`}>Cut: {subcat.default_cut}</span>}
                         </div>
                       );
                     })
                   )}
                 </div>
-                <div className={`p-1 bg-[#f8f9fa] border-t border-slate-400 ${focusedCol === 2 && focusedIdx === displayedSubCategories.length ? 'ring-2 ring-blue-500' : ''}`}>
+                <div className={`p-3 bg-slate-50/50 border-t border-slate-100 ${focusedCol === 2 && focusedIdx === displayedSubCategories.length ? 'bg-indigo-50/50' : ''}`}>
                   <input 
                     ref={inputSubCatRef}
                     type="text"
@@ -634,8 +691,8 @@ export default function TaxonomyMaster() {
                       }
                     }}
                     disabled={!selectedCatId}
-                    placeholder="Add New SubCategory..."
-                    className="w-full bg-white border border-slate-400 px-2 py-1 text-[12px] font-bold text-black focus:bg-[#ffffe0] focus:outline-none focus:border-slate-800 disabled:bg-slate-100"
+                    placeholder="+ Add SubCategory..."
+                    className="w-full bg-white border border-slate-200 px-3 py-2.5 text-xs font-bold text-slate-700 rounded-lg shadow-sm focus:bg-white focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all placeholder-slate-400 disabled:bg-slate-50 disabled:text-slate-400"
                   />
                 </div>
               </div>
@@ -643,48 +700,6 @@ export default function TaxonomyMaster() {
             </div>
           </div>
           
-          {/* Right Sidebar */}
-          <div className='w-[120px] flex-col gap-[2px] overflow-y-auto hidden lg:flex bg-[#e0efeb] shrink-0'>
-             {[
-               { key: 'F4', label: 'Edit' },
-               { key: 'F6', label: 'Merge' },
-               { key: 'DEL', label: 'Delete' },
-             ].map((f) => (
-               <button 
-                 key={f.key} 
-                 className='flex flex-row items-center px-2 py-1 bg-[#e0efeb] border border-[#a3c3be] hover:bg-[#c9e1dd] hover:border-[#81a09d] text-left transition-all shadow-[inset_1px_1px_0_rgba(255,255,255,0.8)]'
-               >
-                 <span className='font-bold text-black text-[11px] w-[30px]'>{f.key}</span>
-                 <span className='text-black text-[11px] font-medium border-l border-[#a3c3be] pl-1 ml-1'>{f.label}</span>
-               </button>
-             ))}
-             <div className='flex-1' />
-             <div className="flex flex-col items-center justify-center p-2 mb-2 border-t border-[#a3c3be] mx-2 pt-4">
-               <svg width="64" height="64" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-                 <circle cx="100" cy="100" r="86" fill="transparent" stroke="#1b5e58" strokeWidth="14" />
-                 <circle cx="14" cy="100" r="8" fill="transparent" stroke="#1b5e58" strokeWidth="5" />
-                 <circle cx="186" cy="100" r="8" fill="transparent" stroke="#1b5e58" strokeWidth="5" />
-                 <text x="100" y="100" fontFamily="system-ui, -apple-system, sans-serif" fontWeight="900" fontSize="72" textAnchor="middle" dominantBaseline="central">
-                   <tspan fill="#12423d">RN</tspan><tspan fill="#1b5e58">.</tspan>
-                 </text>
-               </svg>
-               <span className="font-extrabold text-[13px] text-[#12423d] mt-2 uppercase tracking-widest text-center">RetailNode</span>
-             </div>
-
-             <button 
-               onClick={async () => navigate('/dashboard')}
-               className='flex flex-row items-center px-2 py-1 bg-[#e0efeb] border border-[#a3c3be] hover:bg-[#c9e1dd] hover:border-[#81a09d] text-left transition-all shadow-[inset_1px_1px_0_rgba(255,255,255,0.8)]'
-             >
-                 <span className='font-bold text-black text-[11px] w-[25px] underline'>Q</span>
-                 <span className='text-black text-[11px] font-medium border-l border-[#a3c3be] pl-1 ml-1'>Quit</span>
-             </button>
-          </div>
-          
-        </div>
-        
-        {/* Footer */}
-        <div className='bg-[#1b5e58] text-white text-[11px] px-4 py-1 flex justify-between items-center border-t-2 border-[#12423d] shrink-0'>
-          <div className='font-medium tracking-wide'>Taxonomy Master</div>
         </div>
       </div>
     </>
