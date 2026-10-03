@@ -44,6 +44,7 @@ export default function PartyMaster() {
     gstRawData: null as any,
     contacts: [],
     invoiceConfig: { designNo: false, colourNo: false, showSize: false, showPurchaseDiscount: false, showMarkdown: false }
+  });
 
   const [categories, setCategories] = useState<{cat: string, sub: string}[]>([]);
   const [tempCat, setTempCat] = useState('');
