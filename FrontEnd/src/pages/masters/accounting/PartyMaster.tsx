@@ -42,7 +42,7 @@ export default function PartyMaster() {
     contactNumber2: '', mobileNumber2: '', contactNumber3: '', mobileNumber3: '',
     accountName: '', bankName: '', accountNumber: '', ifsc: '', branch: '', bankAccountType: 'Savings',
     gstRawData: null as any,
-    contacts: [],
+    contacts: [] as {type: string, name: string, mobile: string}[],
     invoiceConfig: { designNo: false, colourNo: false, showSize: false, showPurchaseDiscount: false, showMarkdown: false }
   });
 
@@ -428,7 +428,7 @@ export default function PartyMaster() {
           contactNumber2: '', mobileNumber2: '', contactNumber3: '', mobileNumber3: '',
           accountName: '', bankName: '', accountNumber: '', ifsc: '', branch: '', bankAccountType: 'Savings',
           gstRawData: null as any,
-          contacts: [] as any[],
+          contacts: [] as {type: string, name: string, mobile: string}[],
           invoiceConfig: { designNo: false, colourNo: false, showSize: false, showPurchaseDiscount: false, showMarkdown: false }
         });
         setCategories([]);
@@ -469,7 +469,7 @@ export default function PartyMaster() {
             contactNumber2: '', mobileNumber2: '', contactNumber3: '', mobileNumber3: '',
             accountName: '', bankName: '', accountNumber: '', ifsc: '', branch: '', bankAccountType: 'Savings',
             gstRawData: null as any,
-            contacts: [] as any[],
+            contacts: [] as {type: string, name: string, mobile: string}[],
             invoiceConfig: { designNo: false, colourNo: false, showSize: false, showPurchaseDiscount: false, showMarkdown: false }
           });
           setCategories([]);
@@ -507,7 +507,7 @@ export default function PartyMaster() {
               accountName: row.account_name || '', bankName: row.bank_name || '', accountNumber: row.account_number || '', ifsc: row.ifsc || '', branch: row.branch || '', bankAccountType: row.bank_account_type || 'Savings',
               gstRawData: row.gst_raw_data ? (typeof row.gst_raw_data === 'object' ? row.gst_raw_data : (typeof row.gst_raw_data === 'string' && row.gst_raw_data.trim().startsWith('{') ? JSON.parse(row.gst_raw_data) : null)) : null,
               invoiceConfig: row.invoice_config ? (typeof row.invoice_config === 'string' ? JSON.parse(row.invoice_config) : row.invoice_config) : { designNo: false, colourNo: false, showSize: false, showPurchaseDiscount: false, showMarkdown: false },
-              contacts: [] as any[]
+              contacts: [] as {type: string, name: string, mobile: string}[]
             });
             setCategories(row.categories ? (typeof row.categories === 'string' ? JSON.parse(row.categories) : row.categories) : []);
             setBrands(row.brands ? (typeof row.brands === 'string' ? JSON.parse(row.brands) : row.brands) : []);
@@ -576,7 +576,7 @@ export default function PartyMaster() {
                               accountName: row.account_name || '', bankName: row.bank_name || '', accountNumber: row.account_number || '', ifsc: row.ifsc || '', branch: row.branch || '', bankAccountType: row.bank_account_type || 'Savings',
                               gstRawData: row.gst_raw_data ? (typeof row.gst_raw_data === 'object' ? row.gst_raw_data : (typeof row.gst_raw_data === 'string' && row.gst_raw_data.trim().startsWith('{') ? JSON.parse(row.gst_raw_data) : null)) : null,
                               invoiceConfig: row.invoice_config ? (typeof row.invoice_config === 'string' ? JSON.parse(row.invoice_config) : row.invoice_config) : { designNo: false, colourNo: false, showSize: false, showPurchaseDiscount: false, showMarkdown: false },
-                              contacts: [] as any[]
+                              contacts: [] as {type: string, name: string, mobile: string}[]
                             });
                             setCategories(row.categories ? (typeof row.categories === 'string' ? JSON.parse(row.categories) : row.categories) : []);
                             setBrands(row.brands ? (typeof row.brands === 'string' ? JSON.parse(row.brands) : row.brands) : []);
@@ -1177,7 +1177,7 @@ export default function PartyMaster() {
                           contactNumber2: '', mobileNumber2: '', contactNumber3: '', mobileNumber3: '',
                           accountName: '', bankName: '', accountNumber: '', ifsc: '', branch: '', bankAccountType: 'Savings',
                           gstRawData: null as any,
-                          contacts: [] as any[],
+                          contacts: [] as {type: string, name: string, mobile: string}[],
                           invoiceConfig: { designNo: false, colourNo: false, showSize: false, showPurchaseDiscount: false, showMarkdown: false }
                         });
                         setCategories([]);
