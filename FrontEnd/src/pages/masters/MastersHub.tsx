@@ -68,7 +68,7 @@ export default function MastersHub() {
           <div>
             <h1 className="text-3xl font-black text-slate-800 tracking-tight">Masters Hub</h1>
             <span className="text-slate-300 font-light mb-1">|</span>
-            <p className="text-sm font-medium text-slate-500 mt-1">Configure and manage all core system entities.</p>
+            <p className="text-[10px] font-bold text-slate-500 mt-1">Configure and manage all core system entities.</p>
           </div>
         </div>
 

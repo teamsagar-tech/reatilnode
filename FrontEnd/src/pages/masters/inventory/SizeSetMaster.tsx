@@ -161,16 +161,16 @@ export default function SizeSetMaster() {
         <title>Size Sets Master | RetailNode</title>
       </Helmet>
       
-      <div className='flex flex-col h-[calc(100vh-6rem)] font-sans selection:bg-indigo-100 w-full px-2 sm:px-4'>
-        <div className='flex flex-1 gap-4 overflow-hidden pt-4'>
-          <div className='flex-1 bg-white/70 backdrop-blur-xl border border-slate-200/60 rounded-2xl shadow-xl shadow-slate-200/40 flex flex-col overflow-hidden'>
-            <div className='p-4 sm:p-6 flex-1 overflow-y-auto flex flex-col'>
+      <div className='flex flex-col h-[calc(100vh-64px)] font-sans selection:bg-indigo-100 w-full bg-slate-50 sm:px-4'>
+        <div className='flex flex-1 overflow-hidden pt-4'>
+          <div className='flex-1 bg-white border-none flex flex-col overflow-hidden'>
+            <div className='flex-1 overflow-y-auto flex flex-col flex flex-col'>
             
               <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
-                <div className="flex items-end gap-3 shrink-0">
-                  <h1 className="text-2xl font-black text-slate-800 tracking-tight">{mode === 'list' ? 'Size Sets' : 'New Size Set'}</h1>
+                <div className="flex items-end gap-2 shrink-0">
+                  <h1 className="text-sm font-black text-slate-800 uppercase tracking-tight">{mode === 'list' ? 'Size Sets' : 'New Size Set'}</h1>
                   <span className="text-slate-300 font-light mb-1">|</span>
-                  <p className="text-sm font-medium text-slate-500 mb-0.5">Configuration Master</p>
+                  <p className="text-[10px] font-bold text-slate-500 mb-0.5">Configuration Master</p>
                 </div>
                 
                 {mode === 'list' && (
@@ -179,10 +179,10 @@ export default function SizeSetMaster() {
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
                       <input 
                         type="text" placeholder="Search Size Sets..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium focus:outline-none focus:border-indigo-400 transition-all placeholder-slate-400"
+                        className="w-full pl-7 pr-2 py-1 bg-slate-50 border border-slate-300 rounded text-[11px] font-medium focus:outline-none focus:border-indigo-400 transition-all placeholder-slate-400"
                       />
                     </div>
-                    <button onClick={() => { setMode('create'); setFormData({ sizes_list: [] }); }} className='shrink-0 bg-indigo-600 px-4 py-2 rounded-lg font-bold text-white shadow-md hover:bg-indigo-700 transition-all text-xs'>
+                    <button onClick={() => { setMode('create'); setFormData({ sizes_list: [] }); }} className='shrink-0 bg-indigo-600 px-2 py-1 rounded bg-indigo-600 font-bold text-white shadow-none hover:bg-indigo-700 transition-all text-xs'>
                       Create New (Alt+C)
                     </button>
                   </div>
@@ -250,7 +250,7 @@ export default function SizeSetMaster() {
                       <InputGroup autoFocus={true} label="Group/Set Name" id="input-name" placeholder="e.g. 1-16" value={formData.name} onChange={(v: string) => setFormData({...formData, name: v})} />
                     </div>
                     
-                    <div className="flex-1 flex flex-col gap-1 overflow-y-auto pb-4 custom-scrollbar pr-2">
+                    <div className="flex-1 flex flex-col gap-1 overflow-y-auto px-2 pb-2 custom-scrollbar pr-2">
                       <div className="font-bold text-indigo-800 text-[12px] border-b border-indigo-100 mb-4 pb-2 uppercase tracking-wider">Select Sizes for this Set</div>
                       <div className="bg-slate-50 border border-slate-200 p-5 rounded-xl shadow-inner flex-1 overflow-y-auto custom-scrollbar">
                         {Object.keys(groupedAllSizes).length > 0 ? (

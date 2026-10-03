@@ -468,7 +468,7 @@ export default function SizeSetMaster() {
                     </div>
 
                     {/* Column 2: Size Selection */}
-                    <div className="flex-1 flex flex-col gap-1 overflow-y-auto pb-4 custom-scrollbar pr-2">
+                    <div className="flex-1 flex flex-col gap-1 overflow-y-auto px-2 pb-2 custom-scrollbar pr-2">
                       <SectionTitle>Select Sizes for this Set</SectionTitle>
                       <div className="bg-white border border-slate-300 p-4 rounded shadow-inner flex-1 overflow-y-auto">
                         {Object.keys(groupedAllSizes).length > 0 ? (
