@@ -127,7 +127,7 @@ const sendDailyReport = async () => {
     body { margin: 0; padding: 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #f4f7fa; color: #333333; }
     .email-wrapper { width: 100%; background-color: #f4f7fa; padding: 40px 0; }
     .email-content { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05); }
-    .header { background-color: #1f2937; padding: 30px 40px; text-align: center; }
+    .header { background-color: #dfdfdf; padding: 30px 40px; text-align: center; }
     .header h1 { color: #ffffff; margin: 0; font-size: 28px; font-weight: 700; letter-spacing: 0.5px; }
     .header span { color: #38bdf8; }
     .body-section { padding: 40px; }
@@ -149,8 +149,13 @@ const sendDailyReport = async () => {
       <td align="center">
         <table class="email-content" cellpadding="0" cellspacing="0" border="0" width="100%">
           <tr>
-            <td class="header" style="background-color: #1f2937; padding: 30px 40px; text-align: center; border-bottom: none;">
-              <img src="https://app.retailnode.in/logo3.png" alt="RetailNode Logo" width="220" style="display: block; margin: 0 auto; max-width: 100%; border: 0;" />
+            <td class="header" style="background-color: #dfdfdf; padding: 30px 40px; text-align: center; border-bottom: none;">
+              <div style="display: inline-block; vertical-align: middle; margin-right: 12px;">
+                <img src="https://app.retailnode.in/logo3.png" alt="RetailNode Logo" width="55" height="55" style="display: block;" />
+              </div>
+              <h1 style="display: inline-block; vertical-align: middle; margin: 0; font-size: 32px; font-weight: 800; letter-spacing: 0.5px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
+                <span style="color: #1e293b;">RETAIL</span><span style="color: #38bdf8;">NODE</span>
+              </h1>
             </td>
           </tr>
           <tr>
