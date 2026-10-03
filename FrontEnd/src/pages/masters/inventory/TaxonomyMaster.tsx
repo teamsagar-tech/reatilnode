@@ -504,45 +504,45 @@ export default function TaxonomyMaster() {
         onMerge={handleMerge}
       />
 
-      <div className='flex flex-col h-[calc(100vh-64px)] font-sans selection:bg-indigo-100 w-full px-1 pt-1 pb-1'>
-        <div className='flex flex-1 gap-4 overflow-hidden'>
+      <div className='flex flex-col h-[calc(100vh-64px)] font-sans selection:bg-indigo-100 w-full bg-slate-50'>
+        <div className='flex flex-1 overflow-hidden'>
           
           {/* Main Container */}
-          <div className='flex-1 bg-white/70 backdrop-blur-xl border border-slate-200/60 rounded-2xl shadow-xl shadow-slate-200/40 flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-300'>
+          <div className='flex-1 bg-white border-none flex flex-col overflow-hidden'>
             
             {/* Header */}
-            <div className="flex items-center justify-between px-2 py-1 border-b border-slate-100 shrink-0 bg-white">
+            <div className="flex items-center justify-between px-2 py-1 border-b border-slate-200 shrink-0 bg-white">
               <div className="flex items-end gap-2 shrink-0">
-                <h1 className="text-base font-black text-slate-800 tracking-tight">Taxonomy Master</h1>
+                <h1 className="text-sm font-black text-slate-800 tracking-tight uppercase">Taxonomy Master</h1>
                 <span className="text-slate-300 font-light text-sm mb-0.5">|</span>
-                <p className="text-[10px] font-medium text-slate-500 mb-0.5">Configure Hierarchy</p>
+                <p className="text-[10px] font-bold text-slate-500 mb-0.5">Configure Hierarchy</p>
               </div>
               
-              <div className="hidden sm:flex items-center gap-3 text-[10px] font-bold text-slate-500 bg-slate-50 px-2 py-1 rounded-lg border border-slate-200 shadow-sm">
-                <span className="flex items-center gap-1"><span className="bg-white border border-slate-200 text-indigo-600 px-1 py-0.5 rounded shadow-sm">F4</span> Edit</span>
+              <div className="hidden sm:flex items-center gap-2 text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                <span className="flex items-center gap-1"><span className="text-indigo-600 font-black">F4</span> Edit</span>
                 <span className="text-slate-300">|</span>
-                <span className="flex items-center gap-1"><span className="bg-white border border-slate-200 text-amber-600 px-1 py-0.5 rounded shadow-sm">F6</span> Merge</span>
+                <span className="flex items-center gap-1"><span className="text-amber-600 font-black">F6</span> Merge</span>
                 <span className="text-slate-300">|</span>
-                <span className="flex items-center gap-1"><span className="bg-white border border-slate-200 text-rose-600 px-1 py-0.5 rounded shadow-sm">DEL</span> Delete</span>
+                <span className="flex items-center gap-1"><span className="text-rose-600 font-black">DEL</span> Delete</span>
               </div>
             </div>
 
             {errorMsg && (
-              <div className="bg-rose-50 text-rose-700 border-l-4 border-rose-500 px-4 py-3 text-xs font-bold mx-5 mt-4 rounded-r-lg shadow-sm">
+              <div className="bg-rose-50 text-rose-700 border-b border-rose-200 px-2 py-1 text-[10px] font-bold">
                 {errorMsg}
               </div>
             )}
             
             {/* 3 Column Grid */}
-            <div className='p-2 flex-1 overflow-hidden flex gap-2 bg-slate-50/50'>
+            <div className='flex-1 overflow-hidden flex bg-slate-200 gap-[1px]'>
               
               {/* Column 1: Departments */}
-              <div className={`flex-1 bg-white border rounded-2xl flex flex-col shadow-sm overflow-hidden transition-all duration-300 ${focusedCol === 0 ? 'border-indigo-400 ring-4 ring-indigo-50' : 'border-slate-200'}`}>
-                <div className="bg-slate-50/80 border-b border-slate-100 px-4 py-3 font-bold text-slate-700 text-xs uppercase tracking-widest flex items-center justify-between">
+              <div className={`flex-1 bg-white flex flex-col overflow-hidden transition-all duration-300 ${focusedCol === 0 ? 'ring-2 ring-inset ring-indigo-500 z-10' : ''}`}>
+                <div className="bg-slate-100 border-b border-slate-200 px-2 py-1 font-bold text-slate-800 text-[10px] uppercase tracking-widest flex items-center justify-between">
                   Departments
-                  <span className="bg-white border border-slate-200 text-slate-600 rounded-full px-2 py-0.5 text-[10px] shadow-sm">{departments.length}</span>
+                  <span className="bg-slate-200 text-slate-700 rounded px-1.5 py-0 text-[9px]">{departments.length}</span>
                 </div>
-                <div className="flex-1 overflow-y-auto custom-scrollbar p-2 flex flex-col gap-1.5">
+                <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col">
                   {departments.map((dept, idx) => {
                     const isSelected = selectedDeptId === dept.id;
                     const isFocused = focusedCol === 0 && focusedIdx === idx;
@@ -550,18 +550,18 @@ export default function TaxonomyMaster() {
                       <div 
                         key={dept.id} 
                         onClick={async () => { setSelectedDeptId(dept.id); setSelectedCatId(null); setFocusedCol(0); setFocusedIdx(idx); }}
-                        className={`px-2 py-1.5 rounded-lg cursor-pointer font-bold text-[11px] border transition-all flex items-center justify-between ${
-                          isSelected ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-200' : 
-                          isFocused ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-white border-slate-100 hover:border-slate-300 text-slate-700 hover:bg-slate-50'
+                        className={`px-2 py-1 cursor-pointer font-bold text-[11px] border-b border-slate-100 flex items-center justify-between ${
+                          isSelected ? 'bg-indigo-600 text-white' : 
+                          isFocused ? 'bg-indigo-100 text-indigo-800' : 'bg-white text-slate-700 hover:bg-slate-50'
                         }`}
                       >
                         {dept.name}
-                        {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />}
+                        {isSelected && <span className="w-1 h-1 rounded-full bg-white" />}
                       </div>
                     );
                   })}
                 </div>
-                <div className={`p-3 bg-slate-50/50 border-t border-slate-100 ${focusedCol === 0 && focusedIdx === departments.length ? 'bg-indigo-50/50' : ''}`}>
+                <div className={`p-1 bg-slate-50 border-t border-slate-200 ${focusedCol === 0 && focusedIdx === departments.length ? 'bg-indigo-50' : ''}`}>
                   <input 
                     ref={inputDeptRef}
                     type="text"
@@ -579,26 +579,22 @@ export default function TaxonomyMaster() {
                       }
                     }}
                     placeholder="+ Add Department..."
-                    className="w-full bg-white border border-slate-200 px-2 py-1.5 text-[11px] font-bold text-slate-700 rounded-lg shadow-sm focus:bg-white focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all placeholder-slate-400"
+                    className="w-full bg-white border border-slate-300 px-2 py-1 text-[11px] font-bold text-slate-800 rounded-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 placeholder-slate-400"
                   />
                 </div>
               </div>
 
               {/* Column 2: Categories */}
-              <div className={`flex-1 bg-white border rounded-2xl flex flex-col shadow-sm overflow-hidden transition-all duration-300 ${!selectedDeptId ? 'opacity-50 pointer-events-none' : ''} ${focusedCol === 1 ? 'border-indigo-400 ring-4 ring-indigo-50' : 'border-slate-200'}`}>
-                <div className="bg-slate-50/80 border-b border-slate-100 px-4 py-3 font-bold text-slate-700 text-xs uppercase tracking-widest flex items-center justify-between">
+              <div className={`flex-1 bg-white flex flex-col overflow-hidden transition-all duration-300 ${!selectedDeptId ? 'bg-slate-50 pointer-events-none opacity-60' : ''} ${focusedCol === 1 ? 'ring-2 ring-inset ring-indigo-500 z-10' : ''}`}>
+                <div className="bg-slate-100 border-b border-slate-200 px-2 py-1 font-bold text-slate-800 text-[10px] uppercase tracking-widest flex items-center justify-between">
                   Categories
-                  <span className="bg-white border border-slate-200 text-slate-600 rounded-full px-2 py-0.5 text-[10px] shadow-sm">{displayedCategories.length}</span>
+                  <span className="bg-slate-200 text-slate-700 rounded px-1.5 py-0 text-[9px]">{displayedCategories.length}</span>
                 </div>
-                <div className="flex-1 overflow-y-auto custom-scrollbar p-2 flex flex-col gap-1.5">
+                <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col">
                   {!selectedDeptId ? (
-                    <div className="flex items-center justify-center h-full">
-                      <div className="text-center text-slate-400 text-xs font-semibold bg-slate-50 px-4 py-2 rounded-lg border border-slate-100">Select a Department first</div>
-                    </div>
+                    <div className="flex items-center justify-center h-full text-[10px] text-slate-400 font-bold uppercase tracking-widest">Select Department</div>
                   ) : displayedCategories.length === 0 ? (
-                    <div className="flex items-center justify-center h-full">
-                      <div className="text-center text-slate-400 text-xs font-semibold bg-slate-50 px-4 py-2 rounded-lg border border-slate-100">No categories found</div>
-                    </div>
+                    <div className="flex items-center justify-center h-full text-[10px] text-slate-400 font-bold uppercase tracking-widest">No categories</div>
                   ) : (
                     displayedCategories.map((cat, idx) => {
                       const isSelected = selectedCatId === cat.id;
@@ -607,19 +603,19 @@ export default function TaxonomyMaster() {
                         <div 
                           key={cat.id} 
                           onClick={async () => { setSelectedCatId(cat.id); setFocusedCol(1); setFocusedIdx(idx); }}
-                          className={`px-2 py-1.5 rounded-lg cursor-pointer font-bold text-[11px] border transition-all flex justify-between items-center ${
-                            isSelected ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-200' : 
-                            isFocused ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-white border-slate-100 hover:border-slate-300 text-slate-700 hover:bg-slate-50'
+                          className={`px-2 py-1 cursor-pointer font-bold text-[11px] border-b border-slate-100 flex justify-between items-center ${
+                            isSelected ? 'bg-indigo-600 text-white' : 
+                            isFocused ? 'bg-indigo-100 text-indigo-800' : 'bg-white text-slate-700 hover:bg-slate-50'
                           }`}
                         >
                           <span>{cat.name}</span>
-                          {cat.default_cut && <span className={`text-[10px] px-1.5 py-0.5 rounded shadow-sm ${isSelected ? 'bg-indigo-700 text-indigo-100 border border-indigo-500' : 'bg-slate-100 text-slate-500 border border-slate-200'}`}>Cut: {cat.default_cut}</span>}
+                          {cat.default_cut && <span className={`text-[9px] px-1 py-0 rounded ${isSelected ? 'bg-indigo-800 text-indigo-100' : 'bg-slate-200 text-slate-600'}`}>Cut: {cat.default_cut}</span>}
                         </div>
                       );
                     })
                   )}
                 </div>
-                <div className={`p-3 bg-slate-50/50 border-t border-slate-100 ${focusedCol === 1 && focusedIdx === displayedCategories.length ? 'bg-indigo-50/50' : ''}`}>
+                <div className={`p-1 bg-slate-50 border-t border-slate-200 ${focusedCol === 1 && focusedIdx === displayedCategories.length ? 'bg-indigo-50' : ''}`}>
                   <input 
                     ref={inputCatRef}
                     type="text"
@@ -637,26 +633,22 @@ export default function TaxonomyMaster() {
                     }}
                     disabled={!selectedDeptId}
                     placeholder="+ Add Category..."
-                    className="w-full bg-white border border-slate-200 px-2 py-1.5 text-[11px] font-bold text-slate-700 rounded-lg shadow-sm focus:bg-white focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all placeholder-slate-400 disabled:bg-slate-50 disabled:text-slate-400"
+                    className="w-full bg-white border border-slate-300 px-2 py-1 text-[11px] font-bold text-slate-800 rounded-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 placeholder-slate-400 disabled:bg-slate-100"
                   />
                 </div>
               </div>
 
               {/* Column 3: SubCategories */}
-              <div className={`flex-1 bg-white border rounded-2xl flex flex-col shadow-sm overflow-hidden transition-all duration-300 ${!selectedCatId ? 'opacity-50 pointer-events-none' : ''} ${focusedCol === 2 ? 'border-indigo-400 ring-4 ring-indigo-50' : 'border-slate-200'}`}>
-                <div className="bg-slate-50/80 border-b border-slate-100 px-4 py-3 font-bold text-slate-700 text-xs uppercase tracking-widest flex items-center justify-between">
+              <div className={`flex-1 bg-white flex flex-col overflow-hidden transition-all duration-300 ${!selectedCatId ? 'bg-slate-50 pointer-events-none opacity-60' : ''} ${focusedCol === 2 ? 'ring-2 ring-inset ring-indigo-500 z-10' : ''}`}>
+                <div className="bg-slate-100 border-b border-slate-200 px-2 py-1 font-bold text-slate-800 text-[10px] uppercase tracking-widest flex items-center justify-between">
                   Sub Categories
-                  <span className="bg-white border border-slate-200 text-slate-600 rounded-full px-2 py-0.5 text-[10px] shadow-sm">{displayedSubCategories.length}</span>
+                  <span className="bg-slate-200 text-slate-700 rounded px-1.5 py-0 text-[9px]">{displayedSubCategories.length}</span>
                 </div>
-                <div className="flex-1 overflow-y-auto custom-scrollbar p-2 flex flex-col gap-1.5">
+                <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col">
                    {!selectedCatId ? (
-                    <div className="flex items-center justify-center h-full">
-                      <div className="text-center text-slate-400 text-xs font-semibold bg-slate-50 px-4 py-2 rounded-lg border border-slate-100">Select a Category first</div>
-                    </div>
+                    <div className="flex items-center justify-center h-full text-[10px] text-slate-400 font-bold uppercase tracking-widest">Select Category</div>
                   ) : displayedSubCategories.length === 0 ? (
-                    <div className="flex items-center justify-center h-full">
-                      <div className="text-center text-slate-400 text-xs font-semibold bg-slate-50 px-4 py-2 rounded-lg border border-slate-100">No subcategories found</div>
-                    </div>
+                    <div className="flex items-center justify-center h-full text-[10px] text-slate-400 font-bold uppercase tracking-widest">No subcategories</div>
                   ) : (
                     displayedSubCategories.map((subcat, idx) => {
                       const isFocused = focusedCol === 2 && focusedIdx === idx;
@@ -664,18 +656,18 @@ export default function TaxonomyMaster() {
                         <div 
                           key={subcat.id} 
                           onClick={async () => { setFocusedCol(2); setFocusedIdx(idx); }}
-                          className={`px-2 py-1.5 rounded-lg cursor-pointer font-bold text-[11px] border flex justify-between items-center transition-all ${
-                            isFocused ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-white border-slate-100 hover:border-slate-300 text-slate-700 hover:bg-slate-50'
+                          className={`px-2 py-1 cursor-pointer font-bold text-[11px] border-b border-slate-100 flex justify-between items-center ${
+                            isFocused ? 'bg-indigo-100 text-indigo-800' : 'bg-white text-slate-700 hover:bg-slate-50'
                           }`}
                         >
                           <span>{subcat.name}</span>
-                          {subcat.default_cut && <span className={`text-[10px] px-1.5 py-0.5 rounded shadow-sm bg-slate-100 text-slate-500 border border-slate-200`}>Cut: {subcat.default_cut}</span>}
+                          {subcat.default_cut && <span className={`text-[9px] px-1 py-0 rounded bg-slate-200 text-slate-600`}>Cut: {subcat.default_cut}</span>}
                         </div>
                       );
                     })
                   )}
                 </div>
-                <div className={`p-3 bg-slate-50/50 border-t border-slate-100 ${focusedCol === 2 && focusedIdx === displayedSubCategories.length ? 'bg-indigo-50/50' : ''}`}>
+                <div className={`p-1 bg-slate-50 border-t border-slate-200 ${focusedCol === 2 && focusedIdx === displayedSubCategories.length ? 'bg-indigo-50' : ''}`}>
                   <input 
                     ref={inputSubCatRef}
                     type="text"
@@ -692,7 +684,7 @@ export default function TaxonomyMaster() {
                     }}
                     disabled={!selectedCatId}
                     placeholder="+ Add SubCategory..."
-                    className="w-full bg-white border border-slate-200 px-2 py-1.5 text-[11px] font-bold text-slate-700 rounded-lg shadow-sm focus:bg-white focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all placeholder-slate-400 disabled:bg-slate-50 disabled:text-slate-400"
+                    className="w-full bg-white border border-slate-300 px-2 py-1 text-[11px] font-bold text-slate-800 rounded-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 placeholder-slate-400 disabled:bg-slate-100"
                   />
                 </div>
               </div>
