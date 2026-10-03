@@ -204,8 +204,9 @@ export default function Header() {
         
         {/* Logo & Navigation */}
         <div className="flex items-center h-full">
-          <Link to="/dashboard" className="flex items-center hover:scale-[1.02] transition-transform duration-300 mr-2 md:mr-6 shrink-0">
-            <img src="/logo.png" alt="RetailNode" className="h-[40px] w-auto object-contain" />
+          <Link to="/dashboard" className="flex items-center gap-2 hover:scale-[1.02] transition-transform duration-300 mr-2 md:mr-6 shrink-0">
+            <img src="/logo.png" alt="RetailNode" className="h-[32px] w-auto object-contain" />
+            <span className="text-base md:text-lg font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-700 tracking-tight hidden lg:block">RetailNode</span>
           </Link>
           
           {/* Horizontal Menu (Level 1) */}

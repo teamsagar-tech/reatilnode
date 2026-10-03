@@ -504,18 +504,18 @@ export default function TaxonomyMaster() {
         onMerge={handleMerge}
       />
 
-      <div className='flex flex-col h-[calc(100vh-64px)] font-sans selection:bg-indigo-100 w-full px-2 pt-2 pb-2'>
+      <div className='flex flex-col h-[calc(100vh-64px)] font-sans selection:bg-indigo-100 w-full px-1 pt-1 pb-1'>
         <div className='flex flex-1 gap-4 overflow-hidden'>
           
           {/* Main Container */}
           <div className='flex-1 bg-white/70 backdrop-blur-xl border border-slate-200/60 rounded-2xl shadow-xl shadow-slate-200/40 flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-300'>
             
             {/* Header */}
-            <div className="flex items-center justify-between p-4 sm:p-5 border-b border-slate-100 shrink-0 bg-white">
+            <div className="flex items-center justify-between p-2 sm:p-3 border-b border-slate-100 shrink-0 bg-white">
               <div className="flex items-end gap-3 shrink-0">
-                <h1 className="text-2xl font-black text-slate-800 tracking-tight">Taxonomy Master</h1>
+                <h1 className="text-xl font-black text-slate-800 tracking-tight">Taxonomy Master</h1>
                 <span className="text-slate-300 font-light mb-1">|</span>
-                <p className="text-sm font-medium text-slate-500">Configure Hierarchy</p>
+                <p className="text-xs font-medium text-slate-500">Configure Hierarchy</p>
               </div>
               
               <div className="hidden sm:flex items-center gap-4 text-xs font-bold text-slate-500 bg-slate-50 px-4 py-2 rounded-xl border border-slate-200 shadow-sm">
@@ -534,7 +534,7 @@ export default function TaxonomyMaster() {
             )}
             
             {/* 3 Column Grid */}
-            <div className='p-4 sm:p-5 flex-1 overflow-hidden flex gap-4 bg-slate-50/50'>
+            <div className='p-2 flex-1 overflow-hidden flex gap-2 bg-slate-50/50'>
               
               {/* Column 1: Departments */}
               <div className={`flex-1 bg-white border rounded-2xl flex flex-col shadow-sm overflow-hidden transition-all duration-300 ${focusedCol === 0 ? 'border-indigo-400 ring-4 ring-indigo-50' : 'border-slate-200'}`}>
@@ -550,7 +550,7 @@ export default function TaxonomyMaster() {
                       <div 
                         key={dept.id} 
                         onClick={async () => { setSelectedDeptId(dept.id); setSelectedCatId(null); setFocusedCol(0); setFocusedIdx(idx); }}
-                        className={`px-3 py-2.5 rounded-xl cursor-pointer font-bold text-xs border transition-all flex items-center justify-between ${
+                        className={`px-2 py-1.5 rounded-lg cursor-pointer font-bold text-[11px] border transition-all flex items-center justify-between ${
                           isSelected ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-200' : 
                           isFocused ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-white border-slate-100 hover:border-slate-300 text-slate-700 hover:bg-slate-50'
                         }`}
@@ -579,7 +579,7 @@ export default function TaxonomyMaster() {
                       }
                     }}
                     placeholder="+ Add Department..."
-                    className="w-full bg-white border border-slate-200 px-3 py-2.5 text-xs font-bold text-slate-700 rounded-lg shadow-sm focus:bg-white focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all placeholder-slate-400"
+                    className="w-full bg-white border border-slate-200 px-2 py-1.5 text-[11px] font-bold text-slate-700 rounded-lg shadow-sm focus:bg-white focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all placeholder-slate-400"
                   />
                 </div>
               </div>
@@ -607,7 +607,7 @@ export default function TaxonomyMaster() {
                         <div 
                           key={cat.id} 
                           onClick={async () => { setSelectedCatId(cat.id); setFocusedCol(1); setFocusedIdx(idx); }}
-                          className={`px-3 py-2.5 rounded-xl cursor-pointer font-bold text-xs border transition-all flex justify-between items-center ${
+                          className={`px-2 py-1.5 rounded-lg cursor-pointer font-bold text-[11px] border transition-all flex justify-between items-center ${
                             isSelected ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-200' : 
                             isFocused ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-white border-slate-100 hover:border-slate-300 text-slate-700 hover:bg-slate-50'
                           }`}
@@ -637,7 +637,7 @@ export default function TaxonomyMaster() {
                     }}
                     disabled={!selectedDeptId}
                     placeholder="+ Add Category..."
-                    className="w-full bg-white border border-slate-200 px-3 py-2.5 text-xs font-bold text-slate-700 rounded-lg shadow-sm focus:bg-white focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all placeholder-slate-400 disabled:bg-slate-50 disabled:text-slate-400"
+                    className="w-full bg-white border border-slate-200 px-2 py-1.5 text-[11px] font-bold text-slate-700 rounded-lg shadow-sm focus:bg-white focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all placeholder-slate-400 disabled:bg-slate-50 disabled:text-slate-400"
                   />
                 </div>
               </div>
@@ -664,7 +664,7 @@ export default function TaxonomyMaster() {
                         <div 
                           key={subcat.id} 
                           onClick={async () => { setFocusedCol(2); setFocusedIdx(idx); }}
-                          className={`px-3 py-2.5 rounded-xl cursor-pointer font-bold text-xs border flex justify-between items-center transition-all ${
+                          className={`px-2 py-1.5 rounded-lg cursor-pointer font-bold text-[11px] border flex justify-between items-center transition-all ${
                             isFocused ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-white border-slate-100 hover:border-slate-300 text-slate-700 hover:bg-slate-50'
                           }`}
                         >
@@ -692,7 +692,7 @@ export default function TaxonomyMaster() {
                     }}
                     disabled={!selectedCatId}
                     placeholder="+ Add SubCategory..."
-                    className="w-full bg-white border border-slate-200 px-3 py-2.5 text-xs font-bold text-slate-700 rounded-lg shadow-sm focus:bg-white focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all placeholder-slate-400 disabled:bg-slate-50 disabled:text-slate-400"
+                    className="w-full bg-white border border-slate-200 px-2 py-1.5 text-[11px] font-bold text-slate-700 rounded-lg shadow-sm focus:bg-white focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all placeholder-slate-400 disabled:bg-slate-50 disabled:text-slate-400"
                   />
                 </div>
               </div>

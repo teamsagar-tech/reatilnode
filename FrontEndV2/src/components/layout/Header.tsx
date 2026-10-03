@@ -1,15 +1,191 @@
+import { Bell, Search, Settings, LayoutDashboard, Package, ShoppingCart, Users, LogOut, Database, ChevronDown, ChevronRight } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
-import { Bell, LayoutDashboard, Package, ShoppingCart, Users, Settings, ChevronDown, LogOut } from "lucide-react";
-import { toast } from "../../store/useToastStore";
+import React, { useState, useEffect } from 'react';
 import NotificationBell from "./NotificationBell";
 
+// Menu item typing
+type MenuItem = {
+  name: string;
+  icon?: any;
+  path?: string;
+  show?: boolean;
+  children?: MenuItem[];
+};
+
 export default function Header() {
-  const location = useLocation();
-  const isActive = (path: string) => location.pathname.startsWith(path);
+    const location = useLocation();
+  const [isNavigating, setIsNavigating] = useState(false);
+
+  useEffect(() => {
+    setIsNavigating(true);
+    const t = setTimeout(() => setIsNavigating(false), 200);
+    return () => clearTimeout(t);
+  }, [location.pathname]);
+  const isActive = (path?: string) => path && path !== "#" ? location.pathname.startsWith(path) : false;
 
   const user = JSON.parse((sessionStorage.getItem('user') || localStorage.getItem('user')) || '{}');
-  const isSuperAdmin = user.role === 'superadmin';
   const isImpersonating = sessionStorage.getItem('isImpersonating') === 'true';
+
+  const modules = user?.firm_modules || {};
+  const perms = user?.user_permissions || modules;
+
+  const check = (mod: string) => {
+    if (modules[mod]?.enabled === false) return false;
+    if (perms[mod]?.enabled === false) return false;
+    return true;
+  };
+
+  const isSuperAdmin = user.role === 'superadmin';
+
+  const menuItems: MenuItem[] = isSuperAdmin 
+  ? [
+      { name: "Dashboard", icon: LayoutDashboard, path: "/dashboard", show: true },
+    ].filter(item => item.show)
+  : [
+      { name: "Dashboard", icon: LayoutDashboard, path: "/dashboard", show: true },
+      { 
+        name: "Masters", 
+        icon: Database, 
+        path: "/masters", 
+        show: check('masters'),
+        children: [
+          { name: "Hub Overview", path: "/masters" },
+          { name: "Inventory Masters", children: [
+            { name: "Item Master", path: "/masters/item" },
+            { name: "Brand Master", path: "/masters/brand" },
+            { name: "Category Master", path: "/masters/category" },
+            { name: "Sub-Category", path: "/masters/subcategory" },
+            { name: "Department", path: "/masters/department" },
+            { name: "Section", path: "/masters/section" },
+            { name: "Style", path: "/masters/style" },
+            { name: "Sub-Style", path: "/masters/substyle" },
+            { name: "Taxonomy Master", path: "/masters/taxonomy" },
+            { name: "Design Master", path: "/masters/design" },
+            { name: "Size Master", path: "/masters/size" },
+            { name: "Size Group", path: "/masters/size-group" },
+            { name: "Size Set", path: "/masters/size-sets" },
+            { name: "Color Master", path: "/masters/color" },
+            { name: "Cut Master", path: "/masters/cut" },
+            { name: "Material", path: "/masters/material" },
+            { name: "HSN/SAC", path: "/masters/hsnsac" }
+          ]},
+          { name: "Accounting Masters", children: [
+            { name: "Party Master", path: "/masters/party" },
+            { name: "Customer Master", path: "/masters/customer" },
+            { name: "Transporter", path: "/masters/transporter" },
+            { name: "Hundekari", path: "/masters/hundekari" },
+            { name: "Commission", path: "/masters/commission" }
+          ]},
+          { name: "Configuration", children: [
+             { name: "Location Master", path: "/masters/location" },
+             { name: "Charges Type", path: "/masters/chargestype" },
+             { name: "Item Percentage", path: "/masters/itempercentage" }
+          ]}
+        ]
+      },
+      { 
+        name: "Inventory", 
+        icon: Package, 
+        path: "/inventory", 
+        show: check('inventory'),
+        children: [
+          { name: "Dashboard", path: "/inventory" },
+          { name: "Transactions", children: [
+            { name: "Stock Transfer", path: "#" },
+            { name: "Inward", path: "#" },
+            { name: "Outward", path: "#" }
+          ]},
+          { name: "Masters", children: [
+            { name: "Item Master", path: "/masters/item" },
+            { name: "Brand Master", path: "/masters/brand" },
+            { name: "Category Master", path: "/masters/category" },
+            { name: "Sub-Category", path: "/masters/subcategory" },
+            { name: "Department", path: "/masters/department" },
+            { name: "Section", path: "/masters/section" },
+            { name: "Style", path: "/masters/style" },
+            { name: "Sub-Style", path: "/masters/substyle" },
+            { name: "Taxonomy Master", path: "/masters/taxonomy" },
+            { name: "Design Master", path: "/masters/design" },
+            { name: "Size Master", path: "/masters/size" },
+            { name: "Size Group", path: "/masters/size-group" },
+            { name: "Size Set", path: "/masters/size-sets" },
+            { name: "Color Master", path: "/masters/color" },
+            { name: "Cut Master", path: "/masters/cut" },
+            { name: "Material", path: "/masters/material" },
+            { name: "HSN/SAC", path: "/masters/hsnsac" }
+          ]},
+          { name: "Reports", children: [
+            { name: "Current Stock", path: "#" },
+            { name: "Stock Ageing", path: "#" }
+          ]}
+        ]
+      },
+      { 
+        name: "Sales", 
+        icon: ShoppingCart, 
+        path: "/sales", 
+        show: check('sales'),
+        children: [
+          { name: "Dashboard", path: "/sales" },
+          { name: "Transactions", children: [
+            { name: "Point of Sale", path: "#" },
+            { name: "Sales Invoice", path: "#" },
+            { name: "Sales Drafts", path: "/sales/drafts/sales-drafts" }
+          ]},
+          { name: "Returns & Approvals", children: [
+            { name: "Sales Return", path: "#" },
+            { name: "Price Approval", path: "#" }
+          ]}
+        ]
+      },
+      { 
+        name: "Purchase", 
+        icon: ShoppingCart, 
+        path: "/purchase", 
+        show: check('purchase'),
+        children: [
+          { name: "Dashboard", path: "/purchase" },
+          { name: "Transactions", children: [
+            { name: "Purchase Order", path: "#" },
+            { name: "Purchase Invoice", path: "#" }
+          ]},
+          { name: "Returns", children: [
+            { name: "Debit Note", path: "#" },
+            { name: "Return Challan", path: "#" }
+          ]}
+        ]
+      },
+      { 
+        name: "Accounting", 
+        icon: Users, 
+        path: "#", 
+        show: true,
+        children: [
+          { name: "Masters", children: [
+            { name: "Party Master", path: "/masters/party" },
+            { name: "Customer Master", path: "/masters/customer" },
+            { name: "Transporter", path: "/masters/transporter" },
+            { name: "Hundekari", path: "/masters/hundekari" },
+            { name: "Commission", path: "/masters/commission" }
+          ]}
+        ]
+      },
+      { 
+        name: "Configuration", 
+        icon: Settings, 
+        path: "/settings", 
+        show: true,
+        children: [
+          { name: "Dashboard", path: "/settings" },
+          { name: "Masters", children: [
+             { name: "Location Master", path: "/masters/location" },
+             { name: "Charges Type", path: "/masters/chargestype" },
+             { name: "Item Percentage", path: "/masters/itempercentage" }
+          ]}
+        ]
+      },
+      { name: "Support", icon: Settings, path: "/support/tickets", show: true },
+    ].filter(item => item.show !== false);
 
   const handleLogout = () => {
     sessionStorage.clear();
@@ -17,254 +193,134 @@ export default function Header() {
     window.location.href = '/login';
   };
 
-  const handleSwitchFirm = async (targetFirmId: number) => {
-    if (targetFirmId === user.firm_id) return;
-    try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/auth/switch-firm`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({ target_firm_id: targetFirmId })
-      });
-      const data = await res.json();
-      if (res.ok) {
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('user', JSON.stringify({ ...data.user, available_firms: user.available_firms }));
-        window.location.reload();
-      } else {
-        toast.error(data.error || 'Failed to switch firm');
-      }
-    } catch (err) {
-      console.error(err);
-      toast.error('Error switching firm');
-    }
-  };
-
-  const handleCreateFirm = async () => {
-    const firmName = prompt("Enter new firm name:");
-    if (!firmName) return;
-    try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/firms/me/new`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({ name: firmName })
-      });
-      const data = await res.json();
-      if (res.ok) {
-        toast.success('Firm created successfully! Switching to new firm...');
-        // Refresh token by switching to it immediately
-        handleSwitchFirm(data.firm.id);
-      } else {
-        toast.error(data.error || 'Failed to create firm');
-      }
-    } catch (err) {
-      console.error(err);
-      toast.error('Error creating firm');
-    }
-  };
-
   const exitImpersonation = () => {
     sessionStorage.clear();
     window.location.href = '/dashboard';
   };
 
-  const menuItems = [
-    { name: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
-    { 
-      name: "Inventory", 
-      icon: Package, 
-      path: "/inventory",
-      submenu: [
-        { 
-          name: "Stock Levels", 
-          path: "/inventory/stock",
-          nestedSubmenu: [
-            { name: "All Warehouses", path: "/inventory/stock/all" },
-            { name: "Main Warehouse", path: "/inventory/stock/main" },
-            { name: "Store Fronts", path: "/inventory/stock/stores" },
-          ]
-        },
-        { name: "Products", path: "/products" },
-        { name: "Taxonomy Master", path: "/masters/taxonomy" },
-        { name: "Purchase Invoices", path: "/purchase_invoice/new" },
-        { name: "Purchase Orders", path: "/purchase_order/new" },
-        { name: "Stock Adjustment", path: "/inventory/adjust" },
-        { name: "Suppliers", path: "/inventory/suppliers" },
-      ]
-    },
-    { 
-      name: "Sales", 
-      icon: ShoppingCart, 
-      path: "/sales",
-      submenu: [
-        { name: "Point of Sale (POS)", path: "/sales/pointofsales" },
-        { 
-          name: "Invoices", 
-          path: "/sales/invoices",
-          nestedSubmenu: [
-            { name: "All Invoices", path: "/sales/invoices/all" },
-            { name: "Drafts", path: "/sales/invoices/drafts" },
-            { name: "Overdue", path: "/sales/invoices/overdue" },
-          ]
-        },
-        { name: "Quotations", path: "/sales/quotations" },
-        { name: "Returns", path: "/sales/returns" },
-      ]
-    },
-    { 
-      name: "Customers", 
-      icon: Users, 
-      path: "/customers",
-      submenu: [
-        { name: "Retail Customers", path: "/customers/retail" },
-        { name: "Wholesale (B2B)", path: "/customers/b2b" },
-      ]
-    },
-    { name: "Settings", icon: Settings, path: "/settings" },
-  ];
-
   return (
-    <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 sm:px-8 sticky top-0 z-50 shadow-sm">
-      <div className="flex items-center gap-8">
-        {/* Logo - Increased Size */}
-        <Link to="/dashboard" className="flex items-center hover:opacity-90 transition-opacity">
-          <img src="/logo.png" alt="RetailNode" className="h-[40px] w-auto object-contain" />
-        </Link>
+    <>
+      <header className="h-16 bg-white/95 backdrop-blur-xl border-b border-slate-200/50 flex items-center justify-between px-3 md:px-6 sticky top-0 z-40 shadow-sm w-full max-w-full">
         
-        {/* Desktop Navigation with Multi-level dropdowns */}
-        <nav className="hidden lg:flex items-center space-x-1">
-          {menuItems.map((item) => {
-            const Icon = item.icon;
-            const active = isActive(item.path);
-            const hasSubmenu = !!item.submenu;
-            
-            return (
-              <div key={item.name} className="relative group/main">
-                <Link
-                  to={item.path}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm font-semibold ${
-                    active 
-                      ? "bg-primary/10 text-primary" 
-                      : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
-                  }`}
-                >
-                  <Icon className="w-4 h-4" />
-                  {item.name}
-                  {hasSubmenu && <ChevronDown className="w-3.5 h-3.5 opacity-50 group-hover/main:rotate-180 transition-transform duration-200" />}
-                </Link>
-
-                {/* Dropdown Menu (Level 2) */}
-                {hasSubmenu && (
-                  <div className="absolute left-0 top-full pt-1 opacity-0 invisible group-hover/main:opacity-100 group-hover/main:visible transition-all duration-200 z-50">
-                    <div className="w-52 bg-white border border-slate-200 rounded-xl shadow-lg py-2 flex flex-col">
-                      {item.submenu!.map((subItem) => {
-                        const hasNested = !!subItem.nestedSubmenu;
+        {/* Logo & Navigation */}
+        <div className="flex items-center h-full">
+          <Link to="/dashboard" className="flex items-center gap-2 hover:scale-[1.02] transition-transform duration-300 mr-2 md:mr-6 shrink-0">
+            <img src="/logo.png" alt="RetailNode" className="h-[32px] w-auto object-contain" />
+            <span className="text-base md:text-lg font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-700 tracking-tight hidden lg:block">RetailNode</span>
+          </Link>
+          
+          {/* Horizontal Menu (Level 1) */}
+          <nav className="hidden lg:flex h-full items-center gap-0.5 lg:gap-1 flex-1">
+            {menuItems.map((item) => {
+              const Icon = item.icon;
+              const active = isActive(item.path);
+              const hasChildren = item.children && item.children.length > 0;
+              
+              return (
+                <div key={item.name} className="group relative h-full flex items-center shrink-0">
+                  <Link
+                    to={item.path || "#"}
+                    className={`flex items-center gap-1.5 h-full px-2 xl:px-3 border-b-2 transition-all duration-300 text-[13px] xl:text-sm font-bold cursor-pointer ${
+                      active 
+                        ? "border-indigo-600 text-indigo-700 bg-indigo-50/50" 
+                        : "border-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-50"
+                    }`}
+                  >
+                    {Icon && <Icon className={`w-3.5 h-3.5 xl:w-4 xl:h-4 ${active ? 'scale-110 text-indigo-600' : 'text-slate-400 group-hover:text-slate-600'}`} />}
+                    <span className="whitespace-nowrap">{item.name}</span>
+                    {hasChildren && <ChevronDown className="w-3.5 h-3.5 opacity-50 -ml-1 group-hover:rotate-180 transition-transform duration-300" />}
+                  </Link>
+                  
+                  {/* Level 2 Dropdown */}
+                  {hasChildren && (
+                    <div className={`absolute top-[calc(100%-2px)] left-0 min-w-[200px] bg-white rounded-xl shadow-lg border border-slate-100 py-2 transition-all duration-200 transform z-50 ${isNavigating ? "hidden" : "opacity-0 invisible group-hover:opacity-100 group-hover:visible translate-y-2 group-hover:translate-y-0"}`}>
+                      {item.children!.map((child, idx) => {
+                        const hasSubChildren = child.children && child.children.length > 0;
                         return (
-                          <div key={subItem.name} className="relative group/sub">
+                          <div key={idx} className="group/sub relative">
                             <Link
-                              to={subItem.path}
-                              className="w-full flex items-center justify-between px-4 py-2 text-sm text-slate-600 hover:text-primary hover:bg-slate-50 transition-colors"
+                              to={child.path || "#"}
+                              className="flex items-center justify-between px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-indigo-50 hover:text-indigo-600 transition-colors w-full text-left"
                             >
-                              {subItem.name}
-                              {hasNested && <ChevronDown className="w-3.5 h-3.5 opacity-50 -rotate-90" />}
+                              <span>{child.name}</span>
+                              {hasSubChildren && <ChevronRight className="w-4 h-4 opacity-50" />}
                             </Link>
-
-                            {/* Nested Dropdown Menu (Level 3) */}
-                            {hasNested && (
-                              <div className="absolute left-full top-0 pl-1 opacity-0 invisible group-hover/sub:opacity-100 group-hover/sub:visible transition-all duration-200 z-50">
-                                <div className="w-48 bg-white border border-slate-200 rounded-xl shadow-lg py-2 flex flex-col">
-                                  {subItem.nestedSubmenu!.map((nestedItem) => (
-                                    <Link
-                                      key={nestedItem.name}
-                                      to={nestedItem.path}
-                                      className="px-4 py-2 text-sm text-slate-600 hover:text-primary hover:bg-slate-50 transition-colors"
-                                    >
-                                      {nestedItem.name}
-                                    </Link>
-                                  ))}
-                                </div>
+                            
+                            {/* Level 3 Flyout */}
+                            {hasSubChildren && (
+                              <div className={`absolute top-0 left-full ml-1 min-w-[220px] bg-white rounded-xl shadow-xl border border-slate-100 py-2 transition-all duration-200 transform z-50 ${isNavigating ? "hidden" : "opacity-0 invisible group-hover/sub:opacity-100 group-hover/sub:visible -translate-x-2 group-hover/sub:translate-x-0"}`}>
+                                {child.children!.map((subChild, subIdx) => (
+                                  <Link
+                                    key={subIdx}
+                                    to={subChild.path || "#"}
+                                    className="block px-4 py-2 text-sm font-medium text-slate-600 hover:bg-indigo-50 hover:text-indigo-600 transition-colors"
+                                  >
+                                    {subChild.name}
+                                  </Link>
+                                ))}
                               </div>
                             )}
                           </div>
                         );
                       })}
                     </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </nav>
-      </div>
-      
-      <div className="flex items-center gap-4 sm:gap-6">
-        <NotificationBell />
-        
-        <div className="flex items-center gap-3 border-l border-slate-200 pl-4 sm:pl-6 p-1.5 -my-1.5 rounded-lg transition-colors group/profile relative cursor-pointer">
-          <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm shrink-0 uppercase">
-            {(user.name || "A").substring(0, 2)}
-          </div>
-          <div className="hidden md:block text-left">
-            <p className="text-sm font-bold text-slate-700 leading-none mb-1 capitalize">{user.name || "Admin"}</p>
-            <p className="text-xs text-slate-500 leading-none capitalize">{user.role || "Admin"} • Firm #{user.firm_id}</p>
-          </div>
-          <ChevronDown className="w-4 h-4 text-slate-400 group-hover/profile:rotate-180 transition-transform" />
-
-          {/* Firm Switcher Dropdown */}
-          <div className="absolute right-0 top-full mt-2 w-64 bg-white border border-slate-200 rounded-xl shadow-xl opacity-0 invisible group-hover/profile:opacity-100 group-hover/profile:visible transition-all z-50 overflow-hidden flex flex-col">
-            <div className="px-4 py-2 bg-slate-50 border-b border-slate-100">
-              <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Your Firms</p>
-            </div>
-            <div className="max-h-[250px] overflow-y-auto">
-              {user.available_firms?.map((f: any) => (
-                <div 
-                  key={f.firm_id} 
-                  onClick={() => handleSwitchFirm(f.firm_id)}
-                  className={`px-4 py-3 flex items-center justify-between hover:bg-slate-50 cursor-pointer ${f.firm_id === user.firm_id ? 'bg-primary/5' : ''}`}
-                >
-                  <div className="flex flex-col">
-                    <span className={`text-sm font-bold ${f.firm_id === user.firm_id ? 'text-primary' : 'text-slate-700'}`}>{f.firm_name}</span>
-                    <span className="text-[11px] text-slate-500 capitalize">Role: {f.role}</span>
-                  </div>
-                  {f.firm_id === user.firm_id && <div className="w-2 h-2 rounded-full bg-primary shadow-sm" />}
+                  )}
                 </div>
-              ))}
+              );
+            })}
+          </nav>
+        </div>
+        
+        {/* Right Side Actions */}
+        <div className="flex items-center gap-3 md:gap-5 shrink-0 pl-2">
+          
+          {/* Quick Actions */}
+          <div className="flex items-center gap-1">
+            <button className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all duration-300 hidden sm:block">
+              <Settings className="w-4 h-4" />
+            </button>
+            <NotificationBell />
+          </div>
+          
+          {/* Divider */}
+          <div className="h-6 w-px bg-slate-200"></div>
+
+          {/* User Profile */}
+          <div className="flex items-center gap-2 p-1.5 pr-1 md:pr-3 -my-1.5 rounded-xl transition-all duration-300 border border-transparent shrink-0">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-100 to-purple-100 text-indigo-700 flex items-center justify-center font-bold text-xs shrink-0 border border-indigo-200/50 shadow-inner uppercase">
+              {(user.name || "S").substring(0, 2)}
             </div>
-            <div className="border-t border-slate-100 p-2 gap-2 flex flex-col">
-              <button onClick={handleCreateFirm} className="w-full text-left px-3 py-2 text-sm font-bold text-primary hover:bg-primary/10 rounded-lg transition-colors">
-                + Create New Firm
-              </button>
-              <button 
-                onClick={handleLogout}
-                className="w-full flex items-center justify-between px-3 py-2 text-sm font-bold text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-              >
-                Sign Out
-                <LogOut className="w-4 h-4" />
-              </button>
+            <div className="hidden lg:block text-left">
+              <p className="text-xs font-bold text-slate-700 leading-none mb-1 capitalize whitespace-nowrap">{user.name || "System Admin"}</p>
+              <p className="text-[10px] font-medium text-slate-500 leading-none capitalize whitespace-nowrap">{user.role || "Admin"}</p>
             </div>
+            
+            <button 
+              onClick={handleLogout}
+              title="Logout"
+              className="ml-1 text-slate-400 hover:text-red-500 hover:bg-red-50 p-2 rounded-lg transition-colors"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
           </div>
         </div>
-      </div>
+      </header>
 
+      {/* Render Impersonation Banner outside header so fixed positioning works correctly relative to viewport */}
       {isImpersonating && (
-        <div className="fixed bottom-4 left-4 z-[9999] bg-rose-600 text-white px-5 py-3 rounded-2xl shadow-xl shadow-rose-600/30 flex items-center gap-4 animate-in fade-in slide-in-from-bottom-4">
+        <div className="fixed bottom-6 left-6 z-[99999] bg-rose-600 text-white px-5 py-3 rounded-2xl shadow-2xl shadow-rose-600/30 flex items-center gap-4 animate-in fade-in slide-in-from-bottom-4 border border-rose-500/50">
           <div className="flex flex-col">
             <span className="font-bold text-sm">SuperAdmin Active</span>
             <span className="text-[11px] opacity-90">Impersonating: <strong className="capitalize">{user.name}</strong></span>
           </div>
           <button 
             onClick={exitImpersonation}
-            className="bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-colors border border-white/10"
+            className="bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-colors border border-white/10 ml-2 shadow-sm"
           >
             Exit Mode
           </button>
         </div>
       )}
-    </header>
+    </>
   );
 }
