@@ -1,6 +1,6 @@
 import { Helmet } from 'react-helmet-async';
 import { Link } from 'react-router-dom';
-import { Package, Users, Settings, Database, ArrowRight, Tags, Briefcase, MapPin, Target, Palette, Shirt } from 'lucide-react';
+import { Package, Users, Settings, Database, ArrowRight, Tags, Briefcase, MapPin, Target, Palette, Shirt, Paintbrush } from 'lucide-react';
 
 const masterCategories = [
   {
@@ -14,6 +14,7 @@ const masterCategories = [
       { name: "Brand Master", path: "/masters/brand", icon: Tags },
       { name: "Category Master", path: "/masters/category", icon: Database },
       { name: "Sub-Category", path: "/masters/subcategory", icon: Database },
+      { name: "Taxonomy Master", path: "/masters/taxonomy", icon: Database },
       { name: "Department", path: "/masters/department", icon: Briefcase },
       { name: "Section", path: "/masters/section", icon: Target },
       { name: "Style", path: "/masters/style", icon: Shirt },
@@ -60,12 +61,13 @@ export default function MastersHub() {
         <title>Masters Hub - RetailNode</title>
       </Helmet>
 
-      <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 animate-in fade-in zoom-in duration-500">
+      <div className="px-2 w-full py-6 px-4 sm:px-6 lg:px-8 animate-in fade-in zoom-in duration-500">
         
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-black text-slate-800 tracking-tight">Masters Hub</h1>
+            <span className="text-slate-300 font-light mb-1">|</span>
             <p className="text-sm font-medium text-slate-500 mt-1">Configure and manage all core system entities.</p>
           </div>
         </div>
