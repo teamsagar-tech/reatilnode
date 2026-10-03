@@ -133,7 +133,7 @@ export default function PartyMaster() {
   const [availableBrands, setAvailableBrands] = useState<any[]>([]);
   const [showBrandSuggestions, setShowBrandSuggestions] = useState(false);
   const [focusedBrandIndex, setFocusedBrandIndex] = useState(-1);
-  const [masterModal, setMasterModal] = useState<{type: 'brand', initialValue: string} | null>(null);
+  const [masterModal, setMasterModal] = useState<{type: string, initialValue: string, parentId?: number} | null>(null);
 
   useEffect(() => {
     fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/masters/brand`, {
@@ -674,16 +674,16 @@ export default function PartyMaster() {
                     </div>
                   )}
 
-                  <InputRow label="PAN Number" value={formData.panNumber} onChange={(v) => setFormData({...formData, panNumber: v.toUpperCase()})} />
-                  <InputRow label="State" value={formData.state} onChange={(v) => setFormData({...formData, state: v})} />
-                  <InputRow label="State Code" value={formData.stateCode} onChange={(v) => setFormData({...formData, stateCode: v})} />
+                  <InputRow label="PAN Number" value={formData.panNumber} onChange={(v: any) => setFormData({...formData, panNumber: v.toUpperCase()})} />
+                  <InputRow label="State" value={formData.state} onChange={(v: any) => setFormData({...formData, state: v})} />
+                  <InputRow label="State Code" value={formData.stateCode} onChange={(v: any) => setFormData({...formData, stateCode: v})} />
                 </div>
                 
                 {/* Col 2 */}
                 <div className="w-1/2 flex flex-col gap-1">
-                  <InputRow label="Party Name" value={formData.partyName} onChange={(v) => setFormData({...formData, partyName: v})} />
-                  <InputRow label="Short Name" value={formData.shortName} onChange={(v) => setFormData({...formData, shortName: v})} />
-                                    <InputRow label="Email ID" value={formData.email} onChange={(v) => setFormData({...formData, email: v})} />
+                  <InputRow label="Party Name" value={formData.partyName} onChange={(v: any) => setFormData({...formData, partyName: v})} />
+                  <InputRow label="Short Name" value={formData.shortName} onChange={(v: any) => setFormData({...formData, shortName: v})} />
+                                    <InputRow label="Email ID" value={formData.email} onChange={(v: any) => setFormData({...formData, email: v})} />
                   
                   <div className="flex items-center mb-[2px]">
                     <div className="w-[110px] text-slate-800 font-bold text-[11px] text-right pr-2 leading-tight">Type</div>
@@ -703,11 +703,11 @@ export default function PartyMaster() {
             {/* Bank Details (spans 1/3) */}
             <div className="w-1/3 flex flex-col gap-1 pr-2">
               <SectionTitle>Bank Details</SectionTitle>
-              <InputRow label="Account Name" value={formData.accountName} onChange={(v) => setFormData({...formData, accountName: v})} />
-              <InputRow label="Bank Name" value={formData.bankName} onChange={(v) => setFormData({...formData, bankName: v})} />
-              <InputRow label="Account No" value={formData.accountNumber} onChange={(v) => setFormData({...formData, accountNumber: v})} />
-              <InputRow label="IFSC Code" value={formData.ifsc} onChange={(v) => setFormData({...formData, ifsc: v.toUpperCase()})} />
-              <InputRow label="Branch" value={formData.branch} onChange={(v) => setFormData({...formData, branch: v})} />
+              <InputRow label="Account Name" value={formData.accountName} onChange={(v: any) => setFormData({...formData, accountName: v})} />
+              <InputRow label="Bank Name" value={formData.bankName} onChange={(v: any) => setFormData({...formData, bankName: v})} />
+              <InputRow label="Account No" value={formData.accountNumber} onChange={(v: any) => setFormData({...formData, accountNumber: v})} />
+              <InputRow label="IFSC Code" value={formData.ifsc} onChange={(v: any) => setFormData({...formData, ifsc: v.toUpperCase()})} />
+              <InputRow label="Branch" value={formData.branch} onChange={(v: any) => setFormData({...formData, branch: v})} />
               
               <div className="flex items-center mb-[2px]">
                 <div className="w-[110px] text-slate-800 font-bold text-[11px] text-right pr-2 leading-tight">Account Type</div>
@@ -727,13 +727,13 @@ export default function PartyMaster() {
             {/* Address Information */}
             <div className="w-1/3 flex flex-col gap-1 border-r-2 border-slate-300 pr-4">
               <SectionTitle>Address Information</SectionTitle>
-              <InputRow label="Address Line 1" value={formData.line1} onChange={(v) => setFormData({...formData, line1: v})} />
-              <InputRow label="Address Line 2" value={formData.line2} onChange={(v) => setFormData({...formData, line2: v})} />
-              <InputRow label="Address Line 3" value={formData.line3} onChange={(v) => setFormData({...formData, line3: v})} />
-              <InputRow label="Pincode" value={formData.pincode} onChange={(v) => setFormData({...formData, pincode: v})} width="w-[80px]" />
-              <InputRow label="City" value={formData.city} onChange={(v) => setFormData({...formData, city: v})} />
-              <InputRow label="Taluka" value={formData.taluka} onChange={(v) => setFormData({...formData, taluka: v})} />
-              <InputRow label="District" value={formData.district} onChange={(v) => setFormData({...formData, district: v})} />
+              <InputRow label="Address Line 1" value={formData.line1} onChange={(v: any) => setFormData({...formData, line1: v})} />
+              <InputRow label="Address Line 2" value={formData.line2} onChange={(v: any) => setFormData({...formData, line2: v})} />
+              <InputRow label="Address Line 3" value={formData.line3} onChange={(v: any) => setFormData({...formData, line3: v})} />
+              <InputRow label="Pincode" value={formData.pincode} onChange={(v: any) => setFormData({...formData, pincode: v})} width="w-[80px]" />
+              <InputRow label="City" value={formData.city} onChange={(v: any) => setFormData({...formData, city: v})} />
+              <InputRow label="Taluka" value={formData.taluka} onChange={(v: any) => setFormData({...formData, taluka: v})} />
+              <InputRow label="District" value={formData.district} onChange={(v: any) => setFormData({...formData, district: v})} />
             </div>
 
             {/* Contact Information */}
@@ -749,7 +749,7 @@ export default function PartyMaster() {
                          value={contact.type}
                          onChange={e => {
                            const newContacts = [...formData.contacts];
-                           newContacts[index].type = e.target.value;
+                           (newContacts[index] as any).type = e.target.value;
                            setFormData({...formData, contacts: newContacts});
                          }}
                        >
@@ -780,7 +780,7 @@ export default function PartyMaster() {
                         value={contact.name}
                         onChange={e => {
                           const newContacts = [...formData.contacts];
-                          newContacts[index].name = e.target.value;
+                          (newContacts[index] as any).name = e.target.value;
                           setFormData({...formData, contacts: newContacts});
                         }}
                       />
@@ -793,7 +793,7 @@ export default function PartyMaster() {
                         value={contact.mobile}
                         onChange={e => {
                           const newContacts = [...formData.contacts];
-                          newContacts[index].mobile = e.target.value;
+                          (newContacts[index] as any).mobile = e.target.value;
                           setFormData({...formData, contacts: newContacts});
                         }}
                       />
@@ -803,7 +803,7 @@ export default function PartyMaster() {
                 <div className="pl-[110px] mb-2">
                   <button 
                     type="button"
-                    onClick={() => setFormData({...formData, contacts: [...(formData.contacts || []), { type: 'Office', name: '', mobile: '' }]})}
+                    onClick={() => setFormData({...formData, contacts: [...((formData.contacts as any[]) || []), { type: 'Office', name: '', mobile: '' }]})}
                     className="bg-[#1b5e58] border border-[#0d2d2a] px-2 py-1 text-[10px] font-bold text-white shadow-[1px_1px_0_rgba(0,0,0,0.5)] hover:bg-[#12423d]"
                   >
                     + Add Contact
